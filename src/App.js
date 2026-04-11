@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 function App() {
-  const [balance, setBalance] = useState(0.0015);
+  // Balance ကို 0.0000 ကနေ စပါမယ်
+  const [balance, setBalance] = useState(() => {
+    const saved = localStorage.getItem('ton_balance');
+    return saved ? parseFloat(saved) : 0.0;
+  });
+
   const [activeTab, setActiveTab] = useState('bot');
   const [activeNav, setActiveNav] = useState('earn');
   const [showPayForm, setShowPayForm] = useState(false);
@@ -11,22 +16,38 @@ function App() {
   const adminAddress = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
   const blockId = "27393"; 
 
-  const [botTasks, setBotTasks] = useState([
-    { id: 1, name: 'GrowTea Bot', link: 'https://t.me/GrowTeaBot/app?startapp=1793453606' },
-    { id: 2, name: 'Golden Miner', link: 'https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD' },
-    { id: 3, name: 'Workers On Ton', link: 'https://t.me/WorkersOnTonBot/app?startapp=r_1793453606' },
-    { id: 4, name: 'Easy Bonus Code', link: 'https://t.me/easybonuscode_bot?start=1793453606' },
-    { id: 5, name: 'Ton Dragon', link: 'https://t.me/TonDragonBot/myapp?startapp=1793453606' },
-    { id: 6, name: 'Pobuzz Bot', link: 'https://t.me/Pobuzzbot/app?startapp=1793453606' }
-  ]);
+  const [botTasks, setBotTasks] = useState(() => {
+    const saved = localStorage.getItem('bot_tasks');
+    return saved ? JSON.parse(saved) : [
+      { id: 1, name: 'GrowTea Bot', link: 'https://t.me/GrowTeaBot/app?startapp=1793453606' },
+      { id: 2, name: 'Golden Miner', link: 'https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD' },
+      { id: 3, name: 'Workers On Ton', link: 'https://t.me/WorkersOnTonBot/app?startapp=r_1793453606' },
+      { id: 4, name: 'Easy Bonus Code', link: 'https://t.me/easybonuscode_bot?start=1793453606' },
+      { id: 5, name: 'Ton Dragon', link: 'https://t.me/TonDragonBot/myapp?startapp=1793453606' },
+      { id: 6, name: 'Pobuzz Bot', link: 'https://t.me/Pobuzzbot/app?startapp=1793453606' }
+    ];
+  });
 
-  const [socialTasks, setSocialTasks] = useState([
-    { id: 101, name: "@GrowTeaNews" }, { id: 102, name: "@GoldenMinerNews" },
-    { id: 103, name: "@cryptogold_online_official" }, { id: 104, name: "@M9460" },
-    { id: 105, name: "@easytonfree" }, { id: 106, name: "@WORLDBESTCRYTO" }
-  ]);
+  const [socialTasks, setSocialTasks] = useState(() => {
+    const saved = localStorage.getItem('social_tasks');
+    return saved ? JSON.parse(saved) : [
+      { id: 101, name: "@GrowTeaNews" }, { id: 102, name: "@GoldenMinerNews" },
+      { id: 103, name: "@cryptogold_online_official" }, { id: 104, name: "@M9460" },
+      { id: 105, name: "@easytonfree" }, { id: 106, name: "@WORLDBESTCRYTO" }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ton_balance', balance.toString());
+  }, [balance]);
+
+  useEffect(() => {
+    localStorage.setItem('bot_tasks', JSON.stringify(botTasks));
+    localStorage.setItem('social_tasks', JSON.stringify(socialTasks));
+  }, [botTasks, socialTasks]);
 
   const handleTaskComplete = (id, type) => {
+    setBalance(prev => prev + 0.0005);
     if (type === 'bot') {
       setBotTasks(prev => prev.filter(t => t.id !== id));
     } else {
@@ -34,9 +55,7 @@ function App() {
     }
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: blockId });
-      AdController.show().then(() => {
-        setBalance(prev => prev + 0.0005);
-      }).catch((err) => console.error(err));
+      AdController.show().catch((err) => console.error(err));
     }
   };
 
@@ -93,12 +112,12 @@ function App() {
               {activeTab === 'bot' && (
                 <div style={styles.card}>
                   <h4 style={{fontWeight: '900'}}>Bot Tasks (0.0005 TON)</h4>
-                  {botTasks.map(t => (
+                  {botTasks.length > 0 ? botTasks.map(t => (
                     <div key={t.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
                       <span style={{fontSize: '13px'}}>{t.name}</span>
                       <button style={styles.btn()} onClick={() => { window.open(t.link, '_blank'); handleTaskComplete(t.id, 'bot'); }}>Start</button>
                     </div>
-                  ))}
+                  )) : <p style={{textAlign:'center', color:'#94a3b8'}}>No more tasks available.</p>}
                 </div>
               )}
 
@@ -108,12 +127,12 @@ function App() {
                     + Add Your Task
                   </button>
                   <h4 style={{fontWeight: '900'}}>Social Channels (0.0005 TON)</h4>
-                  {socialTasks.map((t) => (
+                  {socialTasks.length > 0 ? socialTasks.map((t) => (
                     <div key={t.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
                       <span style={{fontSize: '13px'}}>{t.name}</span>
                       <button style={styles.btn('#38bdf8')} onClick={() => { window.open(`https://t.me/${t.name.replace('@','')}`, '_blank'); handleTaskComplete(t.id, 'social'); }}>Join</button>
                     </div>
-                  ))}
+                  )) : <p style={{textAlign:'center', color:'#94a3b8'}}>No more channels available.</p>}
                 </div>
               )}
 
