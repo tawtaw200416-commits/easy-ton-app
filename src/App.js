@@ -113,4 +113,19 @@ function App() {
           {inviteHistory.map((h, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #334155' }}>
               <span style={{ fontSize: '12px' }}>ID: {h.id}</span>
-              <span style={{ color: '#4ade80' }}>{h.status}
+              <span style={{ color: '#4ade80' }}>{h.status} (+{h.reward})</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Navigation Footer */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '20px', backgroundColor: '#1e293b', borderTop: '1px solid #334155' }}>
+        <div onClick={() => setActiveNav('earn')} style={{ color: activeNav === 'earn' ? '#fbbf24' : '#94a3b8', fontWeight: 'bold', cursor: 'pointer' }}>💰 Earn</div>
+        <div onClick={() => setActiveNav('invite')} style={{ color: activeNav === 'invite' ? '#fbbf24' : '#94a3b8', fontWeight: 'bold', cursor: 'pointer' }}>👥 Invite</div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
