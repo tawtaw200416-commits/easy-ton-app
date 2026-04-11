@@ -42,21 +42,20 @@ function App() {
     header: { display: 'flex', alignItems: 'center', backgroundColor: '#1e293b', padding: '15px', borderRadius: '25px', border: '1px solid #334155', gap: '15px', marginBottom: '20px' },
     tonHeaderImg: { width: '50px', height: '50px', borderRadius: '50%', border: '2px solid #fbbf24', objectFit: 'cover' },
     balance: { color: '#fbbf24', fontSize: '24px', fontWeight: 'bold' },
-    tabBar: { display: 'flex', backgroundColor: '#1e293b', borderRadius: '12px', padding: '5px', marginBottom: '20px' },
-    tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: active ? '#fbbf24' : 'transparent', color: active ? '#0f172a' : '#94a3b8', fontWeight: 'bold', fontSize: '12px' }),
+    tabBar: { display: 'flex', backgroundColor: '#1e293b', borderRadius: '12px', padding: '5px', marginBottom: '15px' },
+    tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: active ? '#fbbf24' : 'transparent', color: active ? '#0f172a' : '#94a3b8', fontWeight: 'bold', fontSize: '11px' }),
     card: { backgroundColor: '#1e293b', padding: '18px', borderRadius: '20px', marginBottom: '15px', border: '1px solid #334155' },
     taskItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid #334155' },
     taskIcon: { width: '30px', height: '30px', borderRadius: '50%', border: '1px solid #fbbf24', marginRight: '10px' },
     btn: (color='#fbbf24') => ({ backgroundColor: color, color: '#0f172a', padding: '10px 20px', borderRadius: '10px', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }),
     input: { width: '100%', padding: '12px', borderRadius: '10px', marginBottom: '12px', border: '1px solid #334155', backgroundColor: '#0f172a', color: 'white', boxSizing: 'border-box' },
     footer: { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#1e293b', display: 'flex', justifyContent: 'space-around', padding: '18px', borderTop: '1px solid #334155' },
-    footerItem: (active) => ({ textAlign: 'center', fontSize: '11px', color: active ? '#fbbf24' : '#94a3b8' }),
-    warningCard: { border: '1px solid #ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '15px', borderRadius: '15px' }
+    footerItem: (active) => ({ textAlign: 'center', fontSize: '11px', color: active ? '#fbbf24' : '#94a3b8' })
   };
 
   return (
     <div style={styles.container}>
-      {/* Header */}
+      {/* Header with improved Ton Logo */}
       <div style={styles.header}>
         <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_SAt0O7R4-A0N93T0O9x7I0h6S6-7oN5kAw&s" alt="TON-Logo" style={styles.tonHeaderImg} />
         <div>
@@ -67,6 +66,7 @@ function App() {
 
       {activeNav === 'earn' && (
         <>
+          {/* Tab Sequence: Bot -> Social -> Reward */}
           <div style={styles.tabBar}>
             <button style={styles.tabBtn(activeTab === 'bot')} onClick={() => {setActiveTab('bot'); setShowPayForm(false);}}>Start Bot</button>
             <button style={styles.tabBtn(activeTab === 'social')} onClick={() => {setActiveTab('social'); setShowPayForm(false);}}>Social</button>
@@ -90,21 +90,23 @@ function App() {
 
           {activeTab === 'social' && !showPayForm && (
             <div style={styles.card}>
-              <h4>Join Channels (0.0005 TON)</h4>
-              {socialTasks.map((c, i) => (
-                <div key={i} style={styles.taskItem}>
-                  <div style={{display: 'flex', alignItems: 'center'}}>
-                    <img src="https://cdn-icons-png.flaticon.com/512/2111/2111646.png" alt="icon" style={styles.taskIcon} />
-                    <span>{c}</span>
+              <h4 style={{marginTop: 0}}>Join Channels (0.0005 TON)</h4>
+              <div style={{maxHeight: '40vh', overflowY: 'auto', marginBottom: '10px'}}>
+                {socialTasks.map((c, i) => (
+                  <div key={i} style={styles.taskItem}>
+                    <div style={{display: 'flex', alignItems: 'center'}}>
+                      <img src="https://cdn-icons-png.flaticon.com/512/2111/2111646.png" alt="icon" style={styles.taskIcon} />
+                      <span style={{fontSize: '12px'}}>{c}</span>
+                    </div>
+                    <button style={styles.btn('#38bdf8')} onClick={() => { window.open(`https://t.me/${c.replace('@','')}`, '_blank'); handleTaskComplete(i, 'social'); }}>Join</button>
                   </div>
-                  <button style={styles.btn('#38bdf8')} onClick={() => { window.open(`https://t.me/${c.replace('@','')}`, '_blank'); handleTaskComplete(i, 'social'); }}>Join</button>
-                </div>
-              ))}
+                ))}
+              </div>
               
-              {/* +Add Task Button - Attached to bottom of social list */}
-              <div style={{marginTop: '20px'}}>
+              {/* +Add Task - Positioned tightly below the list */}
+              <div style={{borderTop: '1px solid #334155', paddingTop: '15px'}}>
                 <button style={{...styles.btn(), width: '100%', padding: '15px'}} onClick={() => setShowAddOptions(!showAddOptions)}>
-                   {showAddOptions ? '✕ Close' : '+ Add Task'}
+                   {showAddOptions ? '✕ Close Options' : '+ Add Task'}
                 </button>
                 {showAddOptions && (
                   <div style={{display: 'flex', gap: '10px', marginTop: '10px'}}>
@@ -118,8 +120,8 @@ function App() {
 
           {showPayForm && (
             <div style={styles.card}>
-              <h4>Add New Task</h4>
-              <input style={styles.input} placeholder="Channel Name" />
+              <h4>Create New Task</h4>
+              <input style={styles.input} placeholder="Task Name" />
               <input style={styles.input} placeholder="Link (https://t.me/...)" />
               <select style={styles.input}>
                 <option>100 Members - 0.2 TON</option>
@@ -127,9 +129,9 @@ function App() {
                 <option>300 Members - 0.5 TON</option>
               </select>
               <div style={{backgroundColor: '#0f172a', padding: '15px', borderRadius: '10px', fontSize: '12px', border: '1px dashed #fbbf24'}}>
-                <p>Payment Address:</p>
-                <p style={{color: '#fbbf24', wordBreak: 'break-all'}}>{adminAddress}</p>
-                <p style={{marginTop: '10px'}}>MEMO (Your UID):</p>
+                <p>Send TON to:</p>
+                <p style={{color: '#fbbf24', wordBreak: 'break-all', fontSize: '11px'}}>{adminAddress}</p>
+                <p style={{marginTop: '10px'}}>MEMO (Required):</p>
                 <p style={{color: '#fbbf24', fontSize: '18px', fontWeight: 'bold'}}>{userUID}</p>
               </div>
               <button style={{...styles.btn(), width: '100%', marginTop: '15px', padding: '12px'}} onClick={() => setShowPayForm(false)}>Confirm Payment</button>
@@ -138,57 +140,49 @@ function App() {
 
           {activeTab === 'reward' && (
             <div style={{...styles.card, textAlign: 'center'}}>
-              <h4>Redeem Reward Code</h4>
-              <input style={{...styles.input, textAlign: 'center'}} placeholder="Enter Code" value={claimCode} onChange={(e)=>setClaimCode(e.target.value.toUpperCase())} />
-              <button style={{...styles.btn(), width: '100%'}} onClick={() => alert('Claimed!')}>Claim Now</button>
+              <h4>Redeem Code</h4>
+              <input style={{...styles.input, textAlign: 'center'}} placeholder="Enter Promo Code" value={claimCode} onChange={(e)=>setClaimCode(e.target.value.toUpperCase())} />
+              <button style={{...styles.btn(), width: '100%'}} onClick={() => alert('Code processing...')}>Claim Now</button>
             </div>
           )}
         </>
       )}
 
-      {/* Invite & Withdraw Section */}
+      {/* Other Navigation Sections */}
       {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h3 style={{color: '#fbbf24', textAlign: 'center'}}>Invite Friends</h3>
-          <input style={{...styles.input}} value={`https://t.me/EasyEarnBot?start=${userUID}`} readOnly />
-          <button style={{...styles.btn(), width: '100%'}} onClick={() => alert('Copied!')}>Copy Link</button>
-          <div style={{marginTop: '20px', padding: '10px', backgroundColor: '#0f172a', borderRadius: '10px'}}>
-            <p>Total Invites: 0</p>
-            <p style={{fontSize: '12px', color: '#64748b'}}>Success History: No records yet.</p>
+          <h3 style={{color: '#fbbf24', textAlign: 'center'}}>Invite & Earn</h3>
+          <input style={styles.input} value={`https://t.me/EasyEarnBot?start=${userUID}`} readOnly />
+          <button style={{...styles.btn(), width: '100%'}} onClick={() => alert('Link Copied!')}>Copy Link</button>
+          <div style={{marginTop: '20px', padding: '15px', backgroundColor: '#0f172a', borderRadius: '15px'}}>
+            <p>Total Referrals: 0</p>
+            <p style={{fontSize: '12px', color: '#64748b'}}>Success History: No data</p>
           </div>
         </div>
       )}
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h3 style={{color: '#fbbf24', textAlign: 'center'}}>Withdraw TON</h3>
+          <h3 style={{color: '#fbbf24', textAlign: 'center'}}>Withdraw</h3>
           <input style={styles.input} placeholder="Amount" type="number" />
-          <input style={styles.input} placeholder="Address" />
-          <button style={{...styles.btn(), width: '100%', padding: '12px'}}>Withdraw</button>
-          <h4 style={{marginTop: '20px'}}>History</h4>
-          <p style={{fontSize: '12px', color: '#64748b'}}>No withdrawal history found.</p>
+          <input style={styles.input} placeholder="Wallet Address" />
+          <button style={{...styles.btn(), width: '100%', padding: '14px'}}>Submit Withdrawal</button>
         </div>
       )}
 
-      {/* Profile Section with English Warning */}
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h3 style={{textAlign: 'center'}}>User Profile</h3>
-          <div style={{textAlign: 'center', marginBottom: '20px'}}>
-             <div style={{fontSize: '18px', color: '#fbbf24'}}>{userUID}</div>
-          </div>
-          <div style={styles.warningCard}>
-            <h4 style={{color: '#ef4444', marginTop: 0}}>⚠️ Account Policy</h4>
+          <h3 style={{textAlign: 'center'}}>Account Information</h3>
+          <div style={{backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', padding: '15px', borderRadius: '15px'}}>
+            <h4 style={{color: '#ef4444', marginTop: 0}}>⚠️ Policy Warning</h4>
             <p style={{fontSize: '13px', lineHeight: '1.6', color: '#fca5a5'}}>
-              <b>Warning:</b> Creating multiple or fake accounts to manipulate rewards is strictly prohibited. 
-              Any detected fraudulent activity will result in a <b>Permanent Ban</b> of your account and forfeiture of your balance. 
-              We use manual and automated verification for all withdrawals.
+              <b>English:</b> Creating multiple or fake accounts is strictly prohibited. Any detected fraud will result in a <b>Permanent Ban</b> and loss of all funds. We verify all activities before processing payments.
             </p>
           </div>
         </div>
       )}
 
-      {/* Footer Navigation */}
+      {/* Footer Nav */}
       <div style={styles.footer}>
         <div style={styles.footerItem(activeNav === 'earn')} onClick={() => setActiveNav('earn')}>💰<br/>Earn</div>
         <div style={styles.footerItem(activeNav === 'invite')} onClick={() => setActiveNav('invite')}>👥<br/>Invite</div>
