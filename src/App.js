@@ -5,6 +5,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('bot');
   const [activeNav, setActiveNav] = useState('earn');
   const [showPayForm, setShowPayForm] = useState(false);
+  const [rewardCode, setRewardCode] = useState("");
   
   const userUID = "UID17934536";
   const adminAddress = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
@@ -39,6 +40,16 @@ function App() {
     }
   };
 
+  const handleClaimReward = () => {
+    if (rewardCode === "YTTPO") {
+      setBalance(prev => prev + 0.0005);
+      setRewardCode("");
+      alert("Success! 0.0005 TON added to your balance.");
+    } else {
+      alert("Invalid Reward Code!");
+    }
+  };
+
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     alert("Copied!");
@@ -69,7 +80,6 @@ function App() {
 
       {activeNav === 'earn' && (
         <>
-          {/* Form ပွင့်နေရင် Tab ခလုတ်တွေကိုပါ ဖျောက်ထားမယ် */}
           {!showPayForm && (
             <div style={{display: 'flex', backgroundColor: '#1e293b', borderRadius: '12px', padding: '5px', marginBottom: '15px'}}>
               <button style={{...styles.btn(activeTab === 'bot' ? '#fbbf24' : 'transparent'), flex: 1}} onClick={() => setActiveTab('bot')}>Start Bot</button>
@@ -78,7 +88,6 @@ function App() {
             </div>
           )}
 
-          {/* Form ပွင့်နေရင် ကျန်တဲ့ Task contents အကုန်လုံးကို Hide ထားမယ် */}
           {!showPayForm ? (
             <>
               {activeTab === 'bot' && (
@@ -111,13 +120,17 @@ function App() {
               {activeTab === 'reward' && (
                 <div style={{...styles.card, textAlign: 'center'}}>
                   <h4 style={{fontWeight: '900'}}>Redeem Reward Code</h4>
-                  <input style={{...styles.input, textAlign: 'center'}} placeholder="ENTER CODE (YTTPO)" />
-                  <button style={{...styles.btn(), width: '100%'}}>Claim Now</button>
+                  <input 
+                    style={{...styles.input, textAlign: 'center'}} 
+                    placeholder="ENTER CODE" 
+                    value={rewardCode}
+                    onChange={(e) => setRewardCode(e.target.value.toUpperCase())}
+                  />
+                  <button style={{...styles.btn(), width: '100%'}} onClick={handleClaimReward}>Claim Now</button>
                 </div>
               )}
             </>
           ) : (
-            /* Order Placement ပွင့်လာရင် ဒါပဲ ပေါ်နေမယ် */
             <div style={styles.card}>
               <button style={{...styles.btn('#10b981'), width: '100%', marginBottom: '15px'}} onClick={() => alert("No tasks yet.")}>My Tasks</button>
               <h4 style={{fontWeight: '900', textAlign: 'center'}}>Order Placement</h4>
