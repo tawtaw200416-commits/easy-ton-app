@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 function App() {
-  // ၁။ Telegram User ID & Balance
+  // ၁။ Telegram Data & Balance
   const [userUID, setUserUID] = useState(() => {
     const tg = window.Telegram?.WebApp;
     return tg?.initDataUnsafe?.user?.id?.toString() || "Guest_" + Math.floor(Math.random() * 100000);
@@ -9,25 +9,26 @@ function App() {
 
   const [balance, setBalance] = useState(() => {
     const saved = localStorage.getItem('ton_balance');
-    return saved ? parseFloat(saved) : 0.0;
+    return saved ? parseFloat(saved) : 0.0000;
   });
 
-  // ၂။ Invite Logic (URL ကနေ ID ဖမ်းမယ်)
   const [inviterID, setInviterID] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('tgWebAppStartParam'); 
   });
 
-  const [hasDoneTask, setHasDoneTask] = useState(() => {
-    return localStorage.getItem('user_done_task') === 'true';
-  });
-
+  const [hasDoneTask, setHasDoneTask] = useState(localStorage.getItem('user_done_task') === 'true');
   const [inviteHistory, setInviteHistory] = useState(() => {
     const saved = localStorage.getItem('invite_history');
     return saved ? JSON.parse(saved) : [];
   });
 
-  // ၃။ Tasks စာရင်း (ဒီမှာ အစ်ကို့ task တွေ အကုန်ပြန်ထည့်ပေးထားပါတယ်)
+  // Tab & Navigation State
+  const [activeTab, setActiveTab] = useState('bot'); // Start Bot, Social, Reward
+  const [activeNav, setActiveNav] = useState('earn'); // Earn, Invite, Withdraw, Profile
+  const [redeemCode, setRedeemCode] = useState('');
+
+  // ၂။ Task စာရင်းများ
   const [botTasks, setBotTasks] = useState([
     { id: 1, name: 'GrowTea Bot', link: 'https://t.me/GrowTeaBot/app?startapp=1793453606' },
     { id: 2, name: 'Golden Miner', link: 'https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD' },
@@ -43,86 +44,86 @@ function App() {
     { id: 105, name: "@easytonfree" }, { id: 106, name: "@WORLDBESTCRYTO" }
   ]);
 
-  const [activeTab, setActiveTab] = useState('bot');
-  const [activeNav, setActiveNav] = useState('earn');
-
-  // ၄။ Task လုပ်ရင် Balance တက်ပြီး Invite Success ဖြစ်မယ့် Logic
-  const handleTaskComplete = (id, type) => {
-    const reward = 0.0005;
-    const newBalance = balance + reward;
+  // ၃။ Logic Functions
+  const handleAction = (rewardValue = 0.0005) => {
+    const newBalance = balance + rewardValue;
     setBalance(newBalance);
     localStorage.setItem('ton_balance', newBalance.toString());
 
-    // Invite Success Logic
     if (inviterID && !hasDoneTask) {
-      const newInvite = { id: inviterID, status: 'Success', reward: reward };
-      const updatedHistory = [newInvite, ...inviteHistory];
+      const updatedHistory = [{ id: inviterID, status: 'Success', reward: 0.0005 }, ...inviteHistory];
       setInviteHistory(updatedHistory);
       localStorage.setItem('invite_history', JSON.stringify(updatedHistory));
       setHasDoneTask(true);
       localStorage.setItem('user_done_task', 'true');
     }
+  };
 
-    // Task list ထဲက ဖယ်မယ်
-    if (type === 'bot') setBotTasks(prev => prev.filter(t => t.id !== id));
-    else setSocialTasks(prev => prev.filter(t => t.id !== id));
+  const handleRedeem = () => {
+    if (redeemCode === 'YTTPO') {
+      handleAction(0.0005);
+      setRedeemCode('');
+      alert("Code Redeemed Successfully!");
+    } else {
+      alert("Invalid Code!");
+    }
   };
 
   return (
-    <div style={{ backgroundColor: '#0f172a', color: 'white', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', paddingBottom: '100px' }}>
+    <div style={{ backgroundColor: '#111827', color: 'white', minHeight: '100vh', padding: '15px', fontFamily: 'sans-serif', paddingBottom: '80px' }}>
       
-      {/* Balance Card */}
-      <div style={{ textAlign: 'center', backgroundColor: '#1e293b', padding: '25px', borderRadius: '25px', marginBottom: '20px', border: '1px solid #334155' }}>
-        <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 5px 0' }}>Your Balance</p>
-        <h1 style={{ color: '#fbbf24', fontSize: '32px', fontWeight: '900', margin: 0 }}>{balance.toFixed(4)} TON</h1>
+      {/* Header Balance */}
+      <div style={{ backgroundColor: '#1f2937', padding: '25px', borderRadius: '20px', textAlign: 'center', marginBottom: '15px' }}>
+        <p style={{ color: '#9ca3af', fontSize: '14px', margin: 0 }}>Your Balance</p>
+        <h1 style={{ color: '#facc15', fontSize: '32px', margin: '5px 0' }}>{balance.toFixed(4)} TON</h1>
       </div>
 
       {activeNav === 'earn' && (
-        <div style={{ backgroundColor: '#1e293b', padding: '20px', borderRadius: '20px', border: '1px solid #334155' }}>
-          <h3 style={{ marginTop: 0 }}>Available Tasks</h3>
-          <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '15px' }}>Complete any 1 task to verify your invite!</p>
-          
-          {/* Tab Switcher */}
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-            <button onClick={() => setActiveTab('bot')} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', backgroundColor: activeTab === 'bot' ? '#fbbf24' : '#0f172a', color: activeTab === 'bot' ? '#000' : '#fff', fontWeight: 'bold' }}>Bot</button>
-            <button onClick={() => setActiveTab('social')} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', backgroundColor: activeTab === 'social' ? '#fbbf24' : '#0f172a', color: activeTab === 'social' ? '#000' : '#fff', fontWeight: 'bold' }}>Social</button>
+        <>
+          {/* Sub-Tabs */}
+          <div style={{ display: 'flex', backgroundColor: '#1f2937', borderRadius: '12px', padding: '5px', marginBottom: '15px' }}>
+            {['bot', 'social', 'reward'].map((tab) => (
+              <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', backgroundColor: activeTab === tab ? '#facc15' : 'transparent', color: activeTab === tab ? '#000' : '#fff', fontWeight: 'bold', textTransform: 'capitalize' }}>
+                {tab === 'bot' ? 'Start Bot' : tab}
+              </button>
+            ))}
           </div>
 
-          {/* Task List */}
-          {(activeTab === 'bot' ? botTasks : socialTasks).map(task => (
-            <div key={task.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#0f172a', padding: '12px', borderRadius: '15px', marginBottom: '10px', border: '1px solid #334155' }}>
-              <span style={{ fontSize: '13px' }}>{task.name}</span>
-              <button 
-                onClick={() => { if(task.link) window.open(task.link, '_blank'); handleTaskComplete(task.id, activeTab); }}
-                style={{ backgroundColor: '#fbbf24', color: '#000', border: 'none', padding: '8px 20px', borderRadius: '10px', fontWeight: 'bold' }}
-              >
-                Start
-              </button>
-            </div>
-          ))}
-        </div>
+          <div style={{ backgroundColor: '#1f2937', padding: '20px', borderRadius: '20px' }}>
+            {/* Start Bot List */}
+            {activeTab === 'bot' && botTasks.map(task => (
+              <div key={task.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <span>{task.name}</span>
+                <button onClick={() => { window.open(task.link, '_blank'); handleAction(); }} style={{ backgroundColor: '#facc15', border: 'none', padding: '8px 20px', borderRadius: '10px', fontWeight: 'bold' }}>Start</button>
+              </div>
+            ))}
+
+            {/* Social List */}
+            {activeTab === 'social' && socialTasks.map(task => (
+              <div key={task.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <span>{task.name}</span>
+                <button onClick={() => handleAction()} style={{ backgroundColor: '#60a5fa', border: 'none', padding: '8px 20px', borderRadius: '10px', color: '#fff' }}>Join</button>
+              </div>
+            ))}
+
+            {/* Reward Code Section */}
+            {activeTab === 'reward' && (
+              <div style={{ textAlign: 'center' }}>
+                <h3 style={{ marginBottom: '15px' }}>Redeem Reward Code</h3>
+                <input style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #374151', backgroundColor: '#111827', color: '#fff', textAlign: 'center', marginBottom: '15px' }} placeholder="ENTER CODE (YTTPO)" value={redeemCode} onChange={(e) => setRedeemCode(e.target.value)} />
+                <button onClick={handleRedeem} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: 'none', backgroundColor: '#facc15', fontWeight: 'bold' }}>Claim Now</button>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
-      {/* Invite Tab */}
-      {activeNav === 'invite' && (
-        <div style={{ backgroundColor: '#1e293b', padding: '20px', borderRadius: '20px', textAlign: 'center' }}>
-          <h3>Invite Friends</h3>
-          <input style={{ width: '100%', padding: '12px', borderRadius: '10px', border: 'none', backgroundColor: '#0f172a', color: '#fff', textAlign: 'center' }} value={`https://t.me/EasyTONFree_Bot?start=${userUID}`} readOnly />
-          <button onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${userUID}`); alert("Link Copied!"); }} style={{ width: '100%', marginTop: '10px', padding: '12px', borderRadius: '10px', border: 'none', backgroundColor: '#fbbf24', fontWeight: 'bold' }}>Copy Link</button>
-          <h4 style={{ marginTop: '20px' }}>Invite History (Success)</h4>
-          {inviteHistory.map((h, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #334155' }}>
-              <span style={{ fontSize: '12px' }}>ID: {h.id}</span>
-              <span style={{ color: '#4ade80' }}>{h.status} (+{h.reward})</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Navigation Footer */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '20px', backgroundColor: '#1e293b', borderTop: '1px solid #334155' }}>
-        <div onClick={() => setActiveNav('earn')} style={{ color: activeNav === 'earn' ? '#fbbf24' : '#94a3b8', fontWeight: 'bold', cursor: 'pointer' }}>💰 Earn</div>
-        <div onClick={() => setActiveNav('invite')} style={{ color: activeNav === 'invite' ? '#fbbf24' : '#94a3b8', fontWeight: 'bold', cursor: 'pointer' }}>👥 Invite</div>
+      {/* Footer Nav */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '15px', backgroundColor: '#1f2937', borderTop: '1px solid #374151' }}>
+        <div onClick={() => setActiveNav('earn')} style={{ textAlign: 'center', color: activeNav === 'earn' ? '#facc15' : '#9ca3af' }}>💰<br/><span style={{fontSize: '10px'}}>Earn</span></div>
+        <div onClick={() => setActiveNav('invite')} style={{ textAlign: 'center', color: activeNav === 'invite' ? '#facc15' : '#9ca3af' }}>👥<br/><span style={{fontSize: '10px'}}>Invite</span></div>
+        <div onClick={() => setActiveNav('withdraw')} style={{ textAlign: 'center', color: activeNav === 'withdraw' ? '#facc15' : '#9ca3af' }}>💸<br/><span style={{fontSize: '10px'}}>Withdraw</span></div>
+        <div onClick={() => setActiveNav('profile')} style={{ textAlign: 'center', color: activeNav === 'profile' ? '#facc15' : '#9ca3af' }}>👤<br/><span style={{fontSize: '10px'}}>Profile</span></div>
       </div>
     </div>
   );
