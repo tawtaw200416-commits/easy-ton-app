@@ -28,21 +28,18 @@ function App() {
 
   // Task ခလုတ်နှိပ်လိုက်တာနဲ့ ပျောက်သွားစေမယ့် Logic
   const handleTaskComplete = (id, type) => {
-    // ၁။ အရင်ဆုံး Task ကို ဖျောက်လိုက်မယ်
     if (type === 'bot') {
       setBotTasks(botTasks.filter(t => t.id !== id));
     } else {
       setSocialTasks(socialTasks.filter((_, index) => index !== id));
     }
 
-    // ၂။ ကြော်ငြာပြမယ်
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: blockId });
       AdController.show().then(() => {
-        // ၃။ ကြော်ငြာကြည့်ပြီးရင် ဆုကြေးပေါင်းပေးမယ်
         setBalance(prev => prev + 0.0005);
       }).catch((err) => {
-        console.error("Ad not finished or Error:", err);
+        console.error("Ad error:", err);
       });
     }
   };
@@ -106,7 +103,7 @@ function App() {
           {activeTab === 'social' && !showPayForm && (
             <div style={styles.card}>
               <h4 style={{fontWeight: '900'}}>Social Channels (0.0005 TON)</h4>
-              <div style={{maxHeight: '40vh', overflowY: 'auto'}}>
+              <div style={{maxHeight: '40vh', overflowY: 'auto', marginBottom: '15px'}}>
                 {socialTasks.map((c, i) => (
                   <div key={i} style={styles.taskItem}>
                     <div style={{display: 'flex', alignItems: 'center'}}>
@@ -117,34 +114,69 @@ function App() {
                   </div>
                 ))}
               </div>
+
+              {/* Add Task & Options ပြန်ထည့်ထားပါတယ် */}
+              <div style={{borderTop: '1px solid #334155', paddingTop: '15px'}}>
+                <button style={{...styles.btn(), width: '100%', padding: '15px'}} onClick={() => setShowAddOptions(!showAddOptions)}>
+                   {showAddOptions ? '✕ Close' : '+ Add Task'}
+                </button>
+                {showAddOptions && (
+                  <div style={{display: 'flex', gap: '10px', marginTop: '10px'}}>
+                    <button style={{...styles.btn(), flex: 1}} onClick={() => setShowPayForm(true)}>Add Order</button>
+                    <button style={{...styles.btn('#38bdf8'), flex: 1}}>My History</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {showPayForm && (
+            <div style={styles.card}>
+              <h4 style={{fontWeight: '900'}}>Order Placement (Add Task)</h4>
+              <p style={{fontSize: '11px', color: '#94a3b8', marginBottom: '10px'}}>သတိပေးချက် - MEMO ကုဒ်ကို မှန်အောင်ထည့်ပါ။</p>
+              <input style={styles.input} placeholder="Task Name (eg. @MyChannel)" />
+              <input style={styles.input} placeholder="Link (eg. https://t.me/...)" />
+              
+              <div style={styles.historyBox}>
+                <p style={{fontSize: '11px', fontWeight: '900'}}>Pay Address: <span style={styles.copyBadge} onClick={() => copyToClipboard(adminAddress)}>COPY</span></p>
+                <p style={{color: '#fbbf24', fontSize: '10px', wordBreak: 'break-all'}}>{adminAddress}</p>
+                
+                <p style={{marginTop: '10px', fontSize: '11px', fontWeight: '900'}}>MEMO (လိုအပ်သည်): <span style={styles.copyBadge} onClick={() => copyToClipboard(userUID)}>COPY</span></p>
+                <p style={{color: '#fbbf24', fontSize: '18px'}}>{userUID}</p>
+              </div>
+              
+              <button style={{...styles.btn(), width: '100%', marginTop: '15px', padding: '15px'}} onClick={() => setShowPayForm(false)}>Confirm & Submit</button>
             </div>
           )}
 
           {activeTab === 'reward' && (
             <div style={{...styles.card, textAlign: 'center'}}>
               <h4 style={{fontWeight: '900'}}>Redeem Reward Code</h4>
+              <p style={{fontSize: '11px', color: '#94a3b8', marginBottom: '15px'}}>Code ကို ရိုက်ထည့်ပြီး Claim နှိပ်ပါ။</p>
               <input style={{...styles.input, textAlign: 'center'}} placeholder="CODE (YTTPO)" />
-              <button style={{...styles.btn(), width: '100%'}}>Claim Now</button>
+              <button style={{...styles.btn(), width: '100%', padding: '15px'}}>Claim Now</button>
             </div>
           )}
         </>
       )}
 
-      {/* Invite & Withdraw section - Keep as before */}
+      {/* Footer & Navigation အပိုင်းများ */}
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3 style={{color: '#fbbf24', textAlign: 'center', fontWeight: '900'}}>Refer & Earn 10%</h3>
+          <p style={{textAlign: 'center', fontSize: '12px', marginBottom: '15px'}}>သူငယ်ချင်းများကို ဖိတ်ခေါ်ပြီး Reward ရယူပါ။</p>
           <input style={styles.input} value={`https://t.me/EasyEarnBot?start=${userUID}`} readOnly />
-          <button style={{...styles.btn(), width: '100%'}} onClick={() => copyToClipboard(`https://t.me/EasyEarnBot?start=${userUID}`)}>Copy Referral Link</button>
+          <button style={{...styles.btn(), width: '100%', padding: '15px'}} onClick={() => copyToClipboard(`https://t.me/EasyEarnBot?start=${userUID}`)}>Copy Link</button>
         </div>
       )}
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3 style={{color: '#fbbf24', textAlign: 'center', fontWeight: '900'}}>Withdraw TON</h3>
-          <input style={styles.input} placeholder="Amount" type="number" />
-          <input style={styles.input} placeholder="Wallet Address" />
-          <button style={{...styles.btn(), width: '100%'}}>Submit Request</button>
+          <p style={{textAlign: 'center', fontSize: '12px', marginBottom: '15px'}}>အနည်းဆုံး 0.5 TON ရှိမှ ထုတ်ယူနိုင်ပါမည်။</p>
+          <input style={styles.input} placeholder="Amount (min 0.5)" type="number" />
+          <input style={styles.input} placeholder="Your TON Wallet Address" />
+          <button style={{...styles.btn(), width: '100%', padding: '15px'}}>Submit Withdrawal</button>
         </div>
       )}
 
