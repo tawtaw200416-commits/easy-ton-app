@@ -3,116 +3,132 @@ import React, { useState } from 'react';
 function App() {
   const [balance, setBalance] = useState(0.0000);
   const [activeTab, setActiveTab] = useState('tasks');
-  const [activeCategory, setActiveCategory] = useState('main');
+  const [activeNav, setActiveNav] = useState('earn');
   const [claimCode, setClaimCode] = useState('');
+  
+  // Fake User UID for Demo
+  const userUID = "UID87654321";
+  const adminAddress = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
 
-  // Main Tasks Data
   const [mainTasks, setMainTasks] = useState([
     { id: 1, name: 'GrowTea Bot', link: 'https://t.me/GrowTeaBot/app?startapp=1793453606' },
-    { id: 2, name: 'Golden Miner', link: 'https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD' },
-    { id: 3, name: 'Workers On Ton', link: 'https://t.me/WorkersOnTonBot/app?startapp=r_1793453606' },
-    { id: 4, name: 'Easy Bonus Code', link: 'https://t.me/easybonuscode_bot?start=1793453606' },
-    { id: 5, name: 'Ton Dragon', link: 'https://t.me/TonDragonBot/myapp?startapp=1793453606' },
-    { id: 6, name: 'Pobuzz Bot', link: 'https://t.me/Pobuzzbot/app?startapp=1793453606' }
+    { id: 2, name: 'Golden Miner', link: 'https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD' }
   ]);
 
-  // Social Tasks Data
-  const socialTasks = [
-    "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", "@M9460", 
-    "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO", 
-    "@kombo_crypta", "@easytonfree", "@WORLDBESTCRYTO1", "@MONEYHUB9_69", "@zrbtua", "@perviu1million"
-  ];
-
-  const handleMainTask = (id, link) => {
-    window.open(link, '_blank');
-    setBalance(prev => prev + 0.0005);
-    setMainTasks(prev => prev.filter(task => task.id !== id));
-  };
-
-  const handleSocialJoin = (channel) => {
-    window.open(`https://t.me/${channel.replace('@', '')}`, '_blank');
-    setBalance(prev => prev + 0.0005);
-  };
+  const socialTasks = ["@GrowTeaNews", "@GoldenMinerNews", "@ADS_TON1"];
 
   const styles = {
-    container: { backgroundColor: '#0f172a', color: 'white', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', paddingBottom: '80px' },
-    header: { display: 'flex', alignItems: 'center', backgroundColor: '#1e293b', padding: '15px', borderRadius: '20px', border: '1px solid #334155', gap: '15px' },
-    balance: { color: '#fbbf24', fontSize: '20px', fontWeight: 'bold' },
-    tabBar: { display: 'flex', backgroundColor: '#1e293b', borderRadius: '12px', padding: '5px', margin: '20px 0' },
-    tabBtn: (active) => ({ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: active ? '#fbbf24' : 'transparent', color: active ? '#0f172a' : '#94a3b8', fontWeight: 'bold' }),
-    taskCard: { backgroundColor: '#1e293b', padding: '15px', borderRadius: '15px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #334155' },
-    startBtn: { backgroundColor: '#fbbf24', color: '#0f172a', padding: '8px 20px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' },
-    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#1e293b', display: 'flex', justifyContent: 'space-around', padding: '12px', borderTop: '1px solid #334155' },
-    footerItem: { textAlign: 'center', fontSize: '12px', color: '#94a3b8' }
+    container: { backgroundColor: '#0f172a', color: 'white', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', paddingBottom: '90px' },
+    header: { display: 'flex', alignItems: 'center', backgroundColor: '#1e293b', padding: '15px', borderRadius: '20px', border: '1px solid #334155', gap: '15px', marginBottom: '20px' },
+    balance: { color: '#fbbf24', fontSize: '22px', fontWeight: 'bold' },
+    tabBar: { display: 'flex', backgroundColor: '#1e293b', borderRadius: '12px', padding: '5px', marginBottom: '20px' },
+    tabBtn: (active) => ({ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: active ? '#fbbf24' : 'transparent', color: active ? '#0f172a' : '#94a3b8', fontWeight: 'bold', fontSize: '13px' }),
+    card: { backgroundColor: '#1e293b', padding: '20px', borderRadius: '15px', marginBottom: '15px', border: '1px solid #334155' },
+    taskItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid #334155' },
+    btn: (color='#fbbf24') => ({ backgroundColor: color, color: '#0f172a', padding: '8px 20px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }),
+    input: { width: '100%', padding: '12px', borderRadius: '10px', marginBottom: '12px', border: '1px solid #334155', backgroundColor: '#0f172a', color: 'white', boxSizing: 'border-box' },
+    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#1e293b', display: 'flex', justifyContent: 'space-around', padding: '15px', borderTop: '1px solid #334155' },
+    footerItem: (active) => ({ textAlign: 'center', fontSize: '11px', color: active ? '#fbbf24' : '#94a3b8', cursor: 'pointer' })
+  };
+
+  const handleClaim = () => {
+    if(claimCode === 'YTTPO') { alert('Code Claimed Successfully!'); setClaimCode(''); }
+    else { alert('Invalid Code!'); }
   };
 
   return (
     <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
-        <div style={{width: '45px', height: '45px', borderRadius: '50%', backgroundColor: '#fbbf24'}}></div>
+        <div style={{width: '50px', height: '50px', borderRadius: '50%', backgroundColor: '#fbbf24'}}></div>
         <div>
-          <div style={{fontSize: '14px'}}>Easy TON User</div>
+          <div style={{fontSize: '14px'}}>Shadow Bee's Empire</div>
           <div style={styles.balance}>{balance.toFixed(4)} TON</div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={styles.tabBar}>
-        <button style={styles.tabBtn(activeTab === 'tasks')} onClick={() => setActiveTab('tasks')}>Tasks</button>
-        <button style={styles.tabBtn(activeTab === 'social')} onClick={() => setActiveTab('social')}>Social</button>
-        <button style={styles.tabBtn(activeTab === 'rewards')} onClick={() => setActiveTab('rewards')}>Reward</button>
-      </div>
-
-      {/* Content */}
-      <div style={{marginTop: '10px'}}>
-        {activeTab === 'tasks' && (
-          <div>
-            <h4 style={{marginBottom: '15px', color: '#94a3b8'}}>Main Tasks</h4>
-            {mainTasks.length > 0 ? mainTasks.map(task => (
-              <div key={task.id} style={styles.taskCard}>
-                <span>{task.name}</span>
-                <button style={styles.startBtn} onClick={() => handleMainTask(task.id, task.link)}>Start</button>
+      {/* Main Content based on activeNav */}
+      {activeNav === 'earn' && (
+        <>
+          <div style={styles.tabBar}>
+            <button style={styles.tabBtn(activeTab === 'tasks')} onClick={() => setActiveTab('tasks')}>Tasks</button>
+            <button style={styles.tabBtn(activeTab === 'reward')} onClick={() => setActiveTab('reward')}>Reward</button>
+            <button style={styles.tabBtn(activeTab === 'social')} onClick={() => setActiveTab('social')}>Social</button>
+          </div>
+          {activeTab === 'tasks' && (
+            <div style={styles.card}>
+              <h4>Main Tasks (0.0005 TON)</h4>
+              {mainTasks.map(t => (
+                <div key={t.id} style={styles.taskItem}>
+                  <span style={{fontSize: '14px'}}>{t.name}</span>
+                  <button style={styles.btn()} onClick={() => window.open(t.link, '_blank')}>Start</button>
+                </div>
+              ))}
+            </div>
+          )}
+          {activeTab === 'reward' && (
+            <div style={{...styles.card, textAlign: 'center'}}>
+              <h4 style={{color: '#fbbf24'}}>Enter Code</h4>
+              <input style={{...styles.input, textAlign: 'center'}} placeholder="Type Code Here" value={claimCode} onChange={(e)=>setClaimCode(e.target.value.toUpperCase())} />
+              <button style={{...styles.btn(), width: '100%', padding: '12px'}} onClick={handleClaim}>CLAIM NOW</button>
+            </div>
+          )}
+          {activeTab === 'social' && (
+            <>
+              <div style={styles.card}>
+                <h4>Social Channels</h4>
+                {socialTasks.map((c, i) => (
+                  <div key={i} style={styles.taskItem}>
+                    <span style={{fontSize: '13px'}}>{c}</span>
+                    <button style={styles.btn('#38bdf8')} onClick={() => window.open(`https://t.me/${c.replace('@','')}`, '_blank')}>Join</button>
+                  </div>
+                ))}
               </div>
-            )) : <p style={{textAlign: 'center', color: '#64748b'}}>All tasks completed!</p>}
-          </div>
-        )}
+              <button style={{...styles.btn(), width: '100%', padding: '15px', fontSize: '14px'}}>+ Add Task</button>
+            </>
+          )}
+        </>
+      )}
 
-        {activeTab === 'social' && (
-          <div>
-            <h4 style={{marginBottom: '15px', color: '#94a3b8'}}>Social Channels</h4>
-            {socialTasks.map((channel, index) => (
-              <div key={index} style={styles.taskCard}>
-                <span style={{fontSize: '14px'}}>{channel}</span>
-                <button style={{...styles.startBtn, backgroundColor: '#38bdf8'}} onClick={() => handleSocialJoin(channel)}>Join</button>
-              </div>
-            ))}
-          </div>
-        )}
+      {activeNav === 'invite' && (
+        <div style={styles.card}>
+          <h3 style={{color: '#fbbf24', textAlign: 'center'}}>Invite Friends</h3>
+          <p style={{fontSize: '13px', color: '#94a3b8', textAlign: 'center'}}>Earn 0.0005 TON per invite.</p>
+          <input style={{...styles.input, color: '#94a3b8', fontSize: '12px'}} value={`https://t.me/YourBot?start=${userUID}`} readOnly />
+          <button style={{...styles.btn(), width: '100%', marginBottom: '20px'}} onClick={() => alert('Link Copied!')}>Copy Link</button>
+          <h4>Invite History (0 users)</h4>
+          <div style={{fontSize: '12px', color: '#64748b', textAlign: 'center', padding: '10px'}}>No invites yet.</div>
+        </div>
+      )}
 
-        {activeTab === 'rewards' && (
-          <div style={{textAlign: 'center', padding: '20px', backgroundColor: '#1e293b', borderRadius: '20px'}}>
-            <h3 style={{color: '#fbbf24'}}>Code Reward</h3>
-            <input 
-              style={{width: '90%', padding: '12px', borderRadius: '10px', marginBottom: '15px', border: '1px solid #334155', backgroundColor: '#0f172a', color: 'white', textAlign: 'center'}}
-              placeholder="Enter Code (YTTPO)"
-              value={claimCode}
-              onChange={(e) => setClaimCode(e.target.value.toUpperCase())}
-            />
-            <button style={{...styles.startBtn, width: '100%', padding: '12px'}} onClick={() => {
-              if(claimCode === 'YTTPO') { setBalance(prev => prev + 0.0005); alert('Reward Claimed!'); setClaimCode(''); }
-              else { alert('Wrong Code!'); }
-            }}>Claim</button>
-          </div>
-        )}
-      </div>
+      {activeNav === 'withdraw' && (
+        <div style={styles.card}>
+          <h3 style={{color: '#fbbf24', textAlign: 'center'}}>Withdraw TON</h3>
+          <input style={styles.input} type="number" placeholder="Amount (Min: 0.1 TON)" />
+          <input style={styles.input} placeholder="Enter TON Wallet Address" />
+          <button style={{...styles.btn(), width: '100%', marginBottom: '20px', padding: '12px'}}>Withdraw Now</button>
+          <h4>Withdraw History</h4>
+          <div style={{fontSize: '12px', color: '#64748b', textAlign: 'center', padding: '10px'}}>No history.</div>
+        </div>
+      )}
+
+      {activeNav === 'profile' && (
+        <div style={{...styles.card, border: '1px solid #ef4444'}}>
+          <h3 style={{color: '#ef4444', textAlign: 'center'}}>⚠️ Account Policy</h3>
+          <p style={{fontSize: '14px', color: '#fca5a5', lineHeight: '1.6'}}>
+            Using multiple or fake accounts to exploit rewards is strictly prohibited. 
+            All accounts involved in such activities will be <strong style={{color: 'white'}}>PERMANENTLY BANNED</strong> without notice.
+            Withdrawals will only be processed for valid, unique accounts.
+          </p>
+        </div>
+      )}
 
       {/* Bottom Navigation */}
       <div style={styles.footer}>
-        <div style={{...styles.footerItem, color: '#fbbf24'}}>💰<br/>Earn</div>
-        <div style={styles.footerItem}>👥<br/>Invite</div>
-        <div style={styles.footerItem}>💸<br/>Withdraw</div>
-        <div style={styles.footerItem}>👤<br/>Profile</div>
+        <div style={styles.footerItem(activeNav === 'earn')} onClick={() => setActiveNav('earn')}>💰<br/>Earn</div>
+        <div style={styles.footerItem(activeNav === 'invite')} onClick={() => setActiveNav('invite')}>👥<br/>Invite</div>
+        <div style={styles.footerItem(activeNav === 'withdraw')} onClick={() => setActiveNav('withdraw')}>💸<br/>Withdraw</div>
+        <div style={styles.footerItem(activeNav === 'profile')} onClick={() => setActiveNav('profile')}>👤<br/>Profile</div>
       </div>
     </div>
   );
