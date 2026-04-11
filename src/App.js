@@ -59,7 +59,6 @@ function App() {
 
   return (
     <div style={styles.container}>
-      {/* Header */}
       <div style={styles.header}>
         <div style={{width: '50px', height: '50px', backgroundColor: '#fbbf24', borderRadius: '50%'}}></div>
         <div>
@@ -116,7 +115,7 @@ function App() {
               <input style={styles.input} placeholder="Channel Link" />
               <div style={styles.copyBox} onClick={() => copyToClipboard(adminAddress)}>
                 <small style={{color: '#94a3b8', fontSize: '10px'}}>Pay Address (Click to Copy)</small><br/>
-                <span style={{fontSize: '11px', color: '#fbbf24'}}>{adminAddress}</span>
+                <span style={{fontSize: '11px', color: '#fbbf24', wordBreak: 'break-all'}}>{adminAddress}</span>
               </div>
               <div style={styles.copyBox} onClick={() => copyToClipboard(userUID)}>
                 <small style={{color: '#94a3b8', fontSize: '10px'}}>MEMO / UID (Click to Copy)</small><br/>
@@ -153,7 +152,7 @@ function App() {
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3 style={{fontWeight: '900'}}>Withdraw TON</h3>
-          <input style={styles.input} placeholder="Amount (Min 0.5)" type="number" />
+          <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" />
           <input style={styles.input} placeholder="TON Wallet Address" />
           <button style={{...styles.btn(), width: '100%'}}>Withdraw Now</button>
           <h4 style={{marginTop: '25px', fontWeight: '900'}}>Withdraw History</h4>
@@ -170,21 +169,21 @@ function App() {
         <div style={styles.card}>
           <h3 style={{textAlign: 'center', fontWeight: '900'}}>My Profile</h3>
           <div style={{backgroundColor: '#0f172a', padding: '15px', borderRadius: '12px', border: '1px solid #334155'}}>
-            <p style={{fontWeight: '900'}}>UID: <span style={{color: '#fbbf24'}}>{userUID}</span></p>
-            <p style={{fontWeight: '900'}}>Status: <span style={{color: '#10b981'}}>Active</span></p>
+            <p style={{fontWeight: '900', margin: '8px 0'}}>UID: <span style={{color: '#fbbf24'}}>{userUID}</span></p>
+            <p style={{fontWeight: '900', margin: '8px 0'}}>Status: <span style={{color: '#10b981'}}>Active</span></p>
           </div>
           <div style={{marginTop: '20px', border: '1px solid #ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '15px', borderRadius: '15px'}}>
             <h4 style={{color: '#ef4444', marginTop: 0, fontWeight: '900'}}>⚠️ Policy</h4>
-            <p style={{fontSize: '12px', color: '#fca5a5'}}>Fake accounts are strictly prohibited. You will be banned if fraud is detected.</p>
+            <p style={{fontSize: '12px', color: '#fca5a5', lineHeight: '1.5'}}>Fake accounts and scripts are strictly prohibited. You will be banned permanently if fraud is detected.</p>
           </div>
         </div>
       )}
 
       <div style={styles.footer}>
-        <div style={{textAlign: 'center', fontSize: '11px', color: activeNav === 'earn' ? '#fbbf24' : '#94a3b8', fontWeight: '900'}} onClick={() => setActiveNav('earn')}>💰<br/>Earn</div>
-        <div style={{textAlign: 'center', fontSize: '11px', color: activeNav === 'invite' ? '#fbbf24' : '#94a3b8', fontWeight: '900'}} onClick={() => setActiveNav('invite')}>👥<br/>Invite</div>
-        <div style={{textAlign: 'center', fontSize: '11px', color: activeNav === 'withdraw' ? '#fbbf24' : '#94a3b8', fontWeight: '900'}} onClick={() => setActiveNav('withdraw')}>💸<br/>Withdraw</div>
-        <div style={{textAlign: 'center', fontSize: '11px', color: activeNav === 'profile' ? '#fbbf24' : '#94a3b8', fontWeight: '900'}} onClick={() => setActiveNav('profile')}>👤<br/>Profile</div>
+        <div style={{textAlign: 'center', fontSize: '11px', color: activeNav === 'earn' ? '#fbbf24' : '#94a3b8', fontWeight: '900', cursor: 'pointer'}} onClick={() => setActiveNav('earn')}>💰<br/>Earn</div>
+        <div style={{textAlign: 'center', fontSize: '11px', color: activeNav === 'invite' ? '#fbbf24' : '#94a3b8', fontWeight: '900', cursor: 'pointer'}} onClick={() => setActiveNav('invite')}>👥<br/>Invite</div>
+        <div style={{textAlign: 'center', fontSize: '11px', color: activeNav === 'withdraw' ? '#fbbf24' : '#94a3b8', fontWeight: '900', cursor: 'pointer'}} onClick={() => setActiveNav('withdraw')}>💸<br/>Withdraw</div>
+        <div style={{textAlign: 'center', fontSize: '11px', color: activeNav === 'profile' ? '#fbbf24' : '#94a3b8', fontWeight: '900', cursor: 'pointer'}} onClick={() => setActiveNav('profile')}>👤<br/>Profile</div>
       </div>
     </div>
   );
