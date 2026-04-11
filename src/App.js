@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 
 function App() {
-  const [balance, setBalance] = useState(0.0000);
+  const [balance, setBalance] = useState(0.0015);
   const [activeTab, setActiveTab] = useState('bot');
   const [activeNav, setActiveNav] = useState('earn');
   const [showAddOptions, setShowAddOptions] = useState(false);
   const [showPayForm, setShowPayForm] = useState(false);
-  const [claimCode, setClaimCode] = useState('');
   
   const userUID = "UID17934536";
   const adminAddress = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
+  
+  // အစ်ကိုပေးထားတဲ့ Block ID ကို အသေထည့်ထားပါတယ်
+  const blockId = "27393"; 
 
   const [botTasks, setBotTasks] = useState([
     { id: 1, name: 'GrowTea Bot', link: 'https://t.me/GrowTeaBot/app?startapp=1793453606' },
@@ -27,17 +29,29 @@ function App() {
   ]);
 
   const handleTaskComplete = (id, type) => {
-    setBalance(prev => prev + 0.0005);
-    if (type === 'bot') {
-      setBotTasks(botTasks.filter(t => t.id !== id));
+    // Adsgram Logic
+    if (window.Adsgram) {
+      const AdController = window.Adsgram.init({ blockId: blockId });
+      AdController.show().then((result) => {
+        // ကြော်ငြာအဆုံးထိကြည့်ပြီးမှ Balance တိုးပေးမယ်
+        setBalance(prev => prev + 0.0005);
+        if (type === 'bot') {
+          setBotTasks(botTasks.filter(t => t.id !== id));
+        } else {
+          setSocialTasks(socialTasks.filter((_, index) => index !== id));
+        }
+        alert("Success! +0.0005 TON Reward Added.");
+      }).catch((err) => {
+        alert("Error: You must watch the full ad to earn reward.");
+      });
     } else {
-      setSocialTasks(socialTasks.filter((_, index) => index !== id));
+      alert("Adsgram network is loading... Please try again.");
     }
   };
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    alert("Copied: " + text);
+    alert("Copied!");
   };
 
   const styles = {
@@ -46,7 +60,7 @@ function App() {
     tonHeaderImg: { width: '50px', height: '50px', borderRadius: '50%', border: '2px solid #fbbf24', objectFit: 'cover' },
     balance: { color: '#fbbf24', fontSize: '24px', fontWeight: '900' },
     tabBar: { display: 'flex', backgroundColor: '#1e293b', borderRadius: '12px', padding: '5px', marginBottom: '15px' },
-    tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: active ? '#fbbf24' : 'transparent', color: active ? '#0f172a' : '#94a3b8', fontWeight: '900', fontSize: '12px' }),
+    tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: active ? '#fbbf24' : 'transparent', color: active ? '#0f172a' : '#94a3b8', fontWeight: '900', fontSize: '11px' }),
     card: { backgroundColor: '#1e293b', padding: '18px', borderRadius: '20px', marginBottom: '15px', border: '1px solid #334155' },
     taskItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid #334155' },
     taskIcon: { width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #fbbf24', marginRight: '10px' },
@@ -60,7 +74,7 @@ function App() {
 
   return (
     <div style={styles.container}>
-      {/* Header */}
+      {/* Header Section */}
       <div style={styles.header}>
         <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_SAt0O7R4-A0N93T0O9x7I0h6S6-7oN5kAw&s" alt="TON" style={styles.tonHeaderImg} />
         <div>
@@ -71,6 +85,7 @@ function App() {
 
       {activeNav === 'earn' && (
         <>
+          {/* Main Tabs */}
           <div style={styles.tabBar}>
             <button style={styles.tabBtn(activeTab === 'bot')} onClick={() => {setActiveTab('bot'); setShowPayForm(false);}}>Start Bot</button>
             <button style={styles.tabBtn(activeTab === 'social')} onClick={() => {setActiveTab('social'); setShowPayForm(false);}}>Social</button>
@@ -106,6 +121,7 @@ function App() {
                   </div>
                 ))}
               </div>
+              
               <div style={{marginTop: '15px', borderTop: '1px solid #334155', paddingTop: '15px'}}>
                 <button style={{...styles.btn(), width: '100%', padding: '15px'}} onClick={() => setShowAddOptions(!showAddOptions)}>
                    {showAddOptions ? '✕ Close' : '+ Add Task'}
@@ -113,7 +129,7 @@ function App() {
                 {showAddOptions && (
                   <div style={{display: 'flex', gap: '10px', marginTop: '10px'}}>
                     <button style={{...styles.btn(), flex: 1}} onClick={() => setShowPayForm(true)}>Add Task</button>
-                    <button style={{...styles.btn('#38bdf8'), flex: 1}} onClick={() => alert('Order History is empty')}>My Task</button>
+                    <button style={{...styles.btn('#38bdf8'), flex: 1}} onClick={() => alert('Order History: Empty')}>My Task</button>
                   </div>
                 )}
               </div>
@@ -122,85 +138,52 @@ function App() {
 
           {showPayForm && (
             <div style={styles.card}>
-              <h4 style={{fontWeight: '900'}}>Payment Details</h4>
+              <h4 style={{fontWeight: '900'}}>Order Placement</h4>
               <input style={styles.input} placeholder="Task Name" />
-              <input style={styles.input} placeholder="Telegram Link" />
-              <select style={styles.input}>
-                <option>100 Members - 0.2 TON</option>
-                <option>200 Members - 0.4 TON</option>
-                <option>300 Members - 0.5 TON</option>
-              </select>
+              <input style={styles.input} placeholder="Link" />
               <div style={styles.historyBox}>
-                <p style={{fontSize: '11px', fontWeight: '900'}}>TON Address:</p>
-                <p style={{color: '#fbbf24', fontSize: '10px', wordBreak: 'break-all'}}>
-                  {adminAddress} <span style={styles.copyBadge} onClick={() => copyToClipboard(adminAddress)}>COPY</span>
-                </p>
-                <p style={{marginTop: '10px', fontSize: '11px', fontWeight: '900'}}>MEMO (Required):</p>
-                <p style={{color: '#fbbf24', fontSize: '18px', fontWeight: '900'}}>
-                  {userUID} <span style={styles.copyBadge} onClick={() => copyToClipboard(userUID)}>COPY</span>
-                </p>
+                <p style={{fontSize: '11px', fontWeight: '900'}}>Pay Address: <span style={styles.copyBadge} onClick={() => copyToClipboard(adminAddress)}>COPY</span></p>
+                <p style={{color: '#fbbf24', fontSize: '10px', wordBreak: 'break-all'}}>{adminAddress}</p>
+                <p style={{marginTop: '10px', fontSize: '11px', fontWeight: '900'}}>MEMO: <span style={styles.copyBadge} onClick={() => copyToClipboard(userUID)}>COPY</span></p>
+                <p style={{color: '#fbbf24', fontSize: '18px'}}>{userUID}</p>
               </div>
-              <button style={{...styles.btn(), width: '100%', marginTop: '15px'}} onClick={() => {alert('Payment Notification Sent!'); setShowPayForm(false);}}>Confirm Payment</button>
+              <button style={{...styles.btn(), width: '100%', marginTop: '15px'}} onClick={() => setShowPayForm(false)}>Confirm Order</button>
             </div>
           )}
 
           {activeTab === 'reward' && (
             <div style={{...styles.card, textAlign: 'center'}}>
-              <h4 style={{fontWeight: '900'}}>Redeem Code</h4>
-              <input style={{...styles.input, textAlign: 'center'}} placeholder="ENTER CODE" value={claimCode} onChange={(e)=>setClaimCode(e.target.value.toUpperCase())} />
-              <button style={{...styles.btn(), width: '100%'}}>Claim</button>
+              <h4 style={{fontWeight: '900'}}>Redeem Reward Code</h4>
+              <input style={{...styles.input, textAlign: 'center'}} placeholder="CODE HERE" />
+              <button style={{...styles.btn(), width: '100%'}}>Redeem</button>
             </div>
           )}
         </>
       )}
 
+      {/* Footer Nav Sections */}
       {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h3 style={{color: '#fbbf24', textAlign: 'center', fontWeight: '900'}}>Invite Friends</h3>
-          <p style={{textAlign: 'center', fontSize: '13px', fontWeight: '900'}}>Earn 10% from friend's earnings!</p>
+          <h3 style={{color: '#fbbf24', textAlign: 'center', fontWeight: '900'}}>Refer & Earn 10%</h3>
           <input style={styles.input} value={`https://t.me/EasyEarnBot?start=${userUID}`} readOnly />
-          <button style={{...styles.btn(), width: '100%'}} onClick={() => copyToClipboard(`https://t.me/EasyEarnBot?start=${userUID}`)}>Copy Link</button>
-          
-          <h4 style={{marginTop: '25px', fontWeight: '900'}}>Invite History</h4>
-          <div style={styles.historyBox}>
-            <div style={{display: 'flex', justifyContent: 'space-between', fontWeight: '900', fontSize: '12px'}}>
-              <span>Total Referrals:</span>
-              <span style={{color: '#fbbf24'}}>0 Users</span>
-            </div>
-            <p style={{textAlign: 'center', color: '#64748b', fontSize: '11px', marginTop: '10px'}}>No referral activity yet.</p>
-          </div>
+          <button style={{...styles.btn(), width: '100%'}} onClick={() => copyToClipboard(`https://t.me/EasyEarnBot?start=${userUID}`)}>Copy Referral</button>
+          <h4 style={{marginTop: '25px', fontWeight: '900'}}>History</h4>
+          <div style={styles.historyBox}><p style={{textAlign: 'center', color: '#64748b'}}>No referrals found.</p></div>
         </div>
       )}
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h3 style={{color: '#fbbf24', textAlign: 'center', fontWeight: '900'}}>Withdraw</h3>
-          <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" />
-          <input style={styles.input} placeholder="TON Wallet Address" />
-          <button style={{...styles.btn(), width: '100%'}}>Withdraw Now</button>
-          
-          <h4 style={{marginTop: '25px', fontWeight: '900'}}>Withdraw History</h4>
-          <div style={{...styles.historyBox, textAlign: 'center', color: '#64748b', fontSize: '11px'}}>
-            No withdrawal records found.
-          </div>
+          <h3 style={{color: '#fbbf24', textAlign: 'center', fontWeight: '900'}}>Withdraw TON</h3>
+          <input style={styles.input} placeholder="Amount" type="number" />
+          <input style={styles.input} placeholder="Wallet Address" />
+          <button style={{...styles.btn(), width: '100%'}}>Send Request</button>
+          <h4 style={{marginTop: '20px', fontWeight: '900'}}>Withdraw History</h4>
+          <div style={styles.historyBox}><p style={{textAlign: 'center', color: '#64748b'}}>No data available.</p></div>
         </div>
       )}
 
-      {activeNav === 'profile' && (
-        <div style={styles.card}>
-          <h3 style={{textAlign: 'center', fontWeight: '900'}}>My Account</h3>
-          <div style={styles.historyBox}>
-            <p style={{fontWeight: '900'}}>UID: <span style={{color: '#fbbf24'}}>{userUID}</span></p>
-            <p style={{fontWeight: '900'}}>Status: <span style={{color: '#10b981'}}>Active</span></p>
-          </div>
-          <div style={{marginTop: '20px', border: '1px solid #ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '15px', borderRadius: '15px'}}>
-            <h4 style={{color: '#ef4444', marginTop: 0, fontWeight: '900'}}>⚠️ Policy</h4>
-            <p style={{fontSize: '13px', color: '#fca5a5', fontWeight: '900'}}>Fake accounts are strictly prohibited. You will be banned permanently if fraud is detected.</p>
-          </div>
-        </div>
-      )}
-
-      {/* Footer Nav */}
+      {/* Persistent Footer */}
       <div style={styles.footer}>
         <div style={styles.footerItem(activeNav === 'earn')} onClick={() => setActiveNav('earn')}>💰<br/>Earn</div>
         <div style={styles.footerItem(activeNav === 'invite')} onClick={() => setActiveNav('invite')}>👥<br/>Invite</div>
