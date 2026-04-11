@@ -20,22 +20,38 @@ function App() {
   ]);
 
   const [socialTasks, setSocialTasks] = useState([
-    "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", "@M9460", 
-    "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO", 
-    "@kombo_crypta", "@easytonfree", "@WORLDBESTCRYTO1", "@MONEYHUB9_69", "@zrbtua", "@perviu1million"
+    { id: 101, name: "@GrowTeaNews" },
+    { id: 102, name: "@GoldenMinerNews" },
+    { id: 103, name: "@cryptogold_online_official" },
+    { id: 104, name: "@M9460" },
+    { id: 105, name: "@USDTcloudminer_channel" },
+    { id: 106, name: "@ADS_TON1" },
+    { id: 107, name: "@goblincrypto" },
+    { id: 108, name: "@WORLDBESTCRYTO" },
+    { id: 109, name: "@kombo_crypta" },
+    { id: 110, name: "@easytonfree" },
+    { id: 111, name: "@WORLDBESTCRYTO1" },
+    { id: 112, name: "@MONEYHUB9_69" },
+    { id: 113, name: "@zrbtua" },
+    { id: 114, name: "@perviu1million" }
   ]);
 
   const handleTaskComplete = (id, type) => {
+    // ၁။ Task ကို ချက်ချင်းဖျောက်မယ်
     if (type === 'bot') {
       setBotTasks(prev => prev.filter(t => t.id !== id));
     } else {
-      setSocialTasks(prev => prev.filter((_, index) => index !== id));
+      setSocialTasks(prev => prev.filter(t => t.id !== id));
     }
+
+    // ၂။ ကြော်ငြာပြမယ်၊ ကြည့်ပြီးမှ ပိုက်ဆံပေါင်းမယ်
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: blockId });
       AdController.show().then(() => {
-        setBalance(prev => prev + 0.0005);
-      }).catch((err) => console.error(err));
+        setBalance(prev => prev + 0.0005); // +0.0005 TON Reward
+      }).catch((err) => {
+        console.error("Ad not finished", err);
+      });
     }
   };
 
@@ -57,7 +73,7 @@ function App() {
     input: { width: '100%', padding: '12px', borderRadius: '10px', marginBottom: '12px', border: '1px solid #334155', backgroundColor: '#0f172a', color: 'white', boxSizing: 'border-box' },
     footer: { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#1e293b', display: 'flex', justifyContent: 'space-around', padding: '18px', borderTop: '1px solid #334155', zIndex: 100 },
     footerItem: (active) => ({ textAlign: 'center', fontSize: '11px', color: active ? '#fbbf24' : '#94a3b8', fontWeight: '900' }),
-    copyBox: { backgroundColor: '#0f172a', padding: '12px', borderRadius: '12px', marginBottom: '10px', border: '1px solid #334155', position: 'relative', cursor: 'pointer' },
+    copyBox: { backgroundColor: '#0f172a', padding: '12px', borderRadius: '12px', marginBottom: '10px', border: '1px solid #334155', cursor: 'pointer' },
     copyLabel: { fontSize: '10px', color: '#94a3b8', display: 'block', marginBottom: '4px' },
     copyValue: { fontSize: '13px', color: '#fbbf24', wordBreak: 'break-all', fontWeight: '700' }
   };
@@ -94,15 +110,17 @@ function App() {
 
           {activeTab === 'social' && !showPayForm && (
             <div style={styles.card}>
-              <h4 style={{fontWeight: '900'}}>Social Channels</h4>
-              {socialTasks.map((c, i) => (
-                <div key={i} style={styles.taskItem}>
-                  <span style={{fontSize: '12px', fontWeight: '900'}}>{c}</span>
-                  <button style={styles.btn('#38bdf8')} onClick={() => { window.open(`https://t.me/${c.replace('@','')}`, '_blank'); handleTaskComplete(i, 'social'); }}>Join</button>
-                </div>
-              ))}
+              <h4 style={{fontWeight: '900'}}>Social Channels (0.0005 TON)</h4>
+              <div style={{maxHeight: '45vh', overflowY: 'auto', marginBottom: '10px'}}>
+                {socialTasks.map((t) => (
+                  <div key={t.id} style={styles.taskItem}>
+                    <span style={{fontSize: '12px', fontWeight: '900'}}>{t.name}</span>
+                    <button style={styles.btn('#38bdf8')} onClick={() => { window.open(`https://t.me/${t.name.replace('@','')}`, '_blank'); handleTaskComplete(t.id, 'social'); }}>Join</button>
+                  </div>
+                ))}
+              </div>
               {/* +Add Task Button - Right under social list */}
-              <button style={{...styles.btn(), width: '100%', marginTop: '10px', padding: '15px'}} onClick={() => setShowPayForm(true)}>
+              <button style={{...styles.btn(), width: '100%', padding: '15px'}} onClick={() => setShowPayForm(true)}>
                 + Add Your Task
               </button>
             </div>
