@@ -2,97 +2,114 @@ import React, { useState } from 'react';
 
 function App() {
   const [activeNav, setActiveNav] = useState('earn');
+  const [activeTab, setActiveTab] = useState('social'); // Default tab
   const [showPayForm, setShowPayForm] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState(null);
   
-  // User UID (In real app, fetch from TG WebApp)
+  // User Data
   const userUID = "1793453606";
   const adminWallet = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
-
-  const paymentPlans = [
-    { members: 100, price: 0.2 },
-    { members: 200, price: 0.4 },
-    { members: 300, price: 0.5 }
-  ];
-
+  
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     alert("Copied: " + text);
   };
 
   const styles = {
-    card: { backgroundColor: '#1c2536', borderRadius: '24px', padding: '20px', border: '1px solid #2d3748', marginBottom: '15px' },
-    input: { width: '100%', padding: '16px', borderRadius: '14px', backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', marginBottom: '15px', boxSizing: 'border-box' },
-    yellowBtn: { width: '100%', padding: '16px', borderRadius: '14px', backgroundColor: '#facc15', color: '#000', fontWeight: '900', border: 'none', cursor: 'pointer', fontSize: '16px' },
-    planBox: (isSelected) => ({
-      flex: 1, padding: '15px 10px', borderRadius: '14px', backgroundColor: isSelected ? '#facc15' : '#0f172a',
-      color: isSelected ? '#000' : '#fff', border: isSelected ? 'none' : '1px solid #334155',
-      textAlign: 'center', cursor: 'pointer', transition: '0.3s'
-    }),
-    copyLabel: { color: '#94a3b8', fontSize: '12px', marginBottom: '5px', display: 'block' }
+    container: { backgroundColor: '#101827', color: 'white', minHeight: '100vh', padding: '15px', fontFamily: 'sans-serif' },
+    balanceCard: { backgroundColor: '#1f2937', borderRadius: '25px', padding: '30px', textAlign: 'center', marginBottom: '20px', border: '1px solid #374151' },
+    tabContainer: { display: 'flex', backgroundColor: '#1f2937', borderRadius: '12px', padding: '5px', marginBottom: '20px' },
+    tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', backgroundColor: active ? '#fbbf24' : 'transparent', color: active ? '#000' : '#9ca3af', fontWeight: 'bold', cursor: 'pointer' }),
+    taskCard: { backgroundColor: '#1f2937', borderRadius: '20px', padding: '20px', border: '1px solid #374151' },
+    joinBtn: { backgroundColor: '#60a5fa', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
+    yellowBtn: { backgroundColor: '#fbbf24', color: '#000', border: 'none', padding: '15px', borderRadius: '15px', width: '100%', fontWeight: '900', fontSize: '16px', cursor: 'pointer', marginTop: '10px' },
+    input: { width: '100%', padding: '15px', borderRadius: '12px', backgroundColor: '#111827', color: 'white', border: '1px solid #374151', marginBottom: '15px', boxSizing: 'border-box' },
+    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '15px', backgroundColor: '#1f2937', borderTop: '1px solid #374151' }
   };
 
   return (
-    <div style={{ backgroundColor: '#131926', color: 'white', minHeight: '100vh', padding: '15px' }}>
-      
-      {/* Earn Section with Add Task Logic */}
+    <div style={styles.container}>
+      {/* Balance Section - Always Visible */}
+      <div style={styles.balanceCard}>
+        <p style={{ color: '#9ca3af', fontSize: '12px', margin: 0 }}>Available Balance</p>
+        <h1 style={{ color: '#fbbf24', fontSize: '36px', margin: '10px 0' }}>0.0000 TON</h1>
+      </div>
+
+      {/* Earn Section */}
       {activeNav === 'earn' && (
         <>
-          {!showPayForm ? (
-            <div style={styles.card}>
-              <h3 style={{ textAlign: 'center' }}>Social Channels</h3>
-              <button style={styles.yellowBtn} onClick={() => setShowPayForm(true)}>+ Add Your Task</button>
-            </div>
-          ) : (
-            <div style={styles.card}>
-              <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>Order Placement</h3>
-              
-              <input style={styles.input} placeholder="Channel Username (e.g. @yourchannel)" />
-              <input style={styles.input} placeholder="Invite Link" />
+          <div style={styles.tabContainer}>
+            <button style={styles.tabBtn(activeTab === 'bot')} onClick={() => setActiveTab('bot')}>Start Bot</button>
+            <button style={styles.tabBtn(activeTab === 'social')} onClick={() => setActiveTab('social')}>Social</button>
+            <button style={styles.tabBtn(activeTab === 'reward')} onClick={() => setActiveTab('reward')}>Reward</button>
+          </div>
 
-              <label style={{ marginBottom: '10px', display: 'block', fontWeight: 'bold' }}>Select Plan:</label>
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                {paymentPlans.map((plan, i) => (
-                  <div key={i} style={styles.planBox(selectedPlan === i)} onClick={() => setSelectedPlan(i)}>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{plan.members} Subs</div>
-                    <div style={{ fontSize: '12px' }}>{plan.price} TON</div>
+          <div style={styles.taskCard}>
+            {activeTab === 'social' && !showPayForm && (
+              <>
+                <button style={{...styles.yellowBtn, marginBottom: '20px', border: '1px dashed #000'}} onClick={() => setShowPayForm(true)}>+ ADD YOUR TASK</button>
+                <p style={{fontWeight: 'bold', marginBottom: '15px'}}>Social Channels (0.0005 TON)</p>
+                {["@GrowTeaNews", "@GoldenMinerNews", "@easytonefree"].map((channel, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #374151' }}>
+                    <span>{channel}</span>
+                    <button style={styles.joinBtn}>Join</button>
                   </div>
                 ))}
+              </>
+            )}
+
+            {activeTab === 'reward' && (
+              <div style={{ textAlign: 'center' }}>
+                <h3 style={{ marginBottom: '20px' }}>Redeem Reward Code</h3>
+                <input style={{...styles.input, textAlign: 'center'}} placeholder="ENTER CODE (YTTPO)" />
+                <button style={styles.yellowBtn}>Claim Now</button>
               </div>
+            )}
 
-              {selectedPlan !== null && (
-                <div style={{ backgroundColor: '#0f172a', padding: '15px', borderRadius: '16px', border: '1px solid #facc15', marginBottom: '20px' }}>
-                  <span style={styles.copyLabel}>Admin TON Address:</span>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', wordBreak: 'break-all', fontSize: '12px' }}>
-                    <code>{adminWallet}</code>
-                    <button onClick={() => copyToClipboard(adminWallet)} style={{ background: 'none', border: 'none', color: '#facc15', cursor: 'pointer', fontWeight: 'bold' }}>COPY</button>
-                  </div>
-                  
-                  <hr style={{ border: '0.5px solid #2d3748', margin: '15px 0' }} />
-                  
-                  <span style={styles.copyLabel}>Required MEMO (Your UID):</span>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <b style={{ color: '#facc15', fontSize: '16px' }}>{userUID}</b>
-                    <button onClick={() => copyToClipboard(userUID)} style={{ background: 'none', border: 'none', color: '#facc15', cursor: 'pointer', fontWeight: 'bold' }}>COPY</button>
-                  </div>
-                  <p style={{ fontSize: '10px', color: '#f87171', marginTop: '10px', textAlign: 'center' }}>
-                    ⚠️ Failure to include MEMO will result in loss of funds.
-                  </p>
-                </div>
-              )}
-
-              <button style={{ ...styles.yellowBtn, marginBottom: '10px' }} onClick={() => alert("Submit successful! Pending review.")}>Submit Order</button>
-              <button style={{ ...styles.yellowBtn, backgroundColor: '#334155', color: '#fff' }} onClick={() => setShowPayForm(false)}>Back</button>
-            </div>
-          )}
+            {showPayForm && (
+              <div style={{ textAlign: 'center' }}>
+                <h3 style={{ marginBottom: '20px' }}>Order Placement</h3>
+                <input style={styles.input} placeholder="Channel Username" />
+                <input style={styles.input} placeholder="Link" />
+                {/* Payment Plan Logic can be added here */}
+                <button style={styles.yellowBtn} onClick={() => setShowPayForm(false)}>Back</button>
+              </div>
+            )}
+          </div>
         </>
       )}
 
-      {/* Footer Nav Simulation */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '15px', backgroundColor: '#1c2536', borderTop: '1px solid #2d3748' }}>
-        <div style={{ color: activeNav === 'earn' ? '#facc15' : '#94a3b8' }} onClick={() => setActiveNav('earn')}>💰 Earn</div>
-        <div style={{ color: '#94a3b8' }}>👥 Invite</div>
-        <div style={{ color: '#94a3b8' }}>💸 Withdraw</div>
+      {/* Withdraw Section */}
+      {activeNav === 'withdraw' && (
+        <div style={styles.taskCard}>
+          <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>Withdrawal Request</h3>
+          <p style={{ fontSize: '12px', color: '#9ca3af' }}>Amount to Withdraw (TON):</p>
+          <input style={styles.input} type="number" placeholder="0.00" />
+          
+          <p style={{ fontSize: '12px', color: '#9ca3af' }}>TON Wallet Address:</p>
+          <input style={styles.input} placeholder="Enter Address" />
+
+          <div style={{ backgroundColor: '#111827', padding: '15px', borderRadius: '12px', border: '1px solid #fbbf24', marginBottom: '15px' }}>
+            <p style={{ color: '#fbbf24', fontSize: '13px', margin: 0, fontWeight: 'bold' }}>MEMO (Required): {userUID}</p>
+          </div>
+          
+          <button style={styles.yellowBtn}>CONFIRM WITHDRAWAL</button>
+        </div>
+      )}
+
+      {/* Footer Navigation */}
+      <div style={styles.footer}>
+        <div onClick={() => setActiveNav('earn')} style={{ textAlign: 'center', color: activeNav === 'earn' ? '#fbbf24' : '#9ca3af', cursor: 'pointer' }}>
+          <span style={{ fontSize: '20px' }}>💰</span><br/><small>Earn</small>
+        </div>
+        <div onClick={() => setActiveNav('invite')} style={{ textAlign: 'center', color: activeNav === 'invite' ? '#fbbf24' : '#9ca3af', cursor: 'pointer' }}>
+          <span style={{ fontSize: '20px' }}>👥</span><br/><small>Invite</small>
+        </div>
+        <div onClick={() => setActiveNav('withdraw')} style={{ textAlign: 'center', color: activeNav === 'withdraw' ? '#fbbf24' : '#9ca3af', cursor: 'pointer' }}>
+          <span style={{ fontSize: '20px' }}>💸</span><br/><small>Withdraw</small>
+        </div>
+        <div onClick={() => setActiveNav('profile')} style={{ textAlign: 'center', color: activeNav === 'profile' ? '#fbbf24' : '#9ca3af', cursor: 'pointer' }}>
+          <span style={{ fontSize: '20px' }}>👤</span><br/><small>Profile</small>
+        </div>
       </div>
     </div>
   );
