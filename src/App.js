@@ -9,8 +9,6 @@ function App() {
   
   const userUID = "UID17934536";
   const adminAddress = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
-  
-  // အစ်ကိုပေးထားတဲ့ Block ID ကို အသေထည့်ထားပါတယ်
   const blockId = "27393"; 
 
   const [botTasks, setBotTasks] = useState([
@@ -29,23 +27,18 @@ function App() {
   ]);
 
   const handleTaskComplete = (id, type) => {
-    // Adsgram Logic
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: blockId });
-      AdController.show().then((result) => {
-        // ကြော်ငြာအဆုံးထိကြည့်ပြီးမှ Balance တိုးပေးမယ်
+      AdController.show().then(() => {
         setBalance(prev => prev + 0.0005);
         if (type === 'bot') {
           setBotTasks(botTasks.filter(t => t.id !== id));
         } else {
           setSocialTasks(socialTasks.filter((_, index) => index !== id));
         }
-        alert("Success! +0.0005 TON Reward Added.");
       }).catch((err) => {
-        alert("Error: You must watch the full ad to earn reward.");
+        console.error(err);
       });
-    } else {
-      alert("Adsgram network is loading... Please try again.");
     }
   };
 
@@ -74,9 +67,8 @@ function App() {
 
   return (
     <div style={styles.container}>
-      {/* Header Section */}
       <div style={styles.header}>
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_SAt0O7R4-A0N93T0O9x7I0h6S6-7oN5kAw&s" alt="TON" style={styles.tonHeaderImg} />
+        <img src="https://cryptologos.cc/logos/toncoin-ton-logo.png" alt="TON" style={styles.tonHeaderImg} />
         <div>
           <div style={{fontSize: '15px', fontWeight: '900'}}>Easy Earn TON</div>
           <div style={styles.balance}>{balance.toFixed(4)} TON</div>
@@ -85,7 +77,6 @@ function App() {
 
       {activeNav === 'earn' && (
         <>
-          {/* Main Tabs */}
           <div style={styles.tabBar}>
             <button style={styles.tabBtn(activeTab === 'bot')} onClick={() => {setActiveTab('bot'); setShowPayForm(false);}}>Start Bot</button>
             <button style={styles.tabBtn(activeTab === 'social')} onClick={() => {setActiveTab('social'); setShowPayForm(false);}}>Social</button>
@@ -121,7 +112,6 @@ function App() {
                   </div>
                 ))}
               </div>
-              
               <div style={{marginTop: '15px', borderTop: '1px solid #334155', paddingTop: '15px'}}>
                 <button style={{...styles.btn(), width: '100%', padding: '15px'}} onClick={() => setShowAddOptions(!showAddOptions)}>
                    {showAddOptions ? '✕ Close' : '+ Add Task'}
@@ -129,7 +119,7 @@ function App() {
                 {showAddOptions && (
                   <div style={{display: 'flex', gap: '10px', marginTop: '10px'}}>
                     <button style={{...styles.btn(), flex: 1}} onClick={() => setShowPayForm(true)}>Add Task</button>
-                    <button style={{...styles.btn('#38bdf8'), flex: 1}} onClick={() => alert('Order History: Empty')}>My Task</button>
+                    <button style={{...styles.btn('#38bdf8'), flex: 1}}>My Task</button>
                   </div>
                 )}
               </div>
@@ -154,21 +144,18 @@ function App() {
           {activeTab === 'reward' && (
             <div style={{...styles.card, textAlign: 'center'}}>
               <h4 style={{fontWeight: '900'}}>Redeem Reward Code</h4>
-              <input style={{...styles.input, textAlign: 'center'}} placeholder="CODE HERE" />
-              <button style={{...styles.btn(), width: '100%'}}>Redeem</button>
+              <input style={{...styles.input, textAlign: 'center'}} placeholder="CODE (YTTPO)" />
+              <button style={{...styles.btn(), width: '100%'}}>Claim Now</button>
             </div>
           )}
         </>
       )}
 
-      {/* Footer Nav Sections */}
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3 style={{color: '#fbbf24', textAlign: 'center', fontWeight: '900'}}>Refer & Earn 10%</h3>
           <input style={styles.input} value={`https://t.me/EasyEarnBot?start=${userUID}`} readOnly />
-          <button style={{...styles.btn(), width: '100%'}} onClick={() => copyToClipboard(`https://t.me/EasyEarnBot?start=${userUID}`)}>Copy Referral</button>
-          <h4 style={{marginTop: '25px', fontWeight: '900'}}>History</h4>
-          <div style={styles.historyBox}><p style={{textAlign: 'center', color: '#64748b'}}>No referrals found.</p></div>
+          <button style={{...styles.btn(), width: '100%'}} onClick={() => copyToClipboard(`https://t.me/EasyEarnBot?start=${userUID}`)}>Copy Referral Link</button>
         </div>
       )}
 
@@ -177,13 +164,10 @@ function App() {
           <h3 style={{color: '#fbbf24', textAlign: 'center', fontWeight: '900'}}>Withdraw TON</h3>
           <input style={styles.input} placeholder="Amount" type="number" />
           <input style={styles.input} placeholder="Wallet Address" />
-          <button style={{...styles.btn(), width: '100%'}}>Send Request</button>
-          <h4 style={{marginTop: '20px', fontWeight: '900'}}>Withdraw History</h4>
-          <div style={styles.historyBox}><p style={{textAlign: 'center', color: '#64748b'}}>No data available.</p></div>
+          <button style={{...styles.btn(), width: '100%'}}>Submit Request</button>
         </div>
       )}
 
-      {/* Persistent Footer */}
       <div style={styles.footer}>
         <div style={styles.footerItem(activeNav === 'earn')} onClick={() => setActiveNav('earn')}>💰<br/>Earn</div>
         <div style={styles.footerItem(activeNav === 'invite')} onClick={() => setActiveNav('invite')}>👥<br/>Invite</div>
