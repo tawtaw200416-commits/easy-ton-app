@@ -26,18 +26,23 @@ function App() {
     "@kombo_crypta", "@easytonfree", "@WORLDBESTCRYTO1", "@MONEYHUB9_69", "@zrbtua", "@perviu1million"
   ]);
 
+  // Task ခလုတ်နှိပ်လိုက်တာနဲ့ ပျောက်သွားစေမယ့် Logic
   const handleTaskComplete = (id, type) => {
+    // ၁။ အရင်ဆုံး Task ကို ဖျောက်လိုက်မယ်
+    if (type === 'bot') {
+      setBotTasks(botTasks.filter(t => t.id !== id));
+    } else {
+      setSocialTasks(socialTasks.filter((_, index) => index !== id));
+    }
+
+    // ၂။ ကြော်ငြာပြမယ်
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: blockId });
       AdController.show().then(() => {
+        // ၃။ ကြော်ငြာကြည့်ပြီးရင် ဆုကြေးပေါင်းပေးမယ်
         setBalance(prev => prev + 0.0005);
-        if (type === 'bot') {
-          setBotTasks(botTasks.filter(t => t.id !== id));
-        } else {
-          setSocialTasks(socialTasks.filter((_, index) => index !== id));
-        }
       }).catch((err) => {
-        console.error(err);
+        console.error("Ad not finished or Error:", err);
       });
     }
   };
@@ -112,32 +117,6 @@ function App() {
                   </div>
                 ))}
               </div>
-              <div style={{marginTop: '15px', borderTop: '1px solid #334155', paddingTop: '15px'}}>
-                <button style={{...styles.btn(), width: '100%', padding: '15px'}} onClick={() => setShowAddOptions(!showAddOptions)}>
-                   {showAddOptions ? '✕ Close' : '+ Add Task'}
-                </button>
-                {showAddOptions && (
-                  <div style={{display: 'flex', gap: '10px', marginTop: '10px'}}>
-                    <button style={{...styles.btn(), flex: 1}} onClick={() => setShowPayForm(true)}>Add Task</button>
-                    <button style={{...styles.btn('#38bdf8'), flex: 1}}>My Task</button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {showPayForm && (
-            <div style={styles.card}>
-              <h4 style={{fontWeight: '900'}}>Order Placement</h4>
-              <input style={styles.input} placeholder="Task Name" />
-              <input style={styles.input} placeholder="Link" />
-              <div style={styles.historyBox}>
-                <p style={{fontSize: '11px', fontWeight: '900'}}>Pay Address: <span style={styles.copyBadge} onClick={() => copyToClipboard(adminAddress)}>COPY</span></p>
-                <p style={{color: '#fbbf24', fontSize: '10px', wordBreak: 'break-all'}}>{adminAddress}</p>
-                <p style={{marginTop: '10px', fontSize: '11px', fontWeight: '900'}}>MEMO: <span style={styles.copyBadge} onClick={() => copyToClipboard(userUID)}>COPY</span></p>
-                <p style={{color: '#fbbf24', fontSize: '18px'}}>{userUID}</p>
-              </div>
-              <button style={{...styles.btn(), width: '100%', marginTop: '15px'}} onClick={() => setShowPayForm(false)}>Confirm Order</button>
             </div>
           )}
 
@@ -151,6 +130,7 @@ function App() {
         </>
       )}
 
+      {/* Invite & Withdraw section - Keep as before */}
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3 style={{color: '#fbbf24', textAlign: 'center', fontWeight: '900'}}>Refer & Earn 10%</h3>
