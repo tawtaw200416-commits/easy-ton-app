@@ -4,12 +4,12 @@ function App() {
   const [balance, setBalance] = useState(0.0015);
   const [activeTab, setActiveTab] = useState('bot');
   const [activeNav, setActiveNav] = useState('earn');
+  const [showAddOptions, setShowAddOptions] = useState(false);
   const [showPayForm, setShowPayForm] = useState(false);
-  const [rewardClaimed, setRewardClaimed] = useState(false);
-
+  
   const userUID = "UID17934536";
   const adminAddress = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
-  const blockId = "27393";
+  const blockId = "27393"; 
 
   const [botTasks, setBotTasks] = useState([
     { id: 1, name: 'GrowTea Bot', link: 'https://t.me/GrowTeaBot/app?startapp=1793453606' },
@@ -21,118 +21,121 @@ function App() {
   ]);
 
   const [socialTasks, setSocialTasks] = useState([
-    { id: 1, name: "@GrowTeaNews" },
-    { id: 2, name: "@GoldenMinerNews" },
-    { id: 3, name: "@easytonfree" },
-    { id: 4, name: "@WORLDBESTCRYTO" }
+    "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", "@M9460", 
+    "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO", 
+    "@kombo_crypta", "@easytonfree", "@WORLDBESTCRYTO1", "@MONEYHUB9_69", "@zrbtua", "@perviu1million"
   ]);
 
-  const completeTask = (id, type) => {
+  const handleTaskComplete = (id, type) => {
+    // ၁။ Task ကို ချက်ချင်းဖျောက်မယ်
+    if (type === 'bot') {
+      setBotTasks(prev => prev.filter(t => t.id !== id));
+    } else {
+      setSocialTasks(prev => prev.filter((_, index) => index !== id));
+    }
+
+    // ၂။ ကြော်ငြာပြပြီး Success ဖြစ်မှ ပိုက်ဆံပေါင်းမယ်
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: blockId });
-      AdController.show()
-        .then(() => {
-          setBalance(prev => prev + 0.0005);
-          if (type === 'bot') {
-            setBotTasks(prev => prev.filter(t => t.id !== id));
-          } else {
-            setSocialTasks(prev => prev.filter(t => t.id !== id));
-          }
-          alert("Task Completed! +0.0005 TON added.");
-        })
-        .catch(() => {
-          alert("Please watch the full video to get reward.");
-        });
-    } else {
-      alert("Ads system not ready. Please try again later.");
+      AdController.show().then(() => {
+        setBalance(prev => prev + 0.0005);
+      }).catch((err) => {
+        console.error("Ad not finished", err);
+      });
     }
   };
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    alert("Copied to clipboard!");
+    alert("Copied!");
   };
 
   const styles = {
     container: { backgroundColor: '#0f172a', color: 'white', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', paddingBottom: '110px' },
     header: { display: 'flex', alignItems: 'center', backgroundColor: '#1e293b', padding: '15px', borderRadius: '25px', border: '1px solid #334155', gap: '15px', marginBottom: '20px' },
-    balance: { color: '#fbbf24', fontSize: '26px', fontWeight: '900' },
+    tonHeaderImg: { width: '50px', height: '50px', borderRadius: '50%', border: '2px solid #fbbf24', objectFit: 'cover' },
+    balance: { color: '#fbbf24', fontSize: '24px', fontWeight: '900' },
+    tabBar: { display: 'flex', backgroundColor: '#1e293b', borderRadius: '12px', padding: '5px', marginBottom: '15px' },
+    tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: active ? '#fbbf24' : 'transparent', color: active ? '#0f172a' : '#94a3b8', fontWeight: '900', fontSize: '11px' }),
     card: { backgroundColor: '#1e293b', padding: '18px', borderRadius: '20px', marginBottom: '15px', border: '1px solid #334155' },
-    btn: (color = '#fbbf24') => ({ backgroundColor: color, color: '#0f172a', padding: '10px 20px', borderRadius: '10px', border: 'none', fontWeight: '900', cursor: 'pointer' }),
+    taskItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid #334155' },
+    btn: (color='#fbbf24') => ({ backgroundColor: color, color: '#0f172a', padding: '10px 20px', borderRadius: '10px', border: 'none', fontWeight: '900', cursor: 'pointer', fontSize: '11px' }),
     input: { width: '100%', padding: '12px', borderRadius: '10px', marginBottom: '12px', border: '1px solid #334155', backgroundColor: '#0f172a', color: 'white', boxSizing: 'border-box' },
-    historyItem: { display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #334155', fontSize: '13px' },
-    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#1e293b', display: 'flex', justifyContent: 'space-around', padding: '18px', borderTop: '1px solid #334155' }
+    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#1e293b', display: 'flex', justifyContent: 'space-around', padding: '18px', borderTop: '1px solid #334155', zIndex: 100 },
+    footerItem: (active) => ({ textAlign: 'center', fontSize: '11px', color: active ? '#fbbf24' : '#94a3b8', fontWeight: '900' }),
+    historyBox: { backgroundColor: '#0f172a', padding: '15px', borderRadius: '12px', marginTop: '10px', border: '1px solid #334155' },
+    badge: { display: 'inline-block', backgroundColor: '#fbbf24', color: '#0f172a', padding: '2px 8px', borderRadius: '5px', fontSize: '10px', marginLeft: '10px', fontWeight: '900' }
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <div style={{ width: '50px', height: '50px', backgroundColor: '#fbbf24', borderRadius: '50%' }}></div>
+        <img src="https://cryptologos.cc/logos/toncoin-ton-logo.png" alt="TON" style={styles.tonHeaderImg} />
         <div>
-          <div style={{ fontWeight: '900' }}>Easy Earn TON</div>
+          <div style={{fontSize: '15px', fontWeight: '900'}}>Easy Earn TON</div>
           <div style={styles.balance}>{balance.toFixed(4)} TON</div>
         </div>
       </div>
 
       {activeNav === 'earn' && (
         <>
-          <div style={{ display: 'flex', backgroundColor: '#1e293b', borderRadius: '12px', padding: '5px', marginBottom: '15px' }}>
-            <button style={{ ...styles.btn(activeTab === 'bot' ? '#fbbf24' : 'transparent'), flex: 1, color: activeTab === 'bot' ? '#0f172a' : 'white' }} onClick={() => setActiveTab('bot')}>Start Bot</button>
-            <button style={{ ...styles.btn(activeTab === 'social' ? '#fbbf24' : 'transparent'), flex: 1, color: activeTab === 'social' ? '#0f172a' : 'white' }} onClick={() => setActiveTab('social')}>Social</button>
-            <button style={{ ...styles.btn(activeTab === 'reward' ? '#fbbf24' : 'transparent'), flex: 1, color: activeTab === 'reward' ? '#0f172a' : 'white' }} onClick={() => setActiveTab('reward')}>Reward</button>
+          <div style={styles.tabBar}>
+            <button style={styles.tabBtn(activeTab === 'bot')} onClick={() => {setActiveTab('bot'); setShowPayForm(false);}}>Start Bot</button>
+            <button style={styles.tabBtn(activeTab === 'social')} onClick={() => {setActiveTab('social'); setShowPayForm(false);}}>Social</button>
+            <button style={styles.tabBtn(activeTab === 'reward')} onClick={() => {setActiveTab('reward'); setShowPayForm(false);}}>Reward</button>
           </div>
 
           {activeTab === 'bot' && (
             <div style={styles.card}>
-              <h4>Bot Tasks (0.0005 TON)</h4>
+              <h4 style={{fontWeight: '900'}}>Bot Tasks (0.0005 TON)</h4>
               {botTasks.map(t => (
-                <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span>{t.name}</span>
-                  <button style={styles.btn()} onClick={() => { window.open(t.link, '_blank'); completeTask(t.id, 'bot'); }}>Start</button>
+                <div key={t.id} style={styles.taskItem}>
+                  <span style={{fontWeight: '900', fontSize: '13px'}}>{t.name}</span>
+                  <button style={styles.btn()} onClick={() => { window.open(t.link, '_blank'); handleTaskComplete(t.id, 'bot'); }}>Start</button>
                 </div>
               ))}
             </div>
           )}
 
-          {activeTab === 'social' && (
+          {activeTab === 'social' && !showPayForm && (
             <div style={styles.card}>
-              <h4>Social Channels (0.0005 TON)</h4>
-              {socialTasks.map(t => (
-                <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span>{t.name}</span>
-                  <button style={styles.btn('#38bdf8')} onClick={() => { window.open(`https://t.me/${t.name.replace('@', '')}`, '_blank'); completeTask(t.id, 'social'); }}>Join</button>
+              <h4 style={{fontWeight: '900'}}>Social Channels</h4>
+              {socialTasks.map((c, i) => (
+                <div key={i} style={styles.taskItem}>
+                  <span style={{fontSize: '12px', fontWeight: '900'}}>{c}</span>
+                  <button style={styles.btn('#38bdf8')} onClick={() => { window.open(`https://t.me/${c.replace('@','')}`, '_blank'); handleTaskComplete(i, 'social'); }}>Join</button>
                 </div>
               ))}
-              <button style={{ ...styles.btn(), width: '100%', marginTop: '10px' }} onClick={() => setShowPayForm(true)}>+ Add Your Task</button>
+              <button style={{...styles.btn(), width: '100%', marginTop: '10px'}} onClick={() => setShowAddOptions(!showAddOptions)}>
+                {showAddOptions ? '✕ Close' : '+ Add Task'}
+              </button>
+              {showAddOptions && (
+                <div style={{display: 'flex', gap: '10px', marginTop: '10px'}}>
+                  <button style={{...styles.btn(), flex: 1}} onClick={() => setShowPayForm(true)}>Add Order</button>
+                  <button style={{...styles.btn('#38bdf8'), flex: 1}}>My History</button>
+                </div>
+              )}
             </div>
           )}
 
           {showPayForm && (
             <div style={styles.card}>
-              <h4>Promote Your Channel</h4>
-              <p style={{ fontSize: '11px', color: '#94a3b8' }}>Send 1 TON to the address below with your UID as MEMO.</p>
-              <div style={{ backgroundColor: '#0f172a', padding: '10px', borderRadius: '10px', marginBottom: '10px', wordBreak: 'break-all' }}>
-                <small>Address: {adminAddress}</small><br />
-                <small>MEMO: {userUID}</small>
+              <h4 style={{fontWeight: '900'}}>Order Placement</h4>
+              <input style={styles.input} placeholder="Task Name" />
+              <input style={styles.input} placeholder="Link" />
+              <div style={styles.historyBox}>
+                <p style={{fontSize: '11px'}}>Address: {adminAddress}</p>
+                <p style={{fontSize: '11px'}}>MEMO: {userUID}</p>
               </div>
-              <button style={{ ...styles.btn(), width: '100%' }} onClick={() => setShowPayForm(false)}>Back</button>
+              <button style={{...styles.btn(), width: '100%', marginTop: '10px'}} onClick={() => setShowPayForm(false)}>Back</button>
             </div>
           )}
 
           {activeTab === 'reward' && (
-            <div style={{ ...styles.card, textAlign: 'center' }}>
-              <h4>Redeem Reward Code</h4>
-              <input style={styles.input} placeholder="Enter Code (e.g. YTTPO)" id="rewardCode" />
-              <button style={{ ...styles.btn(), width: '100%' }} onClick={() => {
-                const code = document.getElementById('rewardCode').value;
-                if (code === 'YTTPO' && !rewardClaimed) {
-                  setBalance(prev => prev + 0.0005);
-                  setRewardClaimed(true);
-                  alert("Reward Claimed!");
-                } else {
-                  alert("Invalid code or already claimed.");
-                }
-              }}>Claim Now</button>
+            <div style={{...styles.card, textAlign: 'center'}}>
+              <h4 style={{fontWeight: '900'}}>Redeem Code</h4>
+              <input style={{...styles.input, textAlign: 'center'}} placeholder="CODE HERE" />
+              <button style={{...styles.btn(), width: '100%'}}>Claim</button>
             </div>
           )}
         </>
@@ -140,43 +143,44 @@ function App() {
 
       {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h3 style={{ textAlign: 'center' }}>Refer & Earn 10%</h3>
-          <p style={{ fontSize: '13px', textAlign: 'center' }}>Invite friends and earn from their tasks.</p>
+          <h3 style={{color: '#fbbf24', textAlign: 'center', fontWeight: '900'}}>Refer & Earn 10%</h3>
           <input style={styles.input} value={`https://t.me/EasyEarnBot?start=${userUID}`} readOnly />
-          <button style={{ ...styles.btn(), width: '100%' }} onClick={() => copyToClipboard(`https://t.me/EasyEarnBot?start=${userUID}`)}>Copy Link</button>
-          <h4 style={{ marginTop: '20px' }}>Invite History</h4>
-          <p style={{ fontSize: '12px', color: '#94a3b8' }}>No invites yet.</p>
+          <button style={{...styles.btn(), width: '100%'}} onClick={() => copyToClipboard(`https://t.me/EasyEarnBot?start=${userUID}`)}>Copy Link</button>
+          <h4 style={{marginTop: '20px', fontWeight: '900'}}>Invite History</h4>
+          <div style={styles.historyBox}><p style={{textAlign: 'center', color: '#64748b', fontSize: '12px'}}>No referrals found.</p></div>
         </div>
       )}
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h3>Withdraw TON</h3>
-          <input style={styles.input} placeholder="Min 0.5 TON" type="number" />
-          <input style={styles.input} placeholder="TON Wallet Address" />
-          <button style={{ ...styles.btn(), width: '100%' }}>Withdraw Now</button>
-          <h4 style={{ marginTop: '20px' }}>Withdrawal History</h4>
-          <div style={styles.historyItem}>
-            <span>0.5 TON</span><span style={{ color: '#4ade80' }}>Completed</span><span>2026-04-10</span>
-          </div>
+          <h3 style={{color: '#fbbf24', textAlign: 'center', fontWeight: '900'}}>Withdraw TON</h3>
+          <input style={styles.input} placeholder="Amount" type="number" />
+          <input style={styles.input} placeholder="Wallet Address" />
+          <button style={{...styles.btn(), width: '100%'}}>Withdraw</button>
+          <h4 style={{marginTop: '20px', fontWeight: '900'}}>Withdrawal History</h4>
+          <div style={styles.historyBox}><p style={{textAlign: 'center', color: '#64748b', fontSize: '12px'}}>No history.</p></div>
         </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h3>My Profile</h3>
-          <div style={styles.historyItem}><span>UID:</span><span>{userUID}</span></div>
-          <div style={styles.historyItem}><span>Status:</span><span style={{ color: '#4ade80' }}>Active</span></div>
-          <div style={styles.historyItem}><span>Banned Status:</span><span>None</span></div>
-          <button style={{ ...styles.btn('red'), width: '100%', marginTop: '20px', color: 'white' }}>Logout</button>
+          <h3 style={{fontWeight: '900', textAlign: 'center'}}>My Profile</h3>
+          <div style={styles.historyBox}>
+            <p style={{fontWeight: '900'}}>UID: <span style={{color: '#fbbf24'}}>{userUID}</span></p>
+            <p style={{fontWeight: '900'}}>Status: <span style={{color: '#10b981'}}>Active</span></p>
+          </div>
+          <div style={{marginTop: '20px', border: '1px solid #ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '15px', borderRadius: '15px'}}>
+            <h4 style={{color: '#ef4444', marginTop: 0, fontWeight: '900'}}>⚠️ Policy</h4>
+            <p style={{fontSize: '13px', color: '#fca5a5', fontWeight: '900'}}>Fake accounts are strictly prohibited. You will be banned permanently if fraud is detected.</p>
+          </div>
         </div>
       )}
 
       <div style={styles.footer}>
-        <div style={{ textAlign: 'center', color: activeNav === 'earn' ? '#fbbf24' : '#94a3b8', cursor: 'pointer' }} onClick={() => setActiveNav('earn')}>💰<br /><small>Earn</small></div>
-        <div style={{ textAlign: 'center', color: activeNav === 'invite' ? '#fbbf24' : '#94a3b8', cursor: 'pointer' }} onClick={() => setActiveNav('invite')}>👥<br /><small>Invite</small></div>
-        <div style={{ textAlign: 'center', color: activeNav === 'withdraw' ? '#fbbf24' : '#94a3b8', cursor: 'pointer' }} onClick={() => setActiveNav('withdraw')}>💸<br /><small>Withdraw</small></div>
-        <div style={{ textAlign: 'center', color: activeNav === 'profile' ? '#fbbf24' : '#94a3b8', cursor: 'pointer' }} onClick={() => setActiveNav('profile')}>👤<br /><small>Profile</small></div>
+        <div style={styles.footerItem(activeNav === 'earn')} onClick={() => setActiveNav('earn')}>💰<br/>Earn</div>
+        <div style={styles.footerItem(activeNav === 'invite')} onClick={() => setActiveNav('invite')}>👥<br/>Invite</div>
+        <div style={styles.footerItem(activeNav === 'withdraw')} onClick={() => setActiveNav('withdraw')}>💸<br/>Withdraw</div>
+        <div style={styles.footerItem(activeNav === 'profile')} onClick={() => setActiveNav('profile')}>👤<br/>Profile</div>
       </div>
     </div>
   );
