@@ -58,7 +58,6 @@ function App() {
 
   return (
     <div style={styles.container}>
-      {/* Header */}
       <div style={styles.header}>
         <div style={{width: '50px', height: '50px', backgroundColor: '#fbbf24', borderRadius: '50%'}}></div>
         <div>
@@ -79,8 +78,8 @@ function App() {
             <div style={styles.card}>
               <h4 style={{fontWeight: '900'}}>Bot Tasks</h4>
               {botTasks.map(t => (
-                <div key={t.id} style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px'}}>
-                  <span>{t.name}</span>
+                <div key={t.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
+                  <span style={{fontSize: '13px'}}>{t.name}</span>
                   <button style={styles.btn()} onClick={() => { window.open(t.link, '_blank'); handleTaskComplete(t.id, 'bot'); }}>Start</button>
                 </div>
               ))}
@@ -89,14 +88,13 @@ function App() {
 
           {activeTab === 'social' && !showPayForm && (
             <div style={styles.card}>
-              {/* +Add Task - Now AT THE TOP of Social list */}
               <button style={{...styles.btn(), width: '100%', marginBottom: '15px', padding: '15px'}} onClick={() => setShowPayForm(true)}>
                 + Add Your Task
               </button>
-              <h4 style={{fontWeight: '900'}}>Social Channels</h4>
+              <h4 style={{fontWeight: '900'}}>Social Channels (0.0005 TON)</h4>
               {socialTasks.map((t) => (
-                <div key={t.id} style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px'}}>
-                  <span>{t.name}</span>
+                <div key={t.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
+                  <span style={{fontSize: '13px'}}>{t.name}</span>
                   <button style={styles.btn('#38bdf8')} onClick={() => { window.open(`https://t.me/${t.name.replace('@','')}`, '_blank'); handleTaskComplete(t.id, 'social'); }}>Join</button>
                 </div>
               ))}
@@ -105,7 +103,7 @@ function App() {
 
           {showPayForm && (
             <div style={styles.card}>
-              <h4 style={{fontWeight: '900'}}>Order Placement</h4>
+              <h4 style={{fontWeight: '900', textAlign: 'center'}}>Order Placement</h4>
               <div style={{backgroundColor: '#0f172a', borderRadius: '12px', padding: '5px', marginBottom: '15px', border: '1px solid #334155'}}>
                 <div style={styles.priceRow}><span>100 Users</span><span style={{color: '#fbbf24'}}>0.2 TON</span></div>
                 <div style={styles.priceRow}><span>200 Users</span><span style={{color: '#fbbf24'}}>0.4 TON</span></div>
@@ -116,11 +114,11 @@ function App() {
               <input style={styles.input} placeholder="Channel Link" />
               
               <div style={styles.copyBox} onClick={() => copyToClipboard(adminAddress)}>
-                <small style={{color: '#94a3b8'}}>Pay Address</small><br/>
-                <span style={{fontSize: '11px', color: '#fbbf24'}}>{adminAddress}</span>
+                <small style={{color: '#94a3b8', fontSize: '10px'}}>Pay Address (Click to Copy)</small><br/>
+                <span style={{fontSize: '11px', color: '#fbbf24', wordBreak: 'break-all'}}>{adminAddress}</span>
               </div>
               <div style={styles.copyBox} onClick={() => copyToClipboard(userUID)}>
-                <small style={{color: '#94a3b8'}}>MEMO / UID</small><br/>
+                <small style={{color: '#94a3b8', fontSize: '10px'}}>MEMO / UID (Click to Copy)</small><br/>
                 <span style={{color: '#fbbf24', fontWeight: '900'}}>{userUID}</span>
               </div>
               <button style={{...styles.btn(), width: '100%'}} onClick={() => setShowPayForm(false)}>Back</button>
@@ -129,9 +127,9 @@ function App() {
 
           {activeTab === 'reward' && (
             <div style={{...styles.card, textAlign: 'center'}}>
-              <h4>Redeem Reward Code</h4>
+              <h4 style={{fontWeight: '900'}}>Redeem Code</h4>
               <input style={{...styles.input, textAlign: 'center'}} placeholder="ENTER CODE" />
-              <button style={{...styles.btn(), width: '100%'}}>Claim</button>
+              <button style={{...styles.btn(), width: '100%'}}>Claim Now</button>
             </div>
           )}
         </>
@@ -139,31 +137,41 @@ function App() {
 
       {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h3 style={{textAlign: 'center'}}>Invite Friends</h3>
+          <h3 style={{textAlign: 'center', fontWeight: '900'}}>Invite Friends</h3>
+          <p style={{textAlign: 'center', fontSize: '13px', color: '#fbbf24', fontWeight: 'bold', marginBottom: '5px'}}>
+            Get 0.0005 TON for every friend!
+          </p>
+          <p style={{textAlign: 'center', fontSize: '11px', color: '#94a3b8', marginBottom: '15px'}}>
+            Also earn 10% from their task rewards.
+          </p>
           <input style={styles.input} value={`https://t.me/EasyEarnBot?start=${userUID}`} readOnly />
           <button style={{...styles.btn(), width: '100%'}} onClick={() => copyToClipboard(`https://t.me/EasyEarnBot?start=${userUID}`)}>Copy Link</button>
-          <h4 style={{marginTop: '20px'}}>Invite History</h4>
-          <div style={{backgroundColor: '#0f172a', padding: '10px', borderRadius: '10px', fontSize: '12px'}}>
-            <div style={{display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #334155', padding: '5px'}}>
+          
+          <h4 style={{marginTop: '25px', fontWeight: '900'}}>Invite History</h4>
+          <div style={{backgroundColor: '#0f172a', padding: '15px', borderRadius: '12px', fontSize: '12px', border: '1px solid #334155'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #334155', paddingBottom: '8px', marginBottom: '8px', color: '#94a3b8'}}>
               <span>User ID</span><span>Status</span>
             </div>
-            <div style={{display: 'flex', justifyContent: 'space-between', padding: '5px'}}>
-              <span style={{color: '#94a3b8'}}>No invites yet.</span>
-            </div>
+            <div style={{textAlign: 'center', padding: '10px', color: '#64748b'}}>No invites yet.</div>
           </div>
         </div>
       )}
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h3>Withdraw TON</h3>
-          <input style={styles.input} placeholder="Amount" type="number" />
-          <input style={styles.input} placeholder="Wallet Address" />
+          <h3 style={{fontWeight: '900'}}>Withdraw TON</h3>
+          <input style={styles.input} placeholder="Amount (Min 0.5)" type="number" />
+          <input style={styles.input} placeholder="TON Wallet Address" />
           <button style={{...styles.btn(), width: '100%'}}>Withdraw Now</button>
-          <h4 style={{marginTop: '20px'}}>Withdraw History</h4>
-          <div style={{backgroundColor: '#0f172a', padding: '10px', borderRadius: '10px', fontSize: '11px'}}>
-             <div style={{display: 'flex', justifyContent: 'space-between'}}>
-               <span>0.5 TON</span><span style={{color: '#4ade80'}}>Completed</span><span>2026-04-10</span>
+          
+          <h4 style={{marginTop: '25px', fontWeight: '900'}}>Withdraw History</h4>
+          <div style={{backgroundColor: '#0f172a', padding: '15px', borderRadius: '12px', fontSize: '11px', border: '1px solid #334155'}}>
+             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+               <div>
+                 <span style={{display: 'block', fontWeight: '900'}}>0.5000 TON</span>
+                 <small style={{color: '#94a3b8'}}>2026-04-10</small>
+               </div>
+               <span style={{color: '#4ade80', fontWeight: '900'}}>Completed</span>
              </div>
           </div>
         </div>
@@ -171,23 +179,23 @@ function App() {
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h3 style={{textAlign: 'center'}}>My Profile</h3>
+          <h3 style={{textAlign: 'center', fontWeight: '900'}}>My Profile</h3>
           <div style={{backgroundColor: '#0f172a', padding: '15px', borderRadius: '12px', border: '1px solid #334155'}}>
-            <p style={{fontWeight: '900', margin: '5px 0'}}>UID: <span style={{color: '#fbbf24'}}>{userUID}</span></p>
-            <p style={{fontWeight: '900', margin: '5px 0'}}>Status: <span style={{color: '#10b981'}}>Active</span></p>
+            <p style={{fontWeight: '900', margin: '8px 0'}}>UID: <span style={{color: '#fbbf24'}}>{userUID}</span></p>
+            <p style={{fontWeight: '900', margin: '8px 0'}}>Status: <span style={{color: '#10b981'}}>Active</span></p>
           </div>
           <div style={{marginTop: '20px', border: '1px solid #ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '15px', borderRadius: '15px'}}>
-            <h4 style={{color: '#ef4444', marginTop: 0}}>⚠️ Policy</h4>
-            <p style={{fontSize: '12px', color: '#fca5a5'}}>Fake accounts are prohibited. You will be banned if fraud is detected.</p>
+            <h4 style={{color: '#ef4444', marginTop: 0, fontWeight: '900'}}>⚠️ Policy</h4>
+            <p style={{fontSize: '12px', color: '#fca5a5', lineHeight: '1.5'}}>Fake accounts and scripts are strictly prohibited. You will be banned permanently if fraud is detected.</p>
           </div>
         </div>
       )}
 
       <div style={styles.footer}>
-        <div style={{color: activeNav === 'earn' ? '#fbbf24' : '#94a3b8'}} onClick={() => setActiveNav('earn')}>💰<br/>Earn</div>
-        <div style={{color: activeNav === 'invite' ? '#fbbf24' : '#94a3b8'}} onClick={() => setActiveNav('invite')}>👥<br/>Invite</div>
-        <div style={{color: activeNav === 'withdraw' ? '#fbbf24' : '#94a3b8'}} onClick={() => setActiveNav('withdraw')}>💸<br/>Withdraw</div>
-        <div style={{color: activeNav === 'profile' ? '#fbbf24' : '#94a3b8'}} onClick={() => setActiveNav('profile')}>👤<br/>Profile</div>
+        <div style={{textAlign: 'center', fontSize: '11px', color: activeNav === 'earn' ? '#fbbf24' : '#94a3b8', fontWeight: '900', cursor: 'pointer'}} onClick={() => setActiveNav('earn')}>💰<br/>Earn</div>
+        <div style={{textAlign: 'center', fontSize: '11px', color: activeNav === 'invite' ? '#fbbf24' : '#94a3b8', fontWeight: '900', cursor: 'pointer'}} onClick={() => setActiveNav('invite')}>👥<br/>Invite</div>
+        <div style={{textAlign: 'center', fontSize: '11px', color: activeNav === 'earn' ? '#fbbf24' : '#94a3b8', fontWeight: '900', cursor: 'pointer'}} onClick={() => setActiveNav('withdraw')}>💸<br/>Withdraw</div>
+        <div style={{textAlign: 'center', fontSize: '11px', color: activeNav === 'profile' ? '#fbbf24' : '#94a3b8', fontWeight: '900', cursor: 'pointer'}} onClick={() => setActiveNav('profile')}>👤<br/>Profile</div>
       </div>
     </div>
   );
