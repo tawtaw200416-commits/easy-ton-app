@@ -69,40 +69,55 @@ function App() {
 
       {activeNav === 'earn' && (
         <>
-          <div style={{display: 'flex', backgroundColor: '#1e293b', borderRadius: '12px', padding: '5px', marginBottom: '15px'}}>
-            <button style={{...styles.btn(activeTab === 'bot' ? '#fbbf24' : 'transparent'), flex: 1}} onClick={() => setActiveTab('bot')}>Start Bot</button>
-            <button style={{...styles.btn(activeTab === 'social' ? '#fbbf24' : 'transparent'), flex: 1}} onClick={() => setActiveTab('social')}>Social</button>
-            <button style={{...styles.btn(activeTab === 'reward' ? '#fbbf24' : 'transparent'), flex: 1}} onClick={() => setActiveTab('reward')}>Reward</button>
-          </div>
-
-          {activeTab === 'bot' && (
-            <div style={styles.card}>
-              <h4 style={{fontWeight: '900'}}>Bot Tasks (0.0005 TON)</h4>
-              {botTasks.map(t => (
-                <div key={t.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
-                  <span style={{fontSize: '13px'}}>{t.name}</span>
-                  <button style={styles.btn()} onClick={() => { window.open(t.link, '_blank'); handleTaskComplete(t.id, 'bot'); }}>Start</button>
-                </div>
-              ))}
+          {/* Form ပွင့်နေရင် Tab ခလုတ်တွေကိုပါ ဖျောက်ထားမယ် */}
+          {!showPayForm && (
+            <div style={{display: 'flex', backgroundColor: '#1e293b', borderRadius: '12px', padding: '5px', marginBottom: '15px'}}>
+              <button style={{...styles.btn(activeTab === 'bot' ? '#fbbf24' : 'transparent'), flex: 1}} onClick={() => setActiveTab('bot')}>Start Bot</button>
+              <button style={{...styles.btn(activeTab === 'social' ? '#fbbf24' : 'transparent'), flex: 1}} onClick={() => setActiveTab('social')}>Social</button>
+              <button style={{...styles.btn(activeTab === 'reward' ? '#fbbf24' : 'transparent'), flex: 1}} onClick={() => setActiveTab('reward')}>Reward</button>
             </div>
           )}
 
-          {activeTab === 'social' && !showPayForm && (
-            <div style={styles.card}>
-              <button style={{...styles.btn(), width: '100%', marginBottom: '15px', padding: '15px'}} onClick={() => setShowPayForm(true)}>
-                + Add Your Task
-              </button>
-              <h4 style={{fontWeight: '900'}}>Social Channels (0.0005 TON)</h4>
-              {socialTasks.map((t) => (
-                <div key={t.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
-                  <span style={{fontSize: '13px'}}>{t.name}</span>
-                  <button style={styles.btn('#38bdf8')} onClick={() => { window.open(`https://t.me/${t.name.replace('@','')}`, '_blank'); handleTaskComplete(t.id, 'social'); }}>Join</button>
+          {/* Form ပွင့်နေရင် ကျန်တဲ့ Task contents အကုန်လုံးကို Hide ထားမယ် */}
+          {!showPayForm ? (
+            <>
+              {activeTab === 'bot' && (
+                <div style={styles.card}>
+                  <h4 style={{fontWeight: '900'}}>Bot Tasks (0.0005 TON)</h4>
+                  {botTasks.map(t => (
+                    <div key={t.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
+                      <span style={{fontSize: '13px'}}>{t.name}</span>
+                      <button style={styles.btn()} onClick={() => { window.open(t.link, '_blank'); handleTaskComplete(t.id, 'bot'); }}>Start</button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )}
 
-          {showPayForm && (
+              {activeTab === 'social' && (
+                <div style={styles.card}>
+                  <button style={{...styles.btn(), width: '100%', marginBottom: '15px', padding: '15px'}} onClick={() => setShowPayForm(true)}>
+                    + Add Your Task
+                  </button>
+                  <h4 style={{fontWeight: '900'}}>Social Channels (0.0005 TON)</h4>
+                  {socialTasks.map((t) => (
+                    <div key={t.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
+                      <span style={{fontSize: '13px'}}>{t.name}</span>
+                      <button style={styles.btn('#38bdf8')} onClick={() => { window.open(`https://t.me/${t.name.replace('@','')}`, '_blank'); handleTaskComplete(t.id, 'social'); }}>Join</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {activeTab === 'reward' && (
+                <div style={{...styles.card, textAlign: 'center'}}>
+                  <h4 style={{fontWeight: '900'}}>Redeem Reward Code</h4>
+                  <input style={{...styles.input, textAlign: 'center'}} placeholder="ENTER CODE (YTTPO)" />
+                  <button style={{...styles.btn(), width: '100%'}}>Claim Now</button>
+                </div>
+              )}
+            </>
+          ) : (
+            /* Order Placement ပွင့်လာရင် ဒါပဲ ပေါ်နေမယ် */
             <div style={styles.card}>
               <button style={{...styles.btn('#10b981'), width: '100%', marginBottom: '15px'}} onClick={() => alert("No tasks yet.")}>My Tasks</button>
               <h4 style={{fontWeight: '900', textAlign: 'center'}}>Order Placement</h4>
@@ -122,14 +137,6 @@ function App() {
                 <span style={{color: '#fbbf24', fontWeight: '900'}}>{userUID}</span>
               </div>
               <button style={{...styles.btn(), width: '100%'}} onClick={() => setShowPayForm(false)}>Back</button>
-            </div>
-          )}
-
-          {activeTab === 'reward' && (
-            <div style={{...styles.card, textAlign: 'center'}}>
-              <h4 style={{fontWeight: '900'}}>Redeem Reward Code</h4>
-              <input style={{...styles.input, textAlign: 'center'}} placeholder="ENTER CODE (YTTPO)" />
-              <button style={{...styles.btn(), width: '100%'}}>Claim Now</button>
             </div>
           )}
         </>
