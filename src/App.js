@@ -6,11 +6,12 @@ function App() {
   const [activeNav, setActiveNav] = useState('earn');
   const [showAddOptions, setShowAddOptions] = useState(false);
   const [showPayForm, setShowPayForm] = useState(false);
+  const [claimCode, setClaimCode] = useState('');
   
   const userUID = "UID17934536";
   const adminAddress = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
 
-  // Bot Tasks Data
+  // Bot Tasks
   const [botTasks, setBotTasks] = useState([
     { id: 1, name: 'GrowTea Bot', link: 'https://t.me/GrowTeaBot/app?startapp=1793453606' },
     { id: 2, name: 'Golden Miner', link: 'https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD' },
@@ -20,7 +21,7 @@ function App() {
     { id: 6, name: 'Pobuzz Bot', link: 'https://t.me/Pobuzzbot/app?startapp=1793453606' }
   ]);
 
-  // Social Channels Data
+  // Social Channels
   const [socialTasks, setSocialTasks] = useState([
     "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", "@M9460", 
     "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO", 
@@ -37,27 +38,27 @@ function App() {
   };
 
   const styles = {
-    container: { backgroundColor: '#0f172a', color: 'white', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', paddingBottom: '100px' },
-    header: { display: 'flex', alignItems: 'center', backgroundColor: '#1e293b', padding: '15px', borderRadius: '20px', border: '1px solid #334155', gap: '15px', marginBottom: '20px' },
-    profileImg: { width: '50px', height: '50px', borderRadius: '50%', border: '2px solid #fbbf24', objectFit: 'cover' },
-    balance: { color: '#fbbf24', fontSize: '22px', fontWeight: 'bold' },
-    tabBar: { display: 'flex', backgroundColor: '#1e293b', borderRadius: '12px', padding: '5px', marginBottom: '15px' },
-    tabBtn: (active) => ({ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: active ? '#fbbf24' : 'transparent', color: active ? '#0f172a' : '#94a3b8', fontWeight: 'bold', fontSize: '12px' }),
-    card: { backgroundColor: '#1e293b', padding: '18px', borderRadius: '15px', marginBottom: '15px', border: '1px solid #334155' },
+    container: { backgroundColor: '#0f172a', color: 'white', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif', paddingBottom: '110px' },
+    header: { display: 'flex', alignItems: 'center', backgroundColor: '#1e293b', padding: '15px', borderRadius: '25px', border: '1px solid #334155', gap: '15px', marginBottom: '20px' },
+    tonHeaderImg: { width: '50px', height: '50px', borderRadius: '50%', border: '2px solid #fbbf24', objectFit: 'cover' },
+    balance: { color: '#fbbf24', fontSize: '24px', fontWeight: 'bold' },
+    tabBar: { display: 'flex', backgroundColor: '#1e293b', borderRadius: '12px', padding: '5px', marginBottom: '20px' },
+    tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: active ? '#fbbf24' : 'transparent', color: active ? '#0f172a' : '#94a3b8', fontWeight: 'bold', fontSize: '12px' }),
+    card: { backgroundColor: '#1e293b', padding: '18px', borderRadius: '20px', marginBottom: '15px', border: '1px solid #334155' },
     taskItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid #334155' },
     taskIcon: { width: '30px', height: '30px', borderRadius: '50%', border: '1px solid #fbbf24', marginRight: '10px' },
-    btn: (color='#fbbf24') => ({ backgroundColor: color, color: '#0f172a', padding: '8px 18px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }),
+    btn: (color='#fbbf24') => ({ backgroundColor: color, color: '#0f172a', padding: '10px 20px', borderRadius: '10px', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }),
     input: { width: '100%', padding: '12px', borderRadius: '10px', marginBottom: '12px', border: '1px solid #334155', backgroundColor: '#0f172a', color: 'white', boxSizing: 'border-box' },
-    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#1e293b', display: 'flex', justifyContent: 'space-around', padding: '15px', borderTop: '1px solid #334155' },
+    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#1e293b', display: 'flex', justifyContent: 'space-around', padding: '18px', borderTop: '1px solid #334155' },
     footerItem: (active) => ({ textAlign: 'center', fontSize: '11px', color: active ? '#fbbf24' : '#94a3b8' }),
-    paymentBox: { border: '1px dashed #fbbf24', padding: '15px', borderRadius: '10px', backgroundColor: '#0f172a', marginTop: '10px' }
+    warningCard: { border: '1px solid #ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '15px', borderRadius: '15px' }
   };
 
   return (
     <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
-        <img src="https://t3.ftcdn.net/jpg/05/65/15/86/360_F_565158659_9I3kG0f6PzX2EwT6s0Uv5Q9b4bJvFp4w.jpg" alt="logo" style={styles.profileImg} />
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_SAt0O7R4-A0N93T0O9x7I0h6S6-7oN5kAw&s" alt="TON-Logo" style={styles.tonHeaderImg} />
         <div>
           <div style={{fontSize: '14px', fontWeight: 'bold'}}>Easy Earn TON</div>
           <div style={styles.balance}>{balance.toFixed(4)} TON</div>
@@ -74,34 +75,35 @@ function App() {
 
           {activeTab === 'bot' && (
             <div style={styles.card}>
-              <h4>Available Bots (0.0005 TON each)</h4>
-              {botTasks.length > 0 ? botTasks.map(t => (
+              <h4>Bot Tasks (0.0005 TON)</h4>
+              {botTasks.map(t => (
                 <div key={t.id} style={styles.taskItem}>
                   <div style={{display: 'flex', alignItems: 'center'}}>
                     <img src="https://cryptologos.cc/logos/toncoin-ton-logo.png" alt="icon" style={styles.taskIcon} />
-                    <span style={{fontSize: '13px'}}>{t.name}</span>
+                    <span>{t.name}</span>
                   </div>
-                  <button style={styles.btn()} onClick={() => { window.open(t.link, '_blank'); handleTaskComplete(t.id, 'bot'); }}>Start Bot</button>
+                  <button style={styles.btn()} onClick={() => { window.open(t.link, '_blank'); handleTaskComplete(t.id, 'bot'); }}>Start</button>
                 </div>
-              )) : <p style={{textAlign:'center', color:'#64748b'}}>All bot tasks completed!</p>}
+              ))}
             </div>
           )}
 
           {activeTab === 'social' && !showPayForm && (
             <div style={styles.card}>
-              <h4>Channels (0.0005 TON each)</h4>
-              {socialTasks.length > 0 ? socialTasks.map((c, i) => (
+              <h4>Join Channels (0.0005 TON)</h4>
+              {socialTasks.map((c, i) => (
                 <div key={i} style={styles.taskItem}>
                   <div style={{display: 'flex', alignItems: 'center'}}>
                     <img src="https://cdn-icons-png.flaticon.com/512/2111/2111646.png" alt="icon" style={styles.taskIcon} />
-                    <span style={{fontSize: '12px'}}>{c}</span>
+                    <span>{c}</span>
                   </div>
                   <button style={styles.btn('#38bdf8')} onClick={() => { window.open(`https://t.me/${c.replace('@','')}`, '_blank'); handleTaskComplete(i, 'social'); }}>Join</button>
                 </div>
-              )) : <p style={{textAlign:'center', color:'#64748b'}}>All channel tasks completed!</p>}
+              ))}
               
-              <div style={{marginTop: '15px'}}>
-                <button style={{...styles.btn(), width: '100%', padding: '12px'}} onClick={() => setShowAddOptions(!showAddOptions)}>
+              {/* +Add Task Button - Attached to bottom of social list */}
+              <div style={{marginTop: '20px'}}>
+                <button style={{...styles.btn(), width: '100%', padding: '15px'}} onClick={() => setShowAddOptions(!showAddOptions)}>
                    {showAddOptions ? '✕ Close' : '+ Add Task'}
                 </button>
                 {showAddOptions && (
@@ -114,39 +116,31 @@ function App() {
             </div>
           )}
 
-          {/* Add Task Form with Payment */}
           {showPayForm && (
             <div style={styles.card}>
-              <h4 style={{marginTop: 0}}>Create New Task</h4>
-              <input style={styles.input} placeholder="Task Name (e.g. My Channel)" />
+              <h4>Add New Task</h4>
+              <input style={styles.input} placeholder="Channel Name" />
               <input style={styles.input} placeholder="Link (https://t.me/...)" />
-              
-              <p style={{fontSize: '12px', marginBottom: '5px'}}>Select Package:</p>
-              <select style={{...styles.input, cursor:'pointer'}}>
+              <select style={styles.input}>
                 <option>100 Members - 0.2 TON</option>
                 <option>200 Members - 0.4 TON</option>
                 <option>300 Members - 0.5 TON</option>
               </select>
-
-              <div style={styles.paymentBox}>
-                <p style={{fontSize: '11px', color: '#94a3b8', margin: '0 0 5px 0'}}>Send Payment to:</p>
-                <p style={{fontSize: '10px', wordBreak: 'break-all', color: '#fbbf24'}}>{adminAddress}</p>
-                <p style={{fontSize: '12px', marginTop: '10px'}}>MEMO (Required):</p>
-                <div style={{backgroundColor: '#1e293b', padding: '10px', borderRadius: '5px', color: '#fbbf24', fontWeight: 'bold', textAlign: 'center'}}>
-                  {userUID}
-                </div>
+              <div style={{backgroundColor: '#0f172a', padding: '15px', borderRadius: '10px', fontSize: '12px', border: '1px dashed #fbbf24'}}>
+                <p>Payment Address:</p>
+                <p style={{color: '#fbbf24', wordBreak: 'break-all'}}>{adminAddress}</p>
+                <p style={{marginTop: '10px'}}>MEMO (Your UID):</p>
+                <p style={{color: '#fbbf24', fontSize: '18px', fontWeight: 'bold'}}>{userUID}</p>
               </div>
-              <button style={{...styles.btn(), width: '100%', marginTop: '15px', padding: '12px'}} onClick={() => { alert('Notification sent to Admin. Please wait for verification.'); setShowPayForm(false); setShowAddOptions(false); }}>
-                Confirm Payment
-              </button>
+              <button style={{...styles.btn(), width: '100%', marginTop: '15px', padding: '12px'}} onClick={() => setShowPayForm(false)}>Confirm Payment</button>
             </div>
           )}
 
           {activeTab === 'reward' && (
             <div style={{...styles.card, textAlign: 'center'}}>
-              <h4>Redeem Code</h4>
-              <input style={{...styles.input, textAlign: 'center'}} placeholder="Enter Code" />
-              <button style={{...styles.btn(), width: '100%'}}>Claim</button>
+              <h4>Redeem Reward Code</h4>
+              <input style={{...styles.input, textAlign: 'center'}} placeholder="Enter Code" value={claimCode} onChange={(e)=>setClaimCode(e.target.value.toUpperCase())} />
+              <button style={{...styles.btn(), width: '100%'}} onClick={() => alert('Claimed!')}>Claim Now</button>
             </div>
           )}
         </>
@@ -156,24 +150,40 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3 style={{color: '#fbbf24', textAlign: 'center'}}>Invite Friends</h3>
-          <input style={{...styles.input, color: '#94a3b8'}} value={`https://t.me/EasyEarnBot?start=${userUID}`} readOnly />
+          <input style={{...styles.input}} value={`https://t.me/EasyEarnBot?start=${userUID}`} readOnly />
           <button style={{...styles.btn(), width: '100%'}} onClick={() => alert('Copied!')}>Copy Link</button>
-          <div style={{marginTop:'20px', padding:'10px', backgroundColor:'#0f172a', borderRadius:'10px'}}>
-             <p>Total Invites: 0</p>
-             <p style={{fontSize:'12px', color:'#64748b'}}>Success History: No records</p>
+          <div style={{marginTop: '20px', padding: '10px', backgroundColor: '#0f172a', borderRadius: '10px'}}>
+            <p>Total Invites: 0</p>
+            <p style={{fontSize: '12px', color: '#64748b'}}>Success History: No records yet.</p>
           </div>
         </div>
       )}
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h3 style={{color: '#fbbf24', textAlign: 'center'}}>Withdraw</h3>
+          <h3 style={{color: '#fbbf24', textAlign: 'center'}}>Withdraw TON</h3>
           <input style={styles.input} placeholder="Amount" type="number" />
-          <input style={styles.input} placeholder="Wallet Address" />
-          <button style={{...styles.btn(), width: '100%'}}>Withdraw Now</button>
-          <div style={{marginTop:'20px'}}>
-             <h4>History</h4>
-             <p style={{fontSize:'12px', color:'#64748b'}}>No withdrawal history found.</p>
+          <input style={styles.input} placeholder="Address" />
+          <button style={{...styles.btn(), width: '100%', padding: '12px'}}>Withdraw</button>
+          <h4 style={{marginTop: '20px'}}>History</h4>
+          <p style={{fontSize: '12px', color: '#64748b'}}>No withdrawal history found.</p>
+        </div>
+      )}
+
+      {/* Profile Section with English Warning */}
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h3 style={{textAlign: 'center'}}>User Profile</h3>
+          <div style={{textAlign: 'center', marginBottom: '20px'}}>
+             <div style={{fontSize: '18px', color: '#fbbf24'}}>{userUID}</div>
+          </div>
+          <div style={styles.warningCard}>
+            <h4 style={{color: '#ef4444', marginTop: 0}}>⚠️ Account Policy</h4>
+            <p style={{fontSize: '13px', lineHeight: '1.6', color: '#fca5a5'}}>
+              <b>Warning:</b> Creating multiple or fake accounts to manipulate rewards is strictly prohibited. 
+              Any detected fraudulent activity will result in a <b>Permanent Ban</b> of your account and forfeiture of your balance. 
+              We use manual and automated verification for all withdrawals.
+            </p>
           </div>
         </div>
       )}
