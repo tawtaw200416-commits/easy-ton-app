@@ -6,10 +6,9 @@ function App() {
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('comp_tasks')) || []);
   const [isClaimed, setIsClaimed] = useState(() => localStorage.getItem('gift_claimed') === 'true');
   
-  // Withdraw & Invite Histories
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || []);
   const [inviteHistory, setInviteHistory] = useState(() => JSON.parse(localStorage.getItem('inv_hist')) || [
-    { uid: "189455...", status: "Completed", reward: "0.0005" } // Example record
+    { uid: "189455...", status: "Completed", reward: "0.0005" }
   ]);
 
   const [activeNav, setActiveNav] = useState('earn');
@@ -19,7 +18,7 @@ function App() {
   const adminWallet = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
   const adsBlockId = "27393";
   
-  // Withdraw အချက်အလက်တွေပို့ဖို့ Telegram Bot Info (Bro ရဲ့ Bot Token နဲ့ Chat ID ထည့်လို့ရပါတယ်)
+  // Update these with your real bot details to receive notifications
   const TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN"; 
   const ADMIN_CHAT_ID = "YOUR_CHAT_ID";
 
@@ -78,34 +77,20 @@ function App() {
   const handleWithdraw = () => {
     const amount = document.getElementById('wd_amount').value;
     const address = document.getElementById('wd_address').value;
-
     if (amount >= 0.1 && address.length > 10) {
       if (balance >= amount) {
-        const newEntry = {
-          date: new Date().toLocaleDateString(),
-          amount: amount,
-          status: "Pending"
-        };
+        const newEntry = { date: new Date().toLocaleDateString(), amount: amount, status: "Pending" };
         setWithdrawHistory([newEntry, ...withdrawHistory]);
         setBalance(p => p - Number(amount));
-
-        // Admin ဆီ Telegram ကနေ အချက်အလက်လှမ်းပို့တဲ့ Logic
         const message = `🔔 *New Withdraw Request*\n\nUID: ${userUID}\nAmount: ${amount} TON\nAddress: ${address}`;
         fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${ADMIN_CHAT_ID}&text=${encodeURIComponent(message)}&parse_mode=Markdown`)
-          .then(() => alert("Withdraw Request Sent to Admin!"))
-          .catch(() => alert("Request sent. Pending approval."));
-      } else {
-        alert("Insufficient Balance!");
-      }
-    } else {
-      alert("Min Withdraw 0.1 TON & Valid Address Required!");
-    }
+          .then(() => alert("Withdrawal submitted!"))
+          .catch(() => alert("Request recorded."));
+      } else { alert("Insufficient Balance!"); }
+    } else { alert("Minimum 0.1 TON and valid address required."); }
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    alert("Copied!");
-  };
+  const copyToClipboard = (text) => { navigator.clipboard.writeText(text); alert("Copied!"); };
 
   const styles = {
     main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '90px', fontFamily: 'sans-serif' },
@@ -114,7 +99,8 @@ function App() {
     yellowBtn: { width: '100%', padding: '12px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
     input: { width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '10px', boxSizing: 'border-box' },
     copyBox: { background: 'rgba(251,191,36,0.1)', padding: '12px', borderRadius: '10px', border: '1px solid #fbbf24', textAlign: 'center', cursor: 'pointer', marginBottom: '10px' },
-    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b', borderTop: '1px solid #334155' }
+    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b', borderTop: '1px solid #334155' },
+    warning: { color: '#ef4444', fontSize: '12px', fontWeight: 'bold', border: '1px solid #ef4444', padding: '10px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.1)', marginTop: '15px' }
   };
 
   return (
@@ -131,41 +117,49 @@ function App() {
               <button key={t} onClick={() => setActiveTab(t)} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', backgroundColor: activeTab === t ? '#fbbf24' : '#1e293b', color: activeTab === t ? '#000' : '#fff', fontWeight: 'bold' }}>{t.toUpperCase()}</button>
             ))}
           </div>
+
           {activeTab === 'bot' && botTasks.filter(t => !completed.includes(t.id)).map(b => (
             <div key={b.id} style={styles.card}>
               <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>{b.name}</p>
               <button id={`btn-${b.id}`} onClick={() => handleAction(b.id, b.link)} style={styles.yellowBtn}>START BOT</button>
             </div>
           ))}
+
           {activeTab === 'social' && socialView === 'list' && (
-            <div style={styles.card}>
-              {socialTasks.filter(t => !completed.includes(t.id)).map((s, index, array) => (
-                <div key={s.id} style={{ ...styles.socialRow, borderBottom: index === array.length - 1 ? 'none' : '1px solid #334155' }}>
-                  <span>{s.name}</span>
-                  <button id={`btn-${s.id}`} onClick={() => handleAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '85px', padding: '8px' }}>JOIN</button>
-                </div>
-              ))}
-              <button style={{ ...styles.yellowBtn, marginTop: '15px' }} onClick={() => setSocialView('add')}>+ ADD TASK</button>
-            </div>
+            <>
+              {/* + ADD TASK ခလုတ်ကို အပေါ်ဆုံးသို့ ရွှေ့ထားသည် */}
+              <button 
+                style={{ ...styles.yellowBtn, marginBottom: '15px' }} 
+                onClick={() => setSocialView('add')}
+              >
+                + ADD TASK (PROMOTE CHANNEL)
+              </button>
+
+              <div style={styles.card}>
+                {socialTasks.filter(t => !completed.includes(t.id)).map((s, index, array) => (
+                  <div key={s.id} style={{ ...styles.socialRow, borderBottom: index === array.length - 1 ? 'none' : '1px solid #334155' }}>
+                    <span>{s.name}</span>
+                    <button id={`btn-${s.id}`} onClick={() => handleAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '85px', padding: '8px' }}>JOIN</button>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
+
           {activeTab === 'social' && socialView === 'add' && (
             <div style={styles.card}>
               <h3 style={{ marginTop: 0, color: '#fbbf24' }}>Add New Task</h3>
-              <input style={styles.input} placeholder="Task Name" />
-              <input style={styles.input} placeholder="Telegram Link" />
-              <select style={styles.input}>
-                <option>100 Views - 0.2 TON</option>
-                <option>200 Views - 0.4 TON</option>
-                <option>300 Views - 0.5 TON</option>
-              </select>
+              <input style={styles.input} placeholder="Channel Name" />
+              <input style={styles.input} placeholder="Invite Link" />
+              <select style={styles.input}><option>100 Views - 0.2 TON</option><option>200 Views - 0.4 TON</option></select>
               <div style={styles.copyBox} onClick={() => copyToClipboard(adminWallet)}>
-                <small style={{color: '#94a3b8'}}>TON Address (Click to Copy)</small><br/>
-                <span style={{fontWeight: 'bold', fontSize: '13px'}}>{adminWallet.slice(0,20)}...</span>
+                <small>TON Wallet (Copy)</small><br/><b>{adminWallet.slice(0,20)}...</b>
               </div>
               <button style={styles.yellowBtn} onClick={() => {alert("Submitted!"); setSocialView('list')}}>CONFIRM PAYMENT</button>
-              <p style={{textAlign:'center', marginTop:'15px', cursor:'pointer', color: '#94a3b8'}} onClick={()=>setSocialView('list')}>Back</p>
+              <p style={{textAlign:'center', marginTop:'15px', cursor:'pointer'}} onClick={()=>setSocialView('list')}>Back</p>
             </div>
           )}
+
           {activeTab === 'reward' && (
             <div style={styles.card}>
               <h4>DAILY GIFT CODE</h4>
@@ -183,7 +177,7 @@ function App() {
       {activeNav === 'invite' && (
         <div style={{ textAlign: 'center' }}>
           <div style={styles.card}>
-            <h2 style={{ color: '#fbbf24', marginBottom: '10px' }}>INVITE FRIENDS</h2>
+            <h2>INVITE FRIENDS</h2>
             <p>Direct Reward: <b style={{ color: '#fbbf24' }}>0.0005 TON</b></p>
             <p style={{ color: '#10b981', fontWeight: 'bold' }}>+ 10% TASK COMMISSION</p>
             <div onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={{ ...styles.input, color: '#fbbf24', fontSize: '12px', marginTop: '15px', cursor: 'pointer' }}>
@@ -191,15 +185,11 @@ function App() {
             </div>
             <button onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={{...styles.yellowBtn, marginTop: '10px'}}>COPY LINK</button>
           </div>
-          <h4 style={{ textAlign: 'left', marginLeft: '5px' }}>INVITATION HISTORY</h4>
+          <h4 style={{ textAlign: 'left' }}>INVITATION HISTORY</h4>
           <div style={styles.card}>
             <table style={{ width: '100%', fontSize: '12px', textAlign: 'left' }}>
               <thead><tr style={{ color: '#64748b' }}><th>User UID</th><th>Status</th><th>Reward</th></tr></thead>
-              <tbody>
-                {inviteHistory.map((inv, i) => (
-                  <tr key={i}><td>{inv.uid}</td><td style={{color: '#10b981'}}>{inv.status}</td><td>{inv.reward} TON</td></tr>
-                ))}
-              </tbody>
+              <tbody>{inviteHistory.map((inv, i) => (<tr key={i}><td>{inv.uid}</td><td style={{color: '#10b981'}}>{inv.status}</td><td>{inv.reward} TON</td></tr>))}</tbody>
             </table>
           </div>
         </div>
@@ -220,7 +210,7 @@ function App() {
               <tbody>
                 {withdrawHistory.length > 0 ? withdrawHistory.map((wh, i) => (
                   <tr key={i}><td>{wh.date}</td><td>{wh.amount} TON</td><td style={{color: wh.status === "Pending" ? "#fbbf24" : "#10b981"}}>{wh.status}</td></tr>
-                )) : <tr><td colSpan="3" style={{ textAlign: 'center', padding: '10px' }}>No records found</td></tr>}
+                )) : <tr><td colSpan="3" style={{ textAlign: 'center', padding: '10px' }}>No records</td></tr>}
               </tbody>
             </table>
           </div>
@@ -233,6 +223,12 @@ function App() {
             <div style={{ fontSize: '50px' }}>👤</div>
             <p>UID: {userUID}</p>
             <p>Status: <span style={{ color: '#fbbf24' }}>Active</span></p>
+          </div>
+          
+          <div style={styles.warning}>
+            ⚠️ NOTICE: FAKE ACCOUNTS AND BOT USERS ARE STRICTLY PROHIBITED. 
+            MULTIPLE REGISTRATIONS FROM THE SAME IP WILL RESULT IN AN INSTANT BAN. 
+            WE MONITOR ACTIVITY TO ENSURE FAIRNESS FOR ALL USERS.
           </div>
         </div>
       )}
