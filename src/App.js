@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-// ✅ Configuration - ဒီအပိုင်းမှာ လိုအပ်တာတွေ စုပေးထားပါတယ် (Code ဖျောက်ထားသလို သပ်ရပ်သွားအောင်လို့ပါ)
+// ✅ Configuration အပိုင်း - ဘာမှမပျက်အောင် အကုန်စုထားပါတယ်
 const APP_CONFIG = {
   BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_ID: "5020977059",
@@ -30,32 +30,6 @@ function App() {
     localStorage.setItem('wd_hist', JSON.stringify(withdrawHistory));
   }, [balance, completed, isClaimed, withdrawHistory]);
 
-  const botTasks = [
-    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-    { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-    { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
-    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
-  ];
-
-  const socialTasks = [
-    { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-    { id: 's3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
-    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
-    { id: 's5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
-    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
-    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
-    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
-    { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
-    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-    { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
-    { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
-    { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
-    { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
-  ];
-
   const handleAction = (id, link) => {
     window.open(link, '_blank');
     const btn = document.getElementById(`btn-${id}`);
@@ -68,21 +42,9 @@ function App() {
             setBalance(prev => prev + 0.0005);
             setCompleted(prev => [...prev, id]);
             alert("Reward 0.0005 TON Added!");
-          }).catch(() => alert("Ad skipped or failed. Reward not added."));
-        } else {
-          alert("Ad Provider not loaded. Check index.html script.");
+          }).catch(() => alert("Please watch the full ad."));
         }
       };
-    }
-  };
-
-  const handleConfirmPayment = () => {
-    const channelName = document.getElementById('chan_name').value;
-    const inviteLink = document.getElementById('inv_link').value;
-    if (channelName && inviteLink) {
-      const message = `🔔 *New Order*\nChannel: ${channelName}\nLink: ${inviteLink}\nMemo: ${APP_CONFIG.MY_UID}`;
-      fetch(`https://api.telegram.org/bot${APP_CONFIG.BOT_TOKEN}/sendMessage?chat_id=${APP_CONFIG.ADMIN_ID}&text=${encodeURIComponent(message)}&parse_mode=Markdown`)
-        .then(() => { alert("Order details and Memo ID sent to Admin!"); setSocialView('list'); });
     }
   };
 
@@ -107,7 +69,6 @@ function App() {
     card: { backgroundColor: '#1e293b', padding: '15px', borderRadius: '15px', marginBottom: '8px', border: '1px solid #334155' },
     yellowBtn: { width: '100%', padding: '12px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
     input: { width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '10px', boxSizing: 'border-box' },
-    copyBox: { background: 'rgba(251,191,36,0.1)', padding: '12px', borderRadius: '10px', border: '1px solid #fbbf24', textAlign: 'center', cursor: 'pointer', marginBottom: '10px' },
     footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b', borderTop: '1px solid #334155' },
     warning: { color: '#ef4444', fontSize: '12px', fontWeight: 'bold', border: '1px solid #ef4444', padding: '10px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.1)', marginTop: '15px' }
   };
@@ -116,7 +77,7 @@ function App() {
     <div style={styles.main}>
       <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px' }}>
         <small style={{ color: '#94a3b8' }}>TOTAL BALANCE</small>
-        <h1 style={{ color: '#fbbf24', margin: '5px 0' }}>{balance.toFixed(4)} TON</h1>
+        <h1 style={{ color: '#fbbf24' }}>{balance.toFixed(4)} TON</h1>
       </div>
 
       {activeNav === 'earn' && (
@@ -127,44 +88,17 @@ function App() {
             ))}
           </div>
 
-          {activeTab === 'bot' && botTasks.filter(t => !completed.includes(t.id)).map(b => (
-            <div key={b.id} style={styles.card}>
-              <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>{b.name}</p>
-              <button id={`btn-${b.id}`} onClick={() => handleAction(b.id, b.link)} style={styles.yellowBtn}>START BOT</button>
-            </div>
-          ))}
-
-          {activeTab === 'social' && socialView === 'list' && (
-            <>
-              <button style={{ ...styles.yellowBtn, marginBottom: '15px' }} onClick={() => setSocialView('add')}>+ ADD TASK (PROMOTE CHANNEL)</button>
-              <div style={styles.card}>
-                {socialTasks.filter(t => !completed.includes(t.id)).map((s, idx, arr) => (
-                  <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: idx === arr.length - 1 ? 'none' : '1px solid #334155' }}>
-                    <span>{s.name}</span>
-                    <button id={`btn-${s.id}`} onClick={() => handleAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '85px', padding: '8px' }}>JOIN</button>
-                  </div>
-                ))}
+          {activeTab === 'bot' && (
+            [
+              { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+              { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+              { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" }
+            ].filter(t => !completed.includes(t.id)).map(b => (
+              <div key={b.id} style={styles.card}>
+                <p style={{ fontWeight: 'bold' }}>{b.name}</p>
+                <button id={`btn-${b.id}`} onClick={() => handleAction(b.id, b.link)} style={styles.yellowBtn}>START BOT</button>
               </div>
-            </>
-          )}
-
-          {activeTab === 'social' && socialView === 'add' && (
-            <div style={styles.card}>
-              <h3 style={{ marginTop: 0, color: '#fbbf24', textAlign: 'center' }}>Add New Task</h3>
-              <input id="chan_name" style={styles.input} placeholder="Channel Name" />
-              <input id="inv_link" style={styles.input} placeholder="Invite Link" />
-              <select id="plan_select" style={styles.input}><option>100 Views - 0.2 TON</option><option>200 Views - 0.4 TON</option></select>
-              <div style={styles.copyBox} onClick={() => copyToClipboard(APP_CONFIG.ADMIN_WALLET)}>
-                <small style={{ color: '#94a3b8' }}>TON Wallet (Copy)</small><br/>
-                <b>{APP_CONFIG.ADMIN_WALLET.slice(0,25)}...</b>
-              </div>
-              <div style={{ ...styles.copyBox, marginTop: '10px' }} onClick={() => copyToClipboard(APP_CONFIG.MY_UID)}>
-                <small style={{ color: '#94a3b8' }}>Memo ID (Copy)</small><br/>
-                <b style={{ fontSize: '18px', color: '#fbbf24' }}>{APP_CONFIG.MY_UID}</b>
-              </div>
-              <button style={{ ...styles.yellowBtn, marginTop: '15px' }} onClick={handleConfirmPayment}>CONFIRM PAYMENT</button>
-              <p style={{textAlign:'center', marginTop:'15px', cursor:'pointer', color: '#94a3b8'}} onClick={()=>setSocialView('list')}>Back</p>
-            </div>
+            ))
           )}
 
           {activeTab === 'reward' && (
@@ -172,7 +106,8 @@ function App() {
               <h4>DAILY GIFT CODE</h4>
               {isClaimed ? <p style={{ color: '#10b981', textAlign: 'center' }}>CLAIMED ✅</p> : (
                 <>
-                  <input id="gift" type="password" style={styles.input} placeholder="Enter GIFT77" />
+                  {/* ✅ Code ကို Password အနေနဲ့ ဖျောက်ထားပေးပါတယ် */}
+                  <input id="gift" type="password" style={styles.input} placeholder="Enter Code Here" />
                   <button onClick={() => {if(document.getElementById('gift').value==="GIFT77"){setBalance(b=>b+0.01);setIsClaimed(true);alert("Success!")}}} style={styles.yellowBtn}>CLAIM</button>
                 </>
               )}
@@ -185,12 +120,7 @@ function App() {
         <div style={{ textAlign: 'center' }}>
           <div style={styles.card}>
             <h2>INVITE FRIENDS</h2>
-            <p>Direct Reward: <b style={{ color: '#fbbf24' }}>0.0005 TON</b></p>
-            <p style={{ color: '#10b981', fontWeight: 'bold' }}>+ 10% TASK COMMISSION</p>
-            <div onClick={() => copyToClipboard(`https://t.me/YourBot?start=${APP_CONFIG.MY_UID}`)} style={{ ...styles.input, color: '#fbbf24', fontSize: '12px', marginTop: '15px', cursor: 'pointer' }}>
-                https://t.me/YourBot?start={APP_CONFIG.MY_UID}
-            </div>
-            <button onClick={() => copyToClipboard(`https://t.me/YourBot?start=${APP_CONFIG.MY_UID}`)} style={{...styles.yellowBtn, marginTop: '10px'}}>COPY LINK</button>
+            <button onClick={() => copyToClipboard(`https://t.me/YourBot?start=${APP_CONFIG.MY_UID}`)} style={styles.yellowBtn}>COPY INVITE LINK</button>
           </div>
           <h4 style={{ textAlign: 'left' }}>INVITATION HISTORY</h4>
           <div style={styles.card}>
@@ -210,14 +140,12 @@ function App() {
             <input id="wd_address" style={styles.input} placeholder="TON Wallet Address" />
             <button style={styles.yellowBtn} onClick={handleWithdraw}>WITHDRAW NOW</button>
           </div>
-          <h4 style={{ marginLeft: '5px' }}>WITHDRAWAL HISTORY</h4>
+          <h4>WITHDRAWAL HISTORY</h4>
           <div style={styles.card}>
-            <table style={{ width: '100%', fontSize: '12px', textAlign: 'left' }}>
+             <table style={{ width: '100%', fontSize: '12px', textAlign: 'left' }}>
               <thead><tr style={{ color: '#64748b' }}><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
               <tbody>
-                {withdrawHistory.length > 0 ? withdrawHistory.map((wh, i) => (
-                  <tr key={i}><td>{wh.date}</td><td>{wh.amount} TON</td><td style={{color: wh.status === "Pending" ? "#fbbf24" : "#10b981"}}>{wh.status}</td></tr>
-                )) : <tr><td colSpan="3" style={{ textAlign: 'center', padding: '10px' }}>No records</td></tr>}
+                {withdrawHistory.map((wh, i) => (<tr key={i}><td>{wh.date}</td><td>{wh.amount}</td><td style={{color: '#fbbf24'}}>{wh.status}</td></tr>))}
               </tbody>
             </table>
           </div>
@@ -226,12 +154,8 @@ function App() {
 
       {activeNav === 'profile' && (
         <div style={{ textAlign: 'center' }}>
-          <div style={styles.card}>
-            <div style={{ fontSize: '50px' }}>👤</div>
-            <p>UID: {APP_CONFIG.MY_UID}</p>
-            <p>Status: <span style={{ color: '#fbbf24' }}>Active</span></p>
-          </div>
-          <div style={styles.warning}>⚠️ NOTICE: FAKE ACCOUNTS AND BOT USERS ARE STRICTLY PROHIBITED. MULTIPLE REGISTRATIONS FROM THE SAME IP WILL RESULT IN AN INSTANT BAN.</div>
+          <div style={styles.card}>👤 UID: {APP_CONFIG.MY_UID}</div>
+          <div style={styles.warning}>⚠️ NOTICE: FAKE ACCOUNTS AND BOT USERS ARE STRICTLY PROHIBITED.</div>
         </div>
       )}
 
