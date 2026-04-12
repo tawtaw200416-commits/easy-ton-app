@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
 function App() {
-  // --- 1. Core State & Data Persistence ---
+  // --- 1. Core State & Persistence ---
   const [userUID] = useState("1793453606");
   const [balance, setBalance] = useState(() => JSON.parse(localStorage.getItem('ton_balance')) || 0.0000);
   const [completedTasks, setCompletedTasks] = useState(() => JSON.parse(localStorage.getItem('completed_tasks')) || []);
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('withdraw_history')) || []);
-  const [rewardClaimed, setRewardClaimed] = useState(() => JSON.parse(localStorage.getItem('reward_claimed')) || false);
   
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
@@ -19,10 +18,9 @@ function App() {
     localStorage.setItem('ton_balance', JSON.stringify(balance));
     localStorage.setItem('completed_tasks', JSON.stringify(completedTasks));
     localStorage.setItem('withdraw_history', JSON.stringify(withdrawHistory));
-    localStorage.setItem('reward_claimed', JSON.stringify(rewardClaimed));
-  }, [balance, completedTasks, withdrawHistory, rewardClaimed]);
+  }, [balance, completedTasks, withdrawHistory]);
 
-  // --- 2. Functional Tasks Lists ---
+  // --- 2. Functional Bot Tasks (New List) ---
   const botTasks = [
     { id: 'b1', name: "GrowTea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "GoldenMiner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -32,157 +30,123 @@ function App() {
     { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
   ];
 
-  const socialTasks = [
-    "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", "@M9460",
-    "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO",
-    "@kombo_crypta", "@easytonfree", "@WORLDBESTCRYTO1", "@MONEYHUB9_69",
-    "@zrbtua", "@perviu1million"
-  ].map((name, index) => ({ id: `s${index}`, name, link: `https://t.me/${name.replace('@','')}` }));
-
   // --- 3. Logic Functions ---
-  const handleTaskClick = (task) => {
+  const handleTaskAction = (task) => {
     window.open(task.link, '_blank');
     if (!completedTasks.includes(task.id)) {
       setBalance(prev => prev + 0.0005);
       setCompletedTasks(prev => [...prev, task.id]);
+      alert("Task Completed! +0.0005 TON");
     }
   };
 
-  const handleClaimReward = () => {
-    if (rewardClaimed) return alert("Already claimed!");
-    if (rewardInput.toUpperCase() === "YTTPO") {
-      setBalance(prev => prev + 0.0005);
-      setRewardClaimed(true);
-      setRewardInput("");
-      alert("Reward Claimed!");
-    } else {
-      alert("Invalid Code!");
-    }
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    alert(label + " Copied!");
   };
 
+  // --- 4. Styles (Premium Look) ---
   const styles = {
-    container: { backgroundColor: '#0f172a', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '90px', fontFamily: 'sans-serif' },
-    balanceCard: { background: '#1e293b', padding: '25px', borderRadius: '25px', textAlign: 'center', marginBottom: '20px', border: '1px solid #334155' },
-    tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', backgroundColor: active ? '#fbbf24' : 'transparent', color: active ? '#000' : '#94a3b8', fontWeight: '900', cursor: 'pointer' }),
-    card: { backgroundColor: '#1e293b', padding: '20px', borderRadius: '20px', border: '1px solid #334155', marginBottom: '15px' },
-    input: { width: '100%', padding: '14px', borderRadius: '12px', backgroundColor: '#0f172a', color: '#fff', border: '1px solid #475569', marginBottom: '12px', boxSizing: 'border-box', fontWeight: '900' },
-    btnFull: { width: '100%', padding: '15px', borderRadius: '12px', backgroundColor: '#fbbf24', border: 'none', fontWeight: '900', cursor: 'pointer' },
-    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '15px 0', backgroundColor: '#1e293b', borderTop: '2px solid #334155' }
+    container: { backgroundColor: '#0f172a', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '100px', fontFamily: '"Segoe UI", Roboto, sans-serif' },
+    balanceCard: { background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', padding: '30px 20px', borderRadius: '30px', textAlign: 'center', marginBottom: '25px', border: '1px solid #334155', boxShadow: '0 10px 25px rgba(0,0,0,0.4)' },
+    tabBar: { display: 'flex', backgroundColor: '#1e293b', borderRadius: '18px', padding: '6px', marginBottom: '25px', gap: '5px' },
+    tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '14px', border: 'none', backgroundColor: active ? '#fbbf24' : 'transparent', color: active ? '#000' : '#94a3b8', fontWeight: '800', fontSize: '14px', cursor: 'pointer', transition: '0.3s' }),
+    taskCard: { backgroundColor: '#1e293b', padding: '18px', borderRadius: '22px', border: '1px solid #334155', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', active: { transform: 'scale(0.98)' } },
+    inputField: { width: '100%', padding: '16px', borderRadius: '15px', backgroundColor: '#0f172a', color: '#fff', border: '1px solid #475569', marginBottom: '15px', boxSizing: 'border-box', fontWeight: '600' },
+    copyBox: { backgroundColor: '#0f172a', padding: '15px', borderRadius: '15px', border: '1px dashed #fbbf24', marginBottom: '15px', cursor: 'pointer' },
+    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '15px 0', backgroundColor: '#1e293b', borderTop: '1px solid #334155', borderTopLeftRadius: '25px', borderTopRightRadius: '25px' },
+    navIcon: (active) => ({ textAlign: 'center', flex: 1, color: active ? '#fbbf24' : '#64748b', transition: '0.3s' })
   };
 
   return (
     <div style={styles.container}>
+      {/* Top Section */}
       <div style={styles.balanceCard}>
-        <p style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 'bold' }}>AVAILABLE BALANCE</p>
-        <h1 style={{ color: '#fbbf24', fontSize: '36px', margin: '5px 0', fontWeight: '900' }}>{balance.toFixed(4)} TON</h1>
+        <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 'bold', letterSpacing: '1px' }}>TOTAL BALANCE</span>
+        <h1 style={{ color: '#fbbf24', fontSize: '42px', margin: '8px 0', fontWeight: '900' }}>{balance.toFixed(4)} <span style={{fontSize: '18px'}}>TON</span></h1>
       </div>
 
       {activeNav === 'earn' && (
         <>
-          <div style={{ display: 'flex', backgroundColor: '#1e293b', borderRadius: '15px', padding: '5px', marginBottom: '20px' }}>
-            <button style={styles.tabBtn(activeTab === 'bot')} onClick={() => {setActiveTab('bot'); setShowPayForm(false)}}>Start Bot</button>
-            <button style={styles.tabBtn(activeTab === 'social')} onClick={() => {setActiveTab('social'); setShowPayForm(false)}}>Social</button>
-            <button style={styles.tabBtn(activeTab === 'reward')} onClick={() => {setActiveTab('reward'); setShowPayForm(false)}}>Reward</button>
+          <div style={styles.tabBar}>
+            {['bot', 'social', 'reward'].map((t) => (
+              <button key={t} style={styles.tabBtn(activeTab === t)} onClick={() => {setActiveTab(t); setShowPayForm(false);}}>
+                {t.toUpperCase()}
+              </button>
+            ))}
           </div>
 
           {!showPayForm ? (
-            <div>
+            <div style={{ animation: 'fadeIn 0.4s' }}>
               {activeTab === 'bot' && botTasks.filter(t => !completedTasks.includes(t.id)).map(task => (
-                <div key={task.id} style={styles.card} onClick={() => handleTaskClick(task)}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: '900' }}>{task.name}</span>
-                    <span style={{ color: '#fbbf24', fontWeight: '900' }}>+0.0005 TON</span>
+                <div key={task.id} style={styles.taskCard} onClick={() => handleTaskAction(task)}>
+                  <div>
+                    <div style={{ fontWeight: '800', fontSize: '15px' }}>{task.name}</div>
+                    <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px' }}>Tap to launch bot</div>
+                  </div>
+                  <div style={{ backgroundColor: 'rgba(251,191,36,0.1)', color: '#fbbf24', padding: '8px 12px', borderRadius: '12px', fontWeight: '900', fontSize: '12px' }}>
+                    +0.0005
                   </div>
                 </div>
               ))}
 
-              {activeTab === 'social' && (
-                <>
-                  <button style={{ ...styles.btnFull, marginBottom: '20px' }} onClick={() => setShowPayForm(true)}>+ Add Your Task</button>
-                  {socialTasks.filter(t => !completedTasks.includes(t.id)).map(task => (
-                    <div key={task.id} style={styles.card} onClick={() => handleTaskClick(task)}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: '900' }}>{task.name}</span>
-                        <span style={{ color: '#38bdf8', fontWeight: '900' }}>Join Channel</span>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-
               {activeTab === 'reward' && (
-                <div style={{ textAlign: 'center' }}>
-                  <h4 style={{ fontWeight: '900' }}>Enter Reward Code</h4>
-                  <input 
-                    style={styles.input} 
-                    type="text" 
-                    placeholder="ENTER CODE" 
-                    value={rewardInput} 
-                    onChange={(e) => setRewardInput(e.target.value)} 
-                  />
-                  <button style={styles.btnFull} onClick={handleClaimReward}>Claim Now</button>
+                <div style={{ textAlign: 'center', padding: '10px' }}>
+                  <h3 style={{fontWeight: '800', marginBottom: '20px'}}>Redeem Bonus Code</h3>
+                  <input style={styles.inputField} placeholder="Enter your code here..." value={rewardInput} onChange={(e) => setRewardInput(e.target.value)} />
+                  <button style={{ ...styles.tabBtn(true), width: '100%', padding: '18px' }}>CLAIM NOW</button>
                 </div>
+              )}
+              
+              {/* No more tasks message */}
+              {activeTab === 'bot' && botTasks.filter(t => !completedTasks.includes(t.id)).length === 0 && (
+                <p style={{textAlign:'center', color:'#64748b', marginTop: '50px'}}>All bots are started! Check back later.</p>
               )}
             </div>
           ) : (
-            <div style={styles.card}>
-              <h4 style={{ textAlign: 'center', fontWeight: '900' }}>Order Placement</h4>
-              <input style={styles.input} placeholder="Task Name" />
-              <input style={styles.input} placeholder="Task Link" />
-              <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
-                <div style={{ flex: 1, textAlign: 'center', padding: '10px', background: '#0f172a', borderRadius: '10px', border: '1px solid #fbbf24' }}>100/0.2T</div>
-                <div style={{ flex: 1, textAlign: 'center', padding: '10px', background: '#0f172a', borderRadius: '10px', border: '1px solid #fbbf24' }}>200/0.4T</div>
-                <div style={{ flex: 1, textAlign: 'center', padding: '10px', background: '#0f172a', borderRadius: '10px', border: '1px solid #fbbf24' }}>300/0.5T</div>
+            /* Add Task Section with Memo/Address Copy */
+            <div style={{ ...styles.card, padding: '20px', borderRadius: '25px', backgroundColor: '#1e293b' }}>
+              <h3 style={{ textAlign: 'center', fontWeight: '900', marginBottom: '20px' }}>ORDER PLACEMENT</h3>
+              <input style={styles.inputField} placeholder="Channel Name" />
+              <input style={styles.inputField} placeholder="Link (https://t.me/...)" />
+              
+              <div style={{marginBottom: '10px', color: '#94a3b8', fontSize: '12px', fontWeight: 'bold'}}>PAYMENT DETAILS (TAP TO COPY)</div>
+              
+              <div style={styles.copyBox} onClick={() => copyToClipboard(adminAddress, "Address")}>
+                <div style={{fontSize: '10px', color: '#94a3b8', marginBottom: '5px'}}>TON ADDRESS</div>
+                <div style={{fontSize: '11px', color: '#fbbf24', wordBreak: 'break-all', fontWeight: 'bold'}}>{adminAddress}</div>
               </div>
-              <p style={{ fontSize: '11px', color: '#94a3b8' }}>Admin Address:</p>
-              <code style={{ fontSize: '10px', color: '#fbbf24', wordBreak: 'break-all' }}>{adminAddress}</code>
-              <p style={{ fontWeight: '900', margin: '10px 0' }}>MEMO (UID): {userUID}</p>
-              <button style={styles.btnFull} onClick={() => {alert("Sent to Admin!"); setShowPayForm(false)}}>Confirm Payment</button>
-              <button style={{ background: 'none', border: 'none', color: '#94a3b8', width: '100%', marginTop: '10px' }} onClick={() => setShowPayForm(false)}>Back</button>
+
+              <div style={styles.copyBox} onClick={() => copyToClipboard(userUID, "Memo")}>
+                <div style={{fontSize: '10px', color: '#94a3b8', marginBottom: '5px'}}>MEMO / UID</div>
+                <div style={{fontSize: '18px', color: '#fbbf24', fontWeight: '900'}}>{userUID}</div>
+              </div>
+
+              <button style={{ ...styles.tabBtn(true), width: '100%', height: '55px', marginTop: '10px' }} onClick={() => setShowPayForm(false)}>BACK TO TASKS</button>
             </div>
           )}
         </>
       )}
 
-      {activeNav === 'invite' && (
-        <div style={styles.card}>
-          <h3 style={{ textAlign: 'center', fontWeight: '900' }}>Invite History</h3>
-          <p style={{ textAlign: 'center', color: '#94a3b8' }}>Get 0.0005 TON per successful invite.</p>
-          <div style={{ background: '#0f172a', padding: '15px', borderRadius: '12px', textAlign: 'center', fontWeight: '900', color: '#fbbf24' }}>
-            No Referrals Yet
-          </div>
-        </div>
-      )}
+      {/* Other Tabs Placeholder */}
+      {activeNav === 'invite' && <div style={{textAlign:'center', marginTop: '50px', fontWeight: 'bold'}}>Invite History (Coming Soon)</div>}
+      {activeNav === 'withdraw' && <div style={{textAlign:'center', marginTop: '50px', fontWeight: 'bold'}}>Withdraw History (Coming Soon)</div>}
+      {activeNav === 'profile' && <div style={{textAlign:'center', marginTop: '50px', fontWeight: 'bold'}}>User Profile Settings</div>}
 
-      {activeNav === 'withdraw' && (
-        <div style={styles.card}>
-          <h3 style={{ fontWeight: '900' }}>Withdraw History</h3>
-          <div style={{ marginBottom: '20px' }}>
-            <input style={styles.input} placeholder="Amount (Min 0.1)" />
-            <input style={styles.input} placeholder="Wallet Address" />
-            <button style={styles.btnFull}>Withdraw Now</button>
-          </div>
-          <h4 style={{ borderTop: '1px solid #334155', paddingTop: '10px' }}>Logs</h4>
-          {withdrawHistory.length === 0 && <p style={{ color: '#64748b', fontSize: '12px' }}>No transactions found.</p>}
-        </div>
-      )}
-
-      {activeNav === 'profile' && (
-        <div style={styles.card}>
-          <h3 style={{ textAlign: 'center', fontWeight: '900' }}>Profile</h3>
-          <p style={{ fontWeight: '900' }}>UID: <span style={{ color: '#fbbf24' }}>{userUID}</span></p>
-          <div style={{ marginTop: '20px', background: 'rgba(239, 68, 68, 0.1)', padding: '15px', borderRadius: '15px', border: '1px solid #ef4444' }}>
-            <h4 style={{ color: '#ef4444', margin: 0 }}>Policy</h4>
-            <p style={{ fontSize: '12px' }}>Fake accounts will be banned permanently.</p>
-          </div>
-        </div>
-      )}
-
+      {/* Navigation Footer */}
       <div style={styles.footer}>
-        <div style={{ color: activeNav === 'earn' ? '#fbbf24' : '#64748b', textAlign: 'center' }} onClick={() => setActiveNav('earn')}>💰<br/><small>Earn</small></div>
-        <div style={{ color: activeNav === 'invite' ? '#fbbf24' : '#64748b', textAlign: 'center' }} onClick={() => setActiveNav('invite')}>👥<br/><small>Invite</small></div>
-        <div style={{ color: activeNav === 'withdraw' ? '#fbbf24' : '#64748b', textAlign: 'center' }} onClick={() => setActiveNav('withdraw')}>💸<br/><small>History</small></div>
-        <div style={{ color: activeNav === 'profile' ? '#fbbf24' : '#64748b', textAlign: 'center' }} onClick={() => setActiveNav('profile')}>👤<br/><small>Profile</small></div>
+        <div style={styles.navIcon(activeNav === 'earn')} onClick={() => setActiveNav('earn')}>
+          <div style={{ fontSize: '24px' }}>💰</div><div style={{ marginTop: '4px' }}>EARN</div>
+        </div>
+        <div style={styles.navIcon(activeNav === 'invite')} onClick={() => setActiveNav('invite')}>
+          <div style={{ fontSize: '24px' }}>👥</div><div style={{ marginTop: '4px' }}>INVITE</div>
+        </div>
+        <div style={styles.navIcon(activeNav === 'withdraw')} onClick={() => setActiveNav('withdraw')}>
+          <div style={{ fontSize: '24px' }}>💸</div><div style={{ marginTop: '4px' }}>HISTORY</div>
+        </div>
+        <div style={styles.navIcon(activeNav === 'profile')} onClick={() => setActiveNav('profile')}>
+          <div style={{ fontSize: '24px' }}>👤</div><div style={{ marginTop: '4px' }}>PROFILE</div>
+        </div>
       </div>
     </div>
   );
