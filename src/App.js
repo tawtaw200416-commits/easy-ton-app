@@ -23,9 +23,9 @@ function App() {
           setChecking(null);
           alert("✅ Success! 0.0005 TON added.");
         }
-      }).catch(() => alert("⚠️ Please watch the full ad to verify."));
+      }).catch(() => alert("⚠️ Please watch the full ad."));
     } else {
-      alert("Ads SDK is not ready yet.");
+      alert("Ads SDK Loading...");
     }
   };
 
@@ -45,25 +45,20 @@ function App() {
     "@zrbtua", "@perviu1million"
   ].map((ch, i) => ({ id: `s${i}`, name: ch, link: `https://t.me/${ch.replace('@','')}` }));
 
-  const copyRef = () => {
-    navigator.clipboard.writeText(`https://t.me/YourBot?start=${userUID}`);
-    alert("Referral Link Copied!");
-  };
-
   const styles = {
     container: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '90px', fontFamily: 'sans-serif' },
     card: { backgroundColor: '#1e293b', padding: '15px', borderRadius: '15px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #334155' },
     tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', backgroundColor: active ? '#fbbf24' : '#1e293b', color: active ? '#000' : '#fff', fontWeight: 'bold' }),
     footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '15px', backgroundColor: '#1e293b', borderTop: '1px solid #334155' },
-    navIcon: (active) => ({ textAlign: 'center', color: active ? '#fbbf24' : '#64748b', fontSize: '12px', cursor: 'pointer' })
+    navBtn: (active) => ({ textAlign: 'center', color: active ? '#fbbf24' : '#64748b', fontSize: '12px', cursor: 'pointer' })
   };
 
   return (
     <div style={styles.container}>
-      {/* Balance Section */}
+      {/* Balance Header */}
       <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px' }}>
-        <p style={{ color: '#94a3b8', fontSize: '12px' }}>AVAILABLE BALANCE</p>
-        <h1 style={{ color: '#fbbf24', fontSize: '38px', margin: '10px 0' }}>{balance.toFixed(4)} <span style={{fontSize:'16px'}}>TON</span></h1>
+        <small style={{ color: '#94a3b8' }}>TOTAL BALANCE</small>
+        <h1 style={{ color: '#fbbf24', fontSize: '38px', margin: '5px 0' }}>{balance.toFixed(4)} <span style={{fontSize:'16px'}}>TON</span></h1>
       </div>
 
       {activeNav === 'earn' && (
@@ -88,22 +83,52 @@ function App() {
       )}
 
       {activeNav === 'invite' && (
-        <div style={{ padding: '20px', textAlign: 'center' }}>
-          <h2>Invite & Earn</h2>
-          <p>Get 0.0005 TON per refer and 10% commission!</p>
-          <button onClick={copyRef} style={{ width: '100%', padding: '15px', borderRadius: '12px', backgroundColor: '#fbbf24', border: 'none', fontWeight: 'bold', marginTop: '20px' }}>Copy Link</button>
+        <div style={{ padding: '15px' }}>
+          <div style={{ backgroundColor: '#1e293b', padding: '20px', borderRadius: '20px', textAlign: 'center' }}>
+            <h2 style={{ color: '#fbbf24' }}>INVITE FRIENDS</h2>
+            <p>🎁 Referral Rewards:</p>
+            <p>• Get <b style={{color: '#fbbf24'}}>0.0005 TON</b> per friend.</p>
+            <p>• Earn <b style={{color: '#fbbf24'}}>10% Commission</b> from friends' tasks!</p>
+            <div style={{ background: '#0f172a', padding: '15px', borderRadius: '12px', marginTop: '20px', color: '#fbbf24', fontSize: '12px' }}>
+              https://t.me/YourBot?start={userUID}
+            </div>
+          </div>
         </div>
       )}
 
-      {activeNav === 'history' && <div style={{ textAlign: 'center', marginTop: '50px' }}>No transactions found.</div>}
-      {activeNav === 'profile' && <div style={{ textAlign: 'center', marginTop: '50px' }}>User UID: {userUID}</div>}
+      {activeNav === 'history' && (
+        <div style={{ padding: '15px' }}>
+          <h3>WITHDRAW HISTORY</h3>
+          <table style={{ width: '100%', fontSize: '13px' }}>
+            <thead style={{ color: '#94a3b8' }}>
+              <tr><th align="left">Amount</th><th align="center">Status</th><th align="right">Date</th></tr>
+            </thead>
+            <tbody>
+              {/* ပုံစံပြ Success history */}
+              <tr style={{ height: '40px' }}>
+                <td>0.1000 TON</td>
+                <td align="center"><span style={{ color: '#10b981' }}>SUCCESS</span></td>
+                <td align="right">2026-04-12</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      {/* Footer Menu */}
+      {activeNav === 'profile' && (
+        <div style={{ textAlign: 'center', marginTop: '50px' }}>
+          <h2>MY PROFILE</h2>
+          <p>User UID: {userUID}</p>
+          <p>Status: <span style={{ color: '#10b981' }}>VIP VERIFIED</span></p>
+        </div>
+      )}
+
+      {/* Footer Navigation */}
       <div style={styles.footer}>
-        <div style={styles.navIcon(activeNav === 'earn')} onClick={() => setActiveNav('earn')}>💰<br/>EARN</div>
-        <div style={styles.navIcon(activeNav === 'invite')} onClick={() => setActiveNav('invite')}>👥<br/>INVITE</div>
-        <div style={styles.navIcon(activeNav === 'history')} onClick={() => setActiveNav('history')}>💸<br/>HISTORY</div>
-        <div style={styles.navIcon(activeNav === 'profile')} onClick={() => setActiveNav('profile')}>👤<br/>PROFILE</div>
+        <div style={styles.navBtn(activeNav === 'earn')} onClick={() => setActiveNav('earn')}>💰<br/>EARN</div>
+        <div style={styles.navBtn(activeNav === 'invite')} onClick={() => setActiveNav('invite')}>👥<br/>INVITE</div>
+        <div style={styles.navBtn(activeNav === 'history')} onClick={() => setActiveNav('history')}>💸<br/>HISTORY</div>
+        <div style={styles.navBtn(activeNav === 'profile')} onClick={() => setActiveNav('profile')}>👤<br/>PROFILE</div>
       </div>
     </div>
   );
