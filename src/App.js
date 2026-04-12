@@ -69,17 +69,17 @@ function App() {
     main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '90px', fontFamily: 'sans-serif' },
     card: { backgroundColor: '#1e293b', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '1px solid #334155' },
     yellowBtn: { width: '100%', padding: '12px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
-    input: { width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '10px', boxSizing: 'border-box' },
+    input: { width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '10px', boxSizing: 'border-box', outline: 'none' },
     copySmall: { background: '#334155', color: '#fbbf24', border: 'none', padding: '5px 10px', borderRadius: '5px', fontSize: '10px', cursor: 'pointer' },
     footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b', borderTop: '1px solid #334155', zIndex: 100 }
   };
 
   return (
     <div style={styles.main}>
-      {/* --- HEADER --- */}
+      {/* --- BALANCE HEADER --- */}
       <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px' }}>
         <small style={{ color: '#94a3b8' }}>TOTAL BALANCE</small>
-        <h1 style={{ color: '#fbbf24', margin: '5px 0' }}>{balance.toFixed(4)} TON</h1>
+        <h1 style={{ color: '#fbbf24', margin: '5px 0', fontSize: '32px' }}>{balance.toFixed(4)} TON</h1>
       </div>
 
       {/* --- EARN PANEL --- */}
@@ -124,10 +124,10 @@ function App() {
                     <div>
                       <input style={styles.input} placeholder="Channel Name" />
                       <input style={styles.input} placeholder="Link" />
-                      <select style={styles.input}>
-                        <option>100 Views - 0.2 TON</option>
-                        <option>500 Views - 1.0 TON</option>
-                        <option>1000 Views - 2.0 TON</option>
+                      <select style={{ ...styles.input, appearance: 'none' }}>
+                        <option value="100">100 Views - 0.2 TON</option>
+                        <option value="200">200 Views - 0.4 TON</option>
+                        <option value="300">300 Views - 0.5 TON</option>
                       </select>
                       <div style={{ fontSize: '11px', background: '#0f172a', padding: '12px', borderRadius: '10px', marginBottom: '10px', border: '1px solid #334155' }}>
                         <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px'}}>
@@ -161,13 +161,17 @@ function App() {
       {activeNav === 'invite' && (
         <div style={{ textAlign: 'center' }}>
           <div style={{ ...styles.card, border: '1px solid #fbbf24' }}>
-            <h2 style={{ color: '#fbbf24' }}>INVITE FRIENDS</h2>
+            <h2 style={{ color: '#fbbf24', marginBottom: '15px' }}>INVITE FRIENDS</h2>
             <div style={{ background: '#0f172a', padding: '15px', borderRadius: '12px', marginBottom: '15px' }}>
               <p>Earn <b style={{color:'#fbbf24'}}>0.0005 TON</b> per friend</p>
               <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>+ 10% COMMISSION</p>
             </div>
             <div style={{ ...styles.input, color: '#fbbf24', fontSize: '11px' }}>https://t.me/Bot?start={userUID}</div>
             <button onClick={() => copyToClipboard(`https://t.me/Bot?start=${userUID}`)} style={styles.yellowBtn}>COPY REFER LINK</button>
+          </div>
+          <h3 style={{ textAlign: 'left', marginTop: '20px' }}>INVITE HISTORY</h3>
+          <div style={styles.card}>
+             <div style={{display:'flex', justifyContent:'space-between'}}><span>Total Invited:</span><b style={{color:'#fbbf24'}}>{invites} Users</b></div>
           </div>
         </div>
       )}
@@ -176,36 +180,51 @@ function App() {
       {activeNav === 'withdraw' && (
         <div>
           <div style={styles.card}>
-            <h3>WITHDRAW TON</h3>
-            <input style={styles.input} placeholder="Amount (Min: 0.1 TON)" />
-            <input style={styles.input} placeholder="TON Wallet Address" />
-            <button style={styles.yellowBtn} onClick={() => alert("Insufficient balance or error")}>WITHDRAW NOW</button>
+            <h3 style={{ color: '#fbbf24', marginTop: 0 }}>WITHDRAW TON</h3>
+            <label style={{ fontSize: '12px', color: '#94a3b8' }}>Amount to Withdraw</label>
+            <input style={styles.input} placeholder="Min: 0.1 TON" type="number" />
+            <label style={{ fontSize: '12px', color: '#94a3b8' }}>TON Wallet Address</label>
+            <input style={styles.input} placeholder="Enter Address" />
+            <button style={styles.yellowBtn} onClick={() => alert("Insufficient Balance")}>WITHDRAW NOW</button>
           </div>
-          <h3 style={{marginTop:'20px'}}>WITHDRAW HISTORY</h3>
-          <div style={{...styles.card, textAlign:'center', color:'#64748b'}}>No history found.</div>
+          
+          <h3 style={{ marginTop: '25px' }}>WITHDRAW HISTORY</h3>
+          <div style={{ ...styles.card, textAlign: 'center', padding: '30px' }}>
+            <div style={{ fontSize: '30px', opacity: 0.3 }}>📁</div>
+            <p style={{ color: '#64748b', fontSize: '14px' }}>No History Found</p>
+          </div>
         </div>
       )}
 
       {/* --- PROFILE PANEL --- */}
       {activeNav === 'profile' && (
-        <div style={{textAlign:'center'}}>
+        <div style={{ textAlign: 'center' }}>
           <div style={styles.card}>
-            <div style={{fontSize:'50px'}}>👤</div>
-            <h2 style={{color:'#fbbf24'}}>USER PROFILE</h2>
-            <p>ID: {userUID}</p>
-            <p>Balance: {balance.toFixed(4)} TON</p>
+            <div style={{ fontSize: '50px', marginBottom: '10px' }}>👤</div>
+            <h2 style={{ color: '#fbbf24', margin: '5px 0' }}>USER PROFILE</h2>
+            <div style={{ textAlign: 'left', background: '#0f172a', padding: '15px', borderRadius: '10px', marginTop: '15px' }}>
+              <p style={{ margin: '5px 0', fontSize: '14px' }}>ID: <span style={{ color: '#fbbf24' }}>{userUID}</span></p>
+              <p style={{ margin: '5px 0', fontSize: '14px' }}>Balance: <span style={{ color: '#fbbf24' }}>{balance.toFixed(4)} TON</span></p>
+              <p style={{ margin: '5px 0', fontSize: '14px' }}>Status: <span style={{ color: '#10b981' }}>Active Account</span></p>
+            </div>
           </div>
-          <div style={{...styles.card, border:'1px solid #ef4444', color:'#ef4444', fontSize:'12px'}}>
-            <b>WARNING:</b> Multiple accounts or fake referrals will lead to a permanent ban without payment.
+
+          <div style={{ ...styles.card, border: '1px solid #ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
+            <p style={{ color: '#ef4444', fontSize: '12px', margin: 0, fontWeight: 'bold' }}>
+              ⚠️ WARNING: Multiple accounts or fake referrals will result in a permanent ban. We verify all activities before processing payments.
+            </p>
           </div>
         </div>
       )}
 
-      {/* --- FOOTER --- */}
+      {/* --- FOOTER NAV --- */}
       <div style={styles.footer}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => setActiveNav(n)} style={{ textAlign: 'center', color: activeNav === n ? '#fbbf24' : '#64748b', flex: 1, cursor: 'pointer' }}>
-            {n === 'earn' ? '💰' : n === 'invite' ? '👥' : n === 'withdraw' ? '💸' : '👤'}<br/><small style={{fontSize:'10px'}}>{n.toUpperCase()}</small>
+            <span style={{ fontSize: '20px' }}>
+              {n === 'earn' ? '💰' : n === 'invite' ? '👥' : n === 'withdraw' ? '💸' : '👤'}
+            </span>
+            <br/><small style={{fontSize: '10px'}}>{n.toUpperCase()}</small>
           </div>
         ))}
       </div>
