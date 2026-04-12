@@ -15,7 +15,7 @@ function App() {
     localStorage.setItem('completed_tasks', JSON.stringify(completedTasks));
   }, [balance, completedTasks]);
 
-  // --- ADSGRAM LOGIC ---
+  // --- ADSGRAM LOGIC (Block ID: 27393) ---
   const showAdAndVerify = (taskId) => {
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: "27393" });
@@ -30,6 +30,7 @@ function App() {
     }
   };
 
+  // --- BOT LINKS (အသစ်ပြန်ထည့်ထားသော ၆ ခု) ---
   const botTasks = [
     { id: 'b1', name: "GROW TEA BOT", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "GOLDEN MINER BOT", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -57,9 +58,8 @@ function App() {
 
   return (
     <div style={styles.container}>
-      {/* Header Balance */}
       <div style={{...styles.card, textAlign: 'center', border: '1px solid #fbbf24'}}>
-        <p style={{color: '#94a3b8', fontSize: '11px', fontWeight: '900'}}>TOTAL TON BALANCE</p>
+        <p style={{color: '#94a3b8', fontSize: '11px', fontWeight: '900'}}>TOTAL BALANCE</p>
         <h1 style={{color: '#fbbf24', fontSize: '42px', margin: '10px 0'}}>{balance.toFixed(4)} <span style={{fontSize: '18px'}}>TON</span></h1>
       </div>
 
@@ -73,9 +73,17 @@ function App() {
 
           {!showPayForm ? (
             <div>
+              {activeTab === 'reward' && (
+                <div style={styles.card}>
+                  <p style={{fontWeight: '900', color: '#94a3b8'}}>REWARD CODE:</p>
+                  <input type="password" style={styles.input} placeholder="Enter your code" />
+                  <button style={styles.btn}>CLAIM NOW</button>
+                </div>
+              )}
+
               {activeTab === 'social' && <button style={{...styles.btn, marginBottom: '15px'}} onClick={() => setShowPayForm(true)}>+ ADD TASK</button>}
               
-              {(activeTab === 'bot' ? botTasks : socialTasks).filter(t => !completedTasks.includes(t.id)).map(t => (
+              {(activeTab === 'bot' || activeTab === 'social') && (activeTab === 'bot' ? botTasks : socialTasks).filter(t => !completedTasks.includes(t.id)).map(t => (
                 <div key={t.id} style={styles.card}>
                   <div style={{display:'flex', justifyContent:'space-between', alignItems: 'center'}}>
                     <b style={{fontSize: '13px'}}>{t.name}</b>
@@ -96,18 +104,18 @@ function App() {
               </div>
               {taskSubTab === 'add' ? (
                 <div>
-                  <input style={styles.input} placeholder="CHANNEL/BOT NAME" />
-                  <input style={styles.input} placeholder="LINK (https://t.me/...)" />
+                  <input style={styles.input} placeholder="TASK NAME" />
+                  <input style={styles.input} placeholder="LINK (t.me/...)" />
                   <div style={{display: 'flex', gap: '8px', marginBottom: '15px'}}>
                     <div style={{flex:1, border:'1px solid #fbbf24', padding:'8px', borderRadius:'12px', textAlign:'center', fontSize:'10px'}}>100 Users<br/>0.2 TON</div>
                     <div style={{flex:1, border:'1px solid #fbbf24', padding:'8px', borderRadius:'12px', textAlign:'center', fontSize:'10px'}}>200 Users<br/>0.4 TON</div>
                     <div style={{flex:1, border:'1px solid #fbbf24', padding:'8px', borderRadius:'12px', textAlign:'center', fontSize:'10px'}}>300 Users<br/>0.5 TON</div>
                   </div>
-                  <p style={{fontSize: '11px', color:'#94a3b8'}}>SEND TON TO:</p>
+                  <p style={{fontSize: '11px', color:'#94a3b8'}}>PAY TON TO:</p>
                   <div style={{background: '#0f172a', padding: '12px', borderRadius: '12px', color:'#fbbf24', fontSize:'10px', wordBreak:'break-all', marginBottom:'10px'}} onClick={() => copyText("UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9")}>UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9</div>
-                  <p style={{fontSize: '11px', color:'#94a3b8'}}>MEMO (MUST USE THIS):</p>
+                  <p style={{fontSize: '11px', color:'#94a3b8'}}>MEMO (USER UID):</p>
                   <div style={{background: '#0f172a', padding: '12px', borderRadius: '12px', color:'#fbbf24', fontSize:'20px', fontWeight:'900', textAlign:'center', marginBottom:'15px'}}>{userUID}</div>
-                  <button style={styles.btn} onClick={() => alert("Order Sent to Admin!")}>CONFIRM & PAY</button>
+                  <button style={styles.btn} onClick={() => alert("✅ Order Sent!")}>CONFIRM & PAY</button>
                   <button style={{...styles.btn, background:'none', color:'#94a3b8'}} onClick={() => setShowPayForm(false)}>BACK</button>
                 </div>
               ) : <div style={{textAlign:'center', padding:'20px', color:'#64748b'}}>No tasks found.</div>}
@@ -119,10 +127,8 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{color: '#fbbf24', textAlign:'center'}}>INVITE</h2>
-          <p style={{textAlign:'center', fontSize:'12px'}}>Earn 0.0005 TON per referral</p>
           <div style={{...styles.input, textAlign:'center', color:'#fbbf24', borderStyle:'dashed'}} onClick={() => copyText(`https://t.me/YourBot?start=${userUID}`)}>Copy Referral Link</div>
-          <h4 style={{marginTop:'20px'}}>INVITE HISTORY</h4>
-          <div style={{display:'flex', justifyContent:'space-between', padding:'10px', background:'#0f172a', borderRadius:'10px'}}>
+          <div style={{display:'flex', justifyContent:'space-between', padding:'10px', background:'#0f172a', borderRadius:'10px', marginTop:'20px'}}>
             <span>Total Friends:</span><span>0 Users</span>
           </div>
         </div>
@@ -131,13 +137,12 @@ function App() {
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h2 style={{color: '#fbbf24'}}>WITHDRAW</h2>
-          <input style={styles.input} placeholder="AMOUNT (MIN 0.1)" />
-          <input style={styles.input} placeholder="TON WALLET ADDRESS" />
+          <input style={styles.input} placeholder="AMOUNT" />
+          <input style={styles.input} placeholder="WALLET ADDRESS" />
           <button style={styles.btn}>WITHDRAW NOW</button>
-          <h4 style={{marginTop:'30px'}}>WITHDRAW HISTORY</h4>
-          <table style={{width:'100%', fontSize:'12px', borderCollapse:'collapse', marginTop:'10px'}}>
-            <thead><tr style={{color:'#94a3b8', borderBottom:'1px solid #334155'}}><th align="left">Amount</th><th align="left">Status</th><th align="right">Date</th></tr></thead>
-            <tbody><tr><td colSpan="3" align="center" style={{padding:'20px', color:'#64748b'}}>No history found.</td></tr></tbody>
+          <table style={{width:'100%', fontSize:'12px', marginTop:'20px'}}>
+             <thead><tr style={{color:'#94a3b8', borderBottom:'1px solid #334155'}}><th align="left">Amount</th><th align="left">Status</th><th align="right">Date</th></tr></thead>
+             <tbody><tr><td colSpan="3" align="center" style={{padding:'20px', color:'#64748b'}}>No Withdraw Data.</td></tr></tbody>
           </table>
         </div>
       )}
@@ -148,7 +153,7 @@ function App() {
           <p>UID: {userUID}</p>
           <p>STATUS: <span style={{color:'#10b981'}}>VIP VERIFIED</span></p>
           <div style={{background:'rgba(239,68,68,0.1)', padding:'15px', borderRadius:'15px', border:'1px solid #ef4444', marginTop:'20px'}}>
-            <p style={{color:'#ef4444', fontSize:'12px', margin:0}}><b>⚠️ WARNING POLICY:</b><br/>Fake accounts and multiple IDs are strictly prohibited. Detected accounts will be permanently banned from the system.</p>
+            <p style={{color:'#ef4444', fontSize:'12px', margin:0}}>⚠️ WARNING POLICY: Fake accounts will be banned permanently.</p>
           </div>
         </div>
       )}
