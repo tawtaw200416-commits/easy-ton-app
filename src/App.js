@@ -68,11 +68,11 @@ function App() {
             setBalance(prev => prev + 0.0005);
             setCompleted(prev => [...prev, id]);
             alert("Reward 0.0005 TON Added!");
-          }).catch((err) => {
-            alert("Ad failed or skipped. Please try again.");
+          }).catch(() => {
+            alert("Ad not finished. Please watch the full ad.");
           });
         } else {
-          alert("Adsgram not loaded yet.");
+          alert("Ad Provider not loaded. Check index.html script.");
         }
       };
     }
@@ -82,29 +82,27 @@ function App() {
     const channelName = document.getElementById('chan_name').value;
     const inviteLink = document.getElementById('inv_link').value;
     const plan = document.getElementById('plan_select').value;
-
     if (channelName && inviteLink) {
       const message = `🔔 *New Social Task Order*\n\n📺 Channel: ${channelName}\n🔗 Link: ${inviteLink}\n💰 Plan: ${plan}\n🆔 Memo ID: \`${userUID}\``;
       fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${ADMIN_CHAT_ID}&text=${encodeURIComponent(message)}&parse_mode=Markdown`)
-        .then(() => {
-          alert("Order sent to Admin!");
-          setSocialView('list');
-        });
+        .then(() => { alert("Order sent to Admin!"); setSocialView('list'); })
+        .catch(() => alert("Telegram connection failed."));
     }
   };
 
   const handleWithdraw = () => {
     const amount = document.getElementById('wd_amount').value;
     const address = document.getElementById('wd_address').value;
-    if (balance >= amount && amount >= 0.1) {
+    if (amount >= 0.1 && address.length > 10 && balance >= amount) {
       const message = `💸 *Withdraw Request*\n\nUID: ${userUID}\nAmount: ${amount} TON\nAddress: ${address}`;
       fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${ADMIN_CHAT_ID}&text=${encodeURIComponent(message)}&parse_mode=Markdown`)
         .then(() => {
-          setWithdrawHistory([{ date: new Date().toLocaleDateString(), amount, status: "Pending" }, ...withdrawHistory]);
+          const newEntry = { date: new Date().toLocaleDateString(), amount, status: "Pending" };
+          setWithdrawHistory([newEntry, ...withdrawHistory]);
           setBalance(prev => prev - Number(amount));
           alert("Withdrawal submitted!");
         });
-    }
+    } else { alert("Insufficient Balance or Min 0.1 TON."); }
   };
 
   const copyToClipboard = (text) => { navigator.clipboard.writeText(text); alert("Copied!"); };
@@ -115,7 +113,8 @@ function App() {
     yellowBtn: { width: '100%', padding: '12px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
     input: { width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '10px', boxSizing: 'border-box' },
     copyBox: { background: 'rgba(251,191,36,0.1)', padding: '12px', borderRadius: '10px', border: '1px solid #fbbf24', textAlign: 'center', cursor: 'pointer', marginBottom: '10px' },
-    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b' }
+    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b', borderTop: '1px solid #334155' },
+    warning: { color: '#ef4444', fontSize: '12px', fontWeight: 'bold', border: '1px solid #ef4444', padding: '10px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.1)', marginTop: '15px' }
   };
 
   return (
@@ -135,7 +134,7 @@ function App() {
 
           {activeTab === 'bot' && botTasks.filter(t => !completed.includes(t.id)).map(b => (
             <div key={b.id} style={styles.card}>
-              <p>{b.name}</p>
+              <p style={{fontWeight:'bold'}}>{b.name}</p>
               <button id={`btn-${b.id}`} onClick={() => handleAction(b.id, b.link)} style={styles.yellowBtn}>START BOT</button>
             </div>
           ))}
@@ -147,7 +146,7 @@ function App() {
                 {socialTasks.filter(t => !completed.includes(t.id)).map(s => (
                   <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #334155' }}>
                     <span>{s.name}</span>
-                    <button id={`btn-${s.id}`} onClick={() => handleAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '80px' }}>JOIN</button>
+                    <button id={`btn-${s.id}`} onClick={() => handleAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '80px', padding: '8px' }}>JOIN</button>
                   </div>
                 ))}
               </div>
@@ -158,48 +157,75 @@ function App() {
             <div style={styles.card}>
               <input id="chan_name" style={styles.input} placeholder="Channel Name" />
               <input id="inv_link" style={styles.input} placeholder="Invite Link" />
-              <select id="plan_select" style={styles.input}><option>100 Views - 0.2 TON</option></select>
-              <div style={styles.copyBox} onClick={() => copyToClipboard(adminWallet)}>Wallet: {adminWallet.slice(0,10)}...</div>
-              <div style={styles.copyBox} onClick={() => copyToClipboard(userUID)}>Memo ID: {userUID}</div>
+              <select id="plan_select" style={styles.input}><option>100 Views - 0.2 TON</option><option>200 Views - 0.4 TON</option></select>
+              <div style={styles.copyBox} onClick={() => copyToClipboard(adminWallet)}>Wallet: {adminWallet.slice(0,10)}... (Copy)</div>
+              <div style={styles.copyBox} onClick={() => copyToClipboard(userUID)}>Memo ID: {userUID} (Copy)</div>
               <button style={styles.yellowBtn} onClick={handleConfirmPayment}>CONFIRM PAYMENT</button>
-              <p style={{textAlign:'center', marginTop:'10px'}} onClick={()=>setSocialView('list')}>Back</p>
+              <p style={{textAlign:'center', marginTop:'10px', color:'#94a3b8'}} onClick={()=>setSocialView('list')}>Back</p>
             </div>
           )}
 
           {activeTab === 'reward' && (
-             <div style={styles.card}>
-               <h4>GIFT CODE</h4>
-               <input id="gift" style={styles.input} placeholder="Enter GIFT77" />
-               <button onClick={() => {if(document.getElementById('gift').value==="GIFT77"){setBalance(b=>b+0.01);setIsClaimed(true);alert("Success!")}}} style={styles.yellowBtn}>CLAIM</button>
-             </div>
+            <div style={styles.card}>
+              <h4>DAILY GIFT CODE</h4>
+              {isClaimed ? <p style={{ color: '#10b981', textAlign: 'center' }}>CLAIMED ✅</p> : (
+                <>
+                  <input id="gift" style={styles.input} placeholder="Enter GIFT77" />
+                  <button onClick={() => {if(document.getElementById('gift').value==="GIFT77"){setBalance(b=>b+0.01);setIsClaimed(true);alert("Success!")}}} style={styles.yellowBtn}>CLAIM</button>
+                </>
+              )}
+            </div>
           )}
         </>
       )}
 
       {activeNav === 'invite' && (
-        <div style={styles.card}>
-          <h3>INVITE</h3>
-          <p>Reward: 0.0005 TON</p>
-          <div style={styles.input}>https://t.me/YourBot?start={userUID}</div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={styles.card}>
+            <h2>INVITE FRIENDS</h2>
+            <p>Reward: 0.0005 TON</p>
+            <div onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={styles.input}>https://t.me/YourBot?start={userUID}</div>
+            <button onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={styles.yellowBtn}>COPY LINK</button>
+          </div>
+          <h4 style={{ textAlign: 'left' }}>INVITATION HISTORY</h4>
+          <div style={styles.card}>
+            <table style={{ width: '100%', fontSize: '12px' }}>
+              <thead><tr style={{ color: '#64748b' }}><th>User UID</th><th>Status</th><th>Reward</th></tr></thead>
+              <tbody>{inviteHistory.map((inv, i) => (<tr key={i}><td>{inv.uid}</td><td style={{color: '#10b981'}}>{inv.status}</td><td>{inv.reward}</td></tr>))}</tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {activeNav === 'withdraw' && (
-        <div style={styles.card}>
-          <input id="wd_amount" style={styles.input} placeholder="Amount" type="number" />
-          <input id="wd_address" style={styles.input} placeholder="Address" />
-          <button style={styles.yellowBtn} onClick={handleWithdraw}>WITHDRAW</button>
+        <div>
+          <div style={styles.card}>
+            <h3>WITHDRAWAL</h3>
+            <input id="wd_amount" style={styles.input} placeholder="Amount (Min 0.1)" type="number" />
+            <input id="wd_address" style={styles.input} placeholder="TON Address" />
+            <button style={styles.yellowBtn} onClick={handleWithdraw}>WITHDRAW</button>
+          </div>
+          <h4>WITHDRAWAL HISTORY</h4>
+          <div style={styles.card}>
+            <table style={{ width: '100%', fontSize: '12px' }}>
+              <thead><tr style={{ color: '#64748b' }}><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+              <tbody>{withdrawHistory.map((wh, i) => (<tr key={i}><td>{wh.date}</td><td>{wh.amount}</td><td style={{color:'#fbbf24'}}>{wh.status}</td></tr>))}</tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {activeNav === 'profile' && (
-        <div style={{textAlign:'center'}}><p>UID: {userUID}</p></div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={styles.card}>👤 UID: {userUID}</div>
+          <div style={styles.warning}>⚠️ NOTICE: FAKE ACCOUNTS PROHIBITED. BAN RISK!</div>
+        </div>
       )}
 
       <div style={styles.footer}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => setActiveNav(n)} style={{ color: activeNav === n ? '#fbbf24' : '#64748b', cursor:'pointer' }}>
-            {n.toUpperCase()}
+          <div key={n} onClick={() => setActiveNav(n)} style={{ textAlign: 'center', color: activeNav === n ? '#fbbf24' : '#64748b', cursor: 'pointer' }}>
+            <small>{n.toUpperCase()}</small>
           </div>
         ))}
       </div>
