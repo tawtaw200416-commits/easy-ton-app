@@ -62,47 +62,42 @@ function App() {
     return hoursPast >= 24 ? 'Complete' : 'Pending';
   };
 
-  // --- Styles (Bro တောင်းဆိုထားတဲ့ လင်းလက်တဲ့ အဝါရောင် Theme) ---
   const styles = {
-    // လင်းလက်တဲ့ အဝါရောင် နောက်ခံ
     main: { backgroundColor: '#facc15', color: '#000', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
-    
-    // Balance ပေါ်မယ့် Header အကွက် (အပေါ်ဆုံးက အလွတ်နေရာမှာ ပေါ်မှာပါ)
     headerCard: { 
       textAlign: 'center', 
       background: 'linear-gradient(135deg, #000, #1e293b)', 
-      padding: '30px', 
+      padding: '25px', 
       borderRadius: '25px', 
       marginBottom: '20px', 
-      border: '3px solid #fff',
-      boxShadow: '0 8px 20px rgba(0,0,0,0.2)'
+      border: '4px solid #fff',
+      boxShadow: '0 10px 20px rgba(0,0,0,0.3)'
     },
-
     card: { backgroundColor: '#fff', padding: '18px', borderRadius: '20px', marginBottom: '12px', border: '2px solid #000', color: '#000' },
-    yellowBtn: { width: '100%', padding: '15px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', fontSize: '15px' },
+    yellowBtn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', fontSize: '15px' },
     navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0', height: '85px', zIndex: 100 },
     navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#94a3b8', fontSize: '12px', fontWeight: '900', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }),
-    row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #e2e8f0' },
+    row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #e2e8f0' },
     input: { width: '100%', padding: '14px', borderRadius: '12px', backgroundColor: '#f1f5f9', color: '#000', border: '2px solid #000', marginBottom: '12px', boxSizing: 'border-box', fontWeight: '900' },
-    copyBox: { background: '#f1f5f9', padding: '12px', borderRadius: '12px', border: '1px dashed #000', marginBottom: '10px' }
+    planBtn: (active) => ({ flex: 1, padding: '10px', borderRadius: '10px', border: '2px solid #000', backgroundColor: active ? '#000' : '#fff', color: active ? '#fff' : '#000', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }),
+    copyBox: { background: '#f1f5f9', padding: '10px', borderRadius: '12px', border: '1px dashed #000', marginBottom: '10px' }
   };
 
   return (
     <div style={styles.main}>
-      {/* Header - Total Balance (အပေါ်ဆုံးက အလွတ်မှာ ပေါ်လာမယ့် အကွက်) */}
+      {/* အပေါ်ဆုံး Balance အကွက် */}
       <div style={styles.headerCard}>
-        <small style={{ color: '#facc15', fontWeight: '900', letterSpacing: '2px' }}>MY TOTAL BALANCE</small>
-        <h1 style={{ color: '#fff', fontSize: '45px', margin: '5px 0', fontWeight: '900' }}>
-          {balance.toFixed(4)} <span style={{fontSize:'20px', color: '#facc15'}}>TON</span>
+        <small style={{ color: '#facc15', fontWeight: '900', letterSpacing: '2px' }}>CURRENT BALANCE</small>
+        <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0', fontWeight: '900' }}>
+          {balance.toFixed(5)} <span style={{fontSize:'18px', color: '#facc15'}}>TON</span>
         </h1>
       </div>
 
-      {/* --- EARN SECTION --- */}
       {activeNav === 'earn' && (
         <>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
             {['bot', 'social', 'reward'].map(t => (
-              <button key={t} onClick={() => {setActiveTab(t); setShowAddTask(false);}} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: activeTab === t ? '2px solid #fff' : 'none', backgroundColor: activeTab === t ? '#000' : '#fff', color: activeTab === t ? '#fff' : '#000', fontWeight: '900' }}>{t.toUpperCase()}</button>
+              <button key={t} onClick={() => {setActiveTab(t); setShowAddTask(false);}} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: activeTab === t ? '2px solid #fff' : '2px solid #000', backgroundColor: activeTab === t ? '#000' : '#fff', color: activeTab === t ? '#fff' : '#000', fontWeight: '900' }}>{t.toUpperCase()}</button>
             ))}
           </div>
 
@@ -146,13 +141,34 @@ function App() {
 
             {showAddTask && (
               <div>
-                <h3 style={{fontWeight:'900', color:'#000', marginTop:0}}>Promote Ad</h3>
+                <h3 style={{fontWeight:'900', color:'#000', marginTop:0}}>Promote Ad (Views)</h3>
                 <input style={styles.input} placeholder="Channel Name (@Username)" />
                 <input style={styles.input} placeholder="Channel Link" />
-                <button style={styles.yellowBtn} onClick={() => { window.open(APP_CONFIG.ADMIN_TELEGRAM); setShowAddTask(false); }}>CONTACT ADMIN</button>
+                
+                <p style={{fontSize: '12px', fontWeight: '900', marginBottom: '10px'}}>Select Plan:</p>
+                <div style={{display: 'flex', gap: '5px', marginBottom: '15px'}}>
+                  <button onClick={() => setSelectedPlan('100')} style={styles.planBtn(selectedPlan === '100')}>100 Ads<br/>0.2 TON</button>
+                  <button onClick={() => setSelectedPlan('200')} style={styles.planBtn(selectedPlan === '200')}>200 Ads<br/>0.4 TON</button>
+                  <button onClick={() => setSelectedPlan('300')} style={styles.planBtn(selectedPlan === '300')}>300 Ads<br/>0.5 TON</button>
+                </div>
+
+                <div style={styles.copyBox}>
+                  <small style={{color: '#64748b', fontSize: '10px'}}>TON ADDRESS</small>
+                  <p style={{fontSize: '11px', fontWeight: '900', margin: '5px 0', wordBreak: 'break-all'}}>{APP_CONFIG.ADMIN_WALLET}</p>
+                  <button onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET, "Address")} style={{background:'#000', color:'#fff', border:'none', padding:'4px 10px', borderRadius:'6px', fontWeight:'900', fontSize:'10px'}}>COPY ADDRESS</button>
+                </div>
+                
+                <div style={styles.copyBox}>
+                  <small style={{color: '#64748b', fontSize: '10px'}}>MEMO (USER UID)</small>
+                  <p style={{fontSize: '16px', color: '#000', fontWeight: '900', margin: '5px 0'}}>{APP_CONFIG.MY_UID}</p>
+                  <button onClick={() => handleCopy(APP_CONFIG.MY_UID, "Memo")} style={{background:'#000', color:'#fff', border:'none', padding:'4px 10px', borderRadius:'6px', fontWeight:'900', fontSize:'10px'}}>COPY MEMO</button>
+                </div>
+
+                <p style={{fontSize:'10px', color:'red', fontWeight:'900', marginBottom:'10px'}}>⚠️ ငွေပို့ပြီးလျှင် ပို့ထားသော Screenshot အား Admin ထံ ပေးပို့အတည်ပြုပါ။</p>
+                <button style={styles.yellowBtn} onClick={() => { window.open(APP_CONFIG.ADMIN_TELEGRAM); setShowAddTask(false); }}>CONFIRM & CONTACT ADMIN</button>
               </div>
             )}
-            
+
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Reward Code" />
@@ -163,19 +179,21 @@ function App() {
         </>
       )}
 
-      {/* --- INVITE SECTION --- */}
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{marginTop: 0, fontWeight: '900', textAlign: 'center'}}>INVITE & EARN</h2>
-          <p style={{textAlign: 'center', fontSize: '14px', color: '#64748b', marginBottom: '20px'}}>Earn <strong style={{color: '#000'}}>0.0005 TON</strong> per referral!</p>
           <div style={styles.copyBox}>
-            <p style={{fontSize: '11px', wordBreak: 'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
+            <small style={{color: '#64748b', fontSize: '10px'}}>YOUR REFERRAL LINK:</small>
+            <p style={{fontSize: '11px', fontWeight: '900', margin: '10px 0'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
             <button onClick={() => handleCopy(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`, "Link")} style={styles.yellowBtn}>COPY LINK</button>
+          </div>
+          <div style={{...styles.row, borderBottom: 'none', background: '#f1f5f9', padding: '15px', borderRadius: '15px'}}>
+            <span style={{fontWeight: '900'}}>My Referrals:</span>
+            <span style={{fontWeight: '900', fontSize: '18px'}}>{referralCount}</span>
           </div>
         </div>
       )}
 
-      {/* --- WITHDRAW SECTION --- */}
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3 style={{fontWeight: '900'}}>WITHDRAW</h3>
@@ -190,10 +208,26 @@ function App() {
               alert("Withdraw Request Sent!");
             } else alert("Invalid Amount!");
           }}>WITHDRAW NOW</button>
+          
+          <h4 style={{marginTop: '20px', fontWeight: '900'}}>WITHDRAW HISTORY</h4>
+          {withdrawHistory.length === 0 ? <p style={{fontSize:'12px', color:'#94a3b8'}}>No history yet.</p> : withdrawHistory.map(item => (
+            <div key={item.id} style={styles.row}>
+              <span style={{fontWeight:'900'}}>{item.amount} TON</span>
+              <span style={{color: getStatus(item) === 'Complete' ? '#10b981' : '#f59e0b', fontWeight:'900'}}>{getStatus(item)}</span>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Navigation Footer */}
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h2 style={{fontWeight: '900', textAlign: 'center'}}>USER PROFILE</h2>
+          <div style={styles.row}><span style={{color: '#64748b'}}>UID:</span><span style={{fontWeight: '900'}}>{APP_CONFIG.MY_UID}</span></div>
+          <div style={styles.row}><span style={{color: '#64748b'}}>Balance:</span><span style={{fontWeight: '900'}}>{balance.toFixed(5)} TON</span></div>
+          <button onClick={() => window.open(APP_CONFIG.ADMIN_TELEGRAM)} style={{...styles.yellowBtn, marginTop: '20px'}}>CONTACT SUPPORT</button>
+        </div>
+      )}
+
       <div style={styles.navBar}>
         <div onClick={() => setActiveNav('earn')} style={styles.navBtn(activeNav === 'earn')}><span style={{fontSize:'22px'}}>💰</span><span>EARN</span></div>
         <div onClick={() => setActiveNav('invite')} style={styles.navBtn(activeNav === 'invite')}><span style={{fontSize:'22px'}}>👥</span><span>INVITE</span></div>
