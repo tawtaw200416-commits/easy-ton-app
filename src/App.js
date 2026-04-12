@@ -2,16 +2,12 @@ import React, { useState, useEffect } from 'react';
 
 function App() {
   const [userUID] = useState("1793453606");
-  const [balance, setBalance] = useState(() => {
-    const saved = localStorage.getItem('ton_balance');
-    return saved ? JSON.parse(saved) : 0.0000;
-  });
-  const [completedTasks, setCompletedTasks] = useState(() => {
-    const saved = localStorage.getItem('completed_tasks');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [balance, setBalance] = useState(() => JSON.parse(localStorage.getItem('ton_balance')) || 0.0000);
+  const [completedTasks, setCompletedTasks] = useState(() => JSON.parse(localStorage.getItem('completed_tasks')) || []);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
+  const [taskSubTab, setTaskSubTab] = useState('add');
+  const [showPayForm, setShowPayForm] = useState(false);
   const [checking, setChecking] = useState(null);
 
   useEffect(() => {
@@ -19,26 +15,30 @@ function App() {
     localStorage.setItem('completed_tasks', JSON.stringify(completedTasks));
   }, [balance, completedTasks]);
 
-  const showAdAndVerify = (taskId) => {
-    if (window.Adsgram) {
-      const AdController = window.Adsgram.init({ blockId: "27393" });
-      AdController.show()
-        .then(() => {
-          if (!completedTasks.includes(taskId)) {
-            setBalance(prev => prev + 0.0005);
-            setCompletedTasks(prev => [...prev, taskId]);
-            setChecking(null);
-            alert("✅ Verified! Reward added.");
-          }
-        })
-        .catch(() => {
-          alert("⚠️ Please watch the full ad to verify.");
-        });
-    } else {
-      alert("Adsgram SDK not loaded yet.");
+  // --- ADSGRAM VERIFICATION LOGIC (Block ID: 27393) ---
+  const verifyTaskWithAds = (taskId) => {
+    if (!window.Adsgram) {
+      alert("Ads SDK is loading... Please try again in a moment.");
+      return;
     }
+
+    const AdController = window.Adsgram.init({ blockId: "27393" });
+
+    AdController.show().then((result) => {
+      // ကြော်ငြာကြည့်ပြီးမှ ပိုက်ဆံပေါင်းပေးမည်
+      if (!completedTasks.includes(taskId)) {
+        setBalance(prev => prev + 0.0005);
+        setCompletedTasks(prev => [...prev, taskId]);
+        setChecking(null);
+        alert("✅ Verified! 0.0005 TON added to your balance.");
+      }
+    }).catch((result) => {
+      // ကြော်ငြာကို အဆုံးထိမကြည့်ဘဲ ပိတ်လိုက်လျှင်
+      alert("⚠️ You must watch the full ad to verify the task.");
+    });
   };
 
+  // --- START BOT LINKS ---
   const botTasks = [
     { id: 'bot_1', name: "GROW TEA BOT", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'bot_2', name: "GOLDEN MINER BOT", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -48,58 +48,90 @@ function App() {
     { id: 'bot_6', name: "POBUZZ BOT", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
   ];
 
-  const socialChannels = ["GrowTeaNews", "GoldenMinerNews", "cryptogold_online_official", "M9460", "USDTcloudminer_channel", "ADS_TON1", "goblincrypto", "WORLDBESTCRYTO", "kombo_crypta", "easytonfree", "WORLDBESTCRYTO1", "MONEYHUB9_69", "zrbtua", "perviu1million"];
-  const socialTasks = socialChannels.map((name, i) => ({ id: `soc_${i}`, name: `@${name}`.toUpperCase(), link: `https://t.me/${name}` }));
+  const socialTasks = [
+    "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", "@M9460",
+    "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO",
+    "@kombo_crypta", "@easytonfree", "@WORLDBESTCRYTO1", "@MONEYHUB9_69",
+    "@zrbtua", "@perviu1million"
+  ].map((name, i) => ({ id: `soc_${i}`, name: name.toUpperCase(), link: `https://t.me/${name.replace('@','')}` }));
+
+  const startTask = (task) => {
+    window.open(task.link, '_blank');
+    setChecking(task.id); 
+  };
+
+  const copyText = (t) => { navigator.clipboard.writeText(t); alert("✅ Copied!"); };
 
   const styles = {
-    container: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '100px' },
+    container: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '100px', fontFamily: 'sans-serif' },
     card: { backgroundColor: '#1e293b', padding: '18px', borderRadius: '22px', border: '1px solid #334155', marginBottom: '12px' },
-    tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', backgroundColor: active ? '#fbbf24' : 'transparent', color: active ? '#000' : '#94a3b8', fontWeight: 'bold' }),
-    btn: { padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' },
-    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '15px 0', backgroundColor: '#1e293b' }
+    tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', backgroundColor: active ? '#fbbf24' : 'transparent', color: active ? '#000' : '#94a3b8', fontWeight: '900', fontSize: '12px' }),
+    input: { width: '100%', padding: '14px', borderRadius: '12px', backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', marginBottom: '12px', boxSizing: 'border-box' },
+    btn: { width: '100%', padding: '16px', borderRadius: '15px', backgroundColor: '#fbbf24', border: 'none', fontWeight: '900', cursor: 'pointer' },
+    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '15px 0', backgroundColor: '#1e293b', borderTop: '1px solid #334155' }
   };
 
   return (
     <div style={styles.container}>
-      <div style={{...styles.card, textAlign: 'center', borderColor: '#fbbf24'}}>
-        <p style={{color: '#94a3b8'}}>AVAILABLE BALANCE</p>
-        <h1 style={{color: '#fbbf24', fontSize: '36px'}}>{balance.toFixed(4)} TON</h1>
+      {/* Balance Section */}
+      <div style={{...styles.card, textAlign: 'center', background: 'linear-gradient(135deg, #1e293b 0%, #020617 100%)', border: '1px solid #fbbf24'}}>
+        <p style={{color: '#94a3b8', fontSize: '11px', fontWeight: '900'}}>TOTAL BALANCE</p>
+        <h1 style={{color: '#fbbf24', fontSize: '42px', margin: '10px 0', fontWeight: '950'}}>{balance.toFixed(4)} <span style={{fontSize: '18px'}}>TON</span></h1>
       </div>
 
-      <div style={{display: 'flex', backgroundColor: '#1e293b', borderRadius: '15px', padding: '5px', marginBottom: '20px'}}>
-        <button style={styles.tabBtn(activeTab === 'bot')} onClick={() => setActiveTab('bot')}>BOT</button>
-        <button style={styles.tabBtn(activeTab === 'social')} onClick={() => setActiveTab('social')}>SOCIAL</button>
-      </div>
-
-      {activeTab === 'bot' && botTasks.filter(t => !completedTasks.includes(t.id)).map(t => (
-        <div key={t.id} style={styles.card}>
-          <div style={{display:'flex', justifyContent:'space-between', alignItems: 'center'}}>
-            <span>{t.name}</span>
-            {checking === t.id ? (
-              <button onClick={() => showAdAndVerify(t.id)} style={{...styles.btn, backgroundColor: '#10b981', color: 'white'}}>CHECK</button>
-            ) : (
-              <button onClick={() => { window.open(t.link, '_blank'); setChecking(t.id); }} style={{...styles.btn, backgroundColor: '#fbbf24'}}>START</button>
-            )}
+      {activeNav === 'earn' && (
+        <>
+          <div style={{display: 'flex', backgroundColor: '#1e293b', borderRadius: '15px', padding: '5px', marginBottom: '20px'}}>
+            <button style={styles.tabBtn(activeTab === 'bot')} onClick={() => {setActiveTab('bot'); setShowPayForm(false)}}>START BOT</button>
+            <button style={styles.tabBtn(activeTab === 'reward')} onClick={() => {setActiveTab('reward'); setShowPayForm(false)}}>REWARD</button>
+            <button style={styles.tabBtn(activeTab === 'social')} onClick={() => {setActiveTab('social'); setShowPayForm(false)}}>SOCIAL</button>
           </div>
-        </div>
-      ))}
 
-      {activeTab === 'social' && socialTasks.filter(t => !completedTasks.includes(t.id)).map(t => (
-        <div key={t.id} style={styles.card}>
-          <div style={{display:'flex', justifyContent:'space-between', alignItems: 'center'}}>
-            <span>{t.name}</span>
-            {checking === t.id ? (
-              <button onClick={() => showAdAndVerify(t.id)} style={{...styles.btn, backgroundColor: '#10b981', color: 'white'}}>CHECK</button>
-            ) : (
-              <button onClick={() => { window.open(t.link, '_blank'); setChecking(t.id); }} style={{...styles.btn, backgroundColor: '#fbbf24'}}>JOIN</button>
-            )}
-          </div>
-        </div>
-      ))}
+          {!showPayForm ? (
+            <div>
+              {/* BOT LIST */}
+              {activeTab === 'bot' && botTasks.filter(t => !completedTasks.includes(t.id)).map(t => (
+                <div key={t.id} style={styles.card}>
+                  <div style={{display:'flex', justifyContent:'space-between', alignItems: 'center'}}>
+                    <b style={{fontSize: '14px', color: '#fff'}}>{t.name}</b>
+                    {checking === t.id ? (
+                      <button style={{backgroundColor: '#10b981', color: '#fff', padding: '8px 15px', borderRadius: '10px', border: 'none', fontWeight: '900'}} onClick={() => verifyTaskWithAds(t.id)}>CHECK</button>
+                    ) : (
+                      <button style={{backgroundColor: '#fbbf24', color: '#000', padding: '8px 15px', borderRadius: '10px', border: 'none', fontWeight: '900'}} onClick={() => startTask(t)}>START</button>
+                    )}
+                  </div>
+                </div>
+              ))}
 
+              {/* SOCIAL LIST */}
+              {activeTab === 'social' && socialTasks.filter(t => !completedTasks.includes(t.id)).map(t => (
+                <div key={t.id} style={styles.card}>
+                  <div style={{display:'flex', justifyContent:'space-between', alignItems: 'center'}}>
+                    <b style={{fontSize: '12px', color: '#fff'}}>{t.name}</b>
+                    {checking === t.id ? (
+                      <button style={{backgroundColor: '#10b981', color: '#fff', padding: '8px 15px', borderRadius: '10px', border: 'none', fontWeight: '900'}} onClick={() => verifyTaskWithAds(t.id)}>CHECK</button>
+                    ) : (
+                      <button style={{color:'#38bdf8', background:'none', border:'none', fontWeight:'900'}} onClick={() => startTask(t)}>JOIN</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={styles.card}>
+               {/* Add Task UI as per your previous design... */}
+               <button style={styles.btn} onClick={() => setShowPayForm(false)}>BACK</button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Footer Nav */}
       <div style={styles.footer}>
-        <div onClick={() => setActiveNav('earn')} style={{color: activeNav === 'earn' ? '#fbbf24' : '#64748b'}}>💰 EARN</div>
-        <div onClick={() => setActiveNav('withdraw')} style={{color: activeNav === 'withdraw' ? '#fbbf24' : '#64748b'}}>💸 HISTORY</div>
+        <div style={{textAlign:'center', color: activeNav==='earn'?'#fbbf24':'#64748b', fontWeight: '900'}} onClick={()=>setActiveNav('earn')}>💰<br/><small>EARN</small></div>
+        <div style={{textAlign:'center', color: activeNav==='invite'?'#fbbf24':'#64748b', fontWeight: '900'}} onClick={()=>setActiveNav('invite')}>👥<br/><small>INVITE</small></div>
+        <div style={{textAlign:'center', color: activeNav==='withdraw'?'#fbbf24':'#64748b', fontWeight: '900'}} onClick={()=>setActiveNav('withdraw')}>💸<br/><small>HISTORY</small></div>
+        <div style={{textAlign:'center', color: activeNav==='profile'?'#fbbf24':'#64748b', fontWeight: '900'}} onClick={()=>setActiveNav('profile')}>👤<br/><small>PROFILE</small></div>
       </div>
     </div>
   );
