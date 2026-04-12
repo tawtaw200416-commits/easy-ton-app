@@ -1,29 +1,43 @@
 import React, { useState, useEffect } from 'react';
 
-// ✅ Adsgram Block ID ကို Bro ရဲ့ ID (27393) နဲ့ သေချာအောင် ပြန်စစ်ပေးပါ
-const ADS_BLOCK_ID = "27393";
+const APP_CONFIG = {
+  ADS_BLOCK_ID: "27393",
+  MY_UID: "1793453606",
+  ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9"
+};
 
 function App() {
-  // 💰 Balance (အရင် data မပျက်အောင် 'ton_bal' ကို သုံးထားပါတယ်)
+  // ✅ အရင် Data တွေ မပျောက်အောင် Key နာမည်တွေကို အဟောင်းအတိုင်း သုံးထားပါတယ်
   const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_bal')) || 0.0000);
-  
-  // ✅ လုပ်ပြီးသား Task စာရင်း (အရင် data မပျက်အောင် 'comp_tasks' ကို သုံးထားပါတယ်)
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('comp_tasks')) || []);
-  
-  // 💸 Withdraw History (အရင် data မပျက်အောင် 'wd_hist' ကို သုံးထားပါတယ်)
-  const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || []);
+  const [isClaimed, setIsClaimed] = useState(() => localStorage.getItem('gift_claimed') === 'true');
+  const [withdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || [
+    { date: "2026-04-10", amount: "0.1500", status: "Pending" },
+    { date: "2026-04-08", amount: "0.2000", status: "Success" }
+  ]);
 
   const [activeNav, setActiveNav] = useState('earn');
-  const [activeTab, setActiveTab] = useState('social'); // Social ကို default ထားပေးထားပါတယ်
+  const [activeTab, setActiveTab] = useState('social');
+  const [socialView, setSocialView] = useState('list');
 
-  // Data တွေပြောင်းတိုင်း localStorage မှာ အလိုအလျောက် သိမ်းပေးတဲ့အပိုင်း
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
-    localStorage.setItem('wd_hist', JSON.stringify(withdrawHistory));
-  }, [balance, completed, withdrawHistory]);
+    localStorage.setItem('gift_claimed', isClaimed);
+  }, [balance, completed, isClaimed]);
 
-  // ✅ Bro ရဲ့ Social Tasks ၁၄ ခု (အကုန်ထည့်ထားပါတယ်)
+  // ✅ Bot Tasks (၇ ခု)
+  const botTasks = [
+    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
+    { id: 'b7', name: "Check In Bot", link: "https://t.me/check_in_bot" }
+  ];
+
+  // ✅ Social Tasks (၁၄ ခု)
   const socialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
@@ -41,44 +55,42 @@ function App() {
     { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
   ];
 
-  // ✅ Task Reward Logic (Ads ကြည့်ပြီးမှ ပေါင်းပေးမည့်အပိုင်း)
   const handleAction = (id, link) => {
     window.open(link, '_blank');
     const btn = document.getElementById(`btn-${id}`);
-    if (btn) btn.innerText = "VERIFYING...";
-
-    if (window.Adsgram) {
-      window.Adsgram.init({ blockId: ADS_BLOCK_ID }).show()
-        .then(() => {
-          // Ads ကြည့်ပြီးမှ 0.0005 ပေါင်းပေးခြင်း
+    if (btn) {
+      btn.innerText = "VERIFYING...";
+      if (window.Adsgram) {
+        window.Adsgram.init({ blockId: APP_CONFIG.ADS_BLOCK_ID }).show().then(() => {
           setBalance(prev => Number((prev + 0.0005).toFixed(5)));
           setCompleted(prev => [...prev, id]);
-        })
-        .catch(() => {
-          alert("Please watch the full ad to claim reward.");
-          if (btn) btn.innerText = "JOIN";
+          btn.innerText = "DONE ✅";
+          btn.style.backgroundColor = "#10b981";
+        }).catch(() => {
+          alert("Watch full ad to get reward!");
+          btn.innerText = "RETRY";
         });
-    } else {
-      // Adsgram မရှိလျှင် (Test Mode)
-      setTimeout(() => {
-        setBalance(prev => Number((prev + 0.0005).toFixed(5)));
-        setCompleted(prev => [...prev, id]);
-      }, 2000);
+      } else {
+        setTimeout(() => {
+          setBalance(prev => Number((prev + 0.0005).toFixed(5)));
+          setCompleted(prev => [...prev, id]);
+          btn.innerText = "DONE ✅";
+        }, 2000);
+      }
     }
   };
 
   const styles = {
-    main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '100px' },
-    headerBox: { textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px' },
+    main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '110px' },
     card: { backgroundColor: '#1e293b', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '1px solid #334155' },
-    yellowBtn: { width: '100%', padding: '12px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold' },
-    navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#1e293b', padding: '10px 0', borderTop: '2px solid #334155' }
+    yellowBtn: { width: '100%', padding: '12px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
+    navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#1e293b', padding: '10px 0', borderTop: '2px solid #334155' },
+    navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#fbbf24' : '#94a3b8', cursor: 'pointer' })
   };
 
   return (
     <div style={styles.main}>
-      {/* 💰 Total Balance (အရင်ရှိပြီးသား data ပြန်ပေါ်လာပါမယ်) */}
-      <div style={styles.headerBox}>
+      <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px' }}>
         <small style={{ color: '#94a3b8' }}>TOTAL BALANCE</small>
         <h1 style={{ color: '#fbbf24' }}>{balance.toFixed(4)} TON</h1>
       </div>
@@ -91,24 +103,32 @@ function App() {
             ))}
           </div>
 
-          {activeTab === 'social' && (
+          {activeTab === 'bot' && botTasks.map(b => (
+            <div key={b.id} style={styles.card}>
+              <p>{b.name}</p>
+              <button id={`btn-${b.id}`} disabled={completed.includes(b.id)} onClick={() => handleAction(b.id, b.link)} style={{...styles.yellowBtn, backgroundColor: completed.includes(b.id) ? '#10b981' : '#fbbf24'}}>{completed.includes(b.id) ? "DONE" : "START BOT"}</button>
+            </div>
+          ))}
+
+          {activeTab === 'social' && socialView === 'list' && (
+            <>
+              <button style={{...styles.yellowBtn, marginBottom: '10px'}} onClick={() => setSocialView('add')}>+ ADD TASK</button>
+              <div style={styles.card}>
+                {socialTasks.map(s => (
+                  <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #334155' }}>
+                    <span style={{fontSize:'13px'}}>{s.name}</span>
+                    <button id={`btn-${s.id}`} disabled={completed.includes(s.id)} onClick={() => handleAction(s.id, s.link)} style={{...styles.yellowBtn, width:'80px', padding:'5px', backgroundColor: completed.includes(s.id) ? '#10b981' : '#fbbf24'}}>{completed.includes(s.id) ? "DONE" : "JOIN"}</button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {activeTab === 'reward' && (
             <div style={styles.card}>
-              {socialTasks.map(s => (
-                <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #334155' }}>
-                  <span style={{ fontSize: '13px' }}>{s.name}</span>
-                  <button 
-                    id={`btn-${s.id}`}
-                    disabled={completed.includes(s.id)}
-                    onClick={() => handleAction(s.id, s.link)}
-                    style={{ 
-                      backgroundColor: completed.includes(s.id) ? '#10b981' : '#fbbf24',
-                      color: completed.includes(s.id) ? '#fff' : '#000',
-                      border: 'none', padding: '6px 15px', borderRadius: '8px', fontWeight: 'bold', width: '90px'
-                    }}>
-                    {completed.includes(s.id) ? "DONE" : "JOIN"}
-                  </button>
-                </div>
-              ))}
+              <h4>DAILY GIFT CODE</h4>
+              <input id="gift" type="password" style={{width:'100%', padding:'12px', marginBottom:'10px', borderRadius:'10px', background:'#0f172a', color:'white', border:'1px solid #334155'}} placeholder="Enter Code" />
+              <button onClick={() => {if(document.getElementById('gift').value==="GIFT77"){setBalance(b=>b+0.01);setIsClaimed(true);alert("Success!")}}} style={styles.yellowBtn}>CLAIM</button>
             </div>
           )}
         </>
@@ -118,46 +138,25 @@ function App() {
         <div>
           <div style={styles.card}>
             <h3>WITHDRAWAL</h3>
-            <input style={{ width: '100%', padding: '12px', marginBottom: '10px', borderRadius: '10px', backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155' }} placeholder="Amount (Min 0.1)" type="number" />
-            <input style={{ width: '100%', padding: '12px', marginBottom: '10px', borderRadius: '10px', backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155' }} placeholder="TON Wallet Address" />
+            <input style={{width:'100%', padding:'12px', marginBottom:'10px', borderRadius:'10px', background:'#0f172a', color:'white', border:'1px solid #334155'}} placeholder="Amount (Min 0.1)" type="number" />
+            <input style={{width:'100%', padding:'12px', marginBottom:'10px', borderRadius:'10px', background:'#0f172a', color:'white', border:'1px solid #334155'}} placeholder="TON Wallet Address" />
             <button style={styles.yellowBtn}>WITHDRAW NOW</button>
           </div>
-
-          {/* 💸 History Section (အရင် data မပျက်အောင် ပြန်ချိတ်ထားပါတယ်) */}
-          <h4>WITHDRAWAL HISTORY</h4>
+          <h4>HISTORY</h4>
           <div style={styles.card}>
-            {withdrawHistory.length === 0 ? (
-              <div style={{ textAlign: 'center', color: '#94a3b8', padding: '20px' }}>No records found</div>
-            ) : (
-              <table style={{ width: '100%', fontSize: '13px', textAlign: 'left' }}>
-                <thead>
-                  <tr>
-                    <th style={{ color: '#64748b' }}>Date</th>
-                    <th style={{ color: '#64748b' }}>Amount</th>
-                    <th style={{ color: '#64748b' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {withdrawHistory.map((w, i) => (
-                    <tr key={i}>
-                      <td style={{ padding: '10px 0' }}>{w.date}</td>
-                      <td>{w.amount} TON</td>
-                      <td style={{ color: w.status === 'Success' ? '#10b981' : '#fbbf24' }}>{w.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+            <table style={{width:'100%', fontSize:'13px', textAlign:'left'}}>
+              <thead><tr style={{color:'#64748b'}}><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+              <tbody>{withdrawHistory.map((w,i)=><tr key={i}><td style={{padding:'10px 0'}}>{w.date}</td><td>{w.amount}</td><td style={{color: w.status==='Success'?'#10b981':'#fbbf24'}}>{w.status}</td></tr>)}</tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* Footer Navigation */}
       <div style={styles.navBar}>
-        <div onClick={() => setActiveNav('earn')} style={{ flex: 1, textAlign: 'center', color: activeNav === 'earn' ? '#fbbf24' : '#94a3b8' }}>💰<br/><small>EARN</small></div>
-        <div onClick={() => setActiveNav('invite')} style={{ flex: 1, textAlign: 'center', color: activeNav === 'invite' ? '#fbbf24' : '#94a3b8' }}>👥<br/><small>INVITE</small></div>
-        <div onClick={() => setActiveNav('withdraw')} style={{ flex: 1, textAlign: 'center', color: activeNav === 'withdraw' ? '#fbbf24' : '#94a3b8' }}>💸<br/><small>WITHDRAW</small></div>
-        <div onClick={() => setActiveNav('profile')} style={{ flex: 1, textAlign: 'center', color: activeNav === 'profile' ? '#fbbf24' : '#94a3b8' }}>👤<br/><small>PROFILE</small></div>
+        <div onClick={() => setActiveNav('earn')} style={styles.navBtn(activeNav === 'earn')}>💰<br/><small>EARN</small></div>
+        <div onClick={() => setActiveNav('invite')} style={styles.navBtn(activeNav === 'invite')}>👥<br/><small>INVITE</small></div>
+        <div onClick={() => setActiveNav('withdraw')} style={styles.navBtn(activeNav === 'withdraw')}>💸<br/><small>WITHDRAW</small></div>
+        <div onClick={() => setActiveNav('profile')} style={styles.navBtn(activeNav === 'profile')}>👤<br/><small>PROFILE</small></div>
       </div>
     </div>
   );
