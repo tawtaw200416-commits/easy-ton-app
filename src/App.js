@@ -18,6 +18,7 @@ function App() {
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [showAddTask, setShowAddTask] = useState(false);
+  const [rewardInput, setRewardInput] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [selectedPlan, setSelectedPlan] = useState(null);
 
@@ -30,6 +31,22 @@ function App() {
 
   const handleCopy = (text, label) => {
     navigator.clipboard.writeText(text).then(() => alert(`${label} Copied!`));
+  };
+
+  // Reward Code EASY1 အတွက် Logic
+  const handleClaimReward = () => {
+    if (rewardInput === 'EASY1') {
+      if (completed.includes('reward_easy1')) {
+        alert("You have already claimed this code!");
+      } else {
+        setBalance(prev => Number((prev + 0.0005).toFixed(5)));
+        setCompleted(prev => [...prev, 'reward_easy1']);
+        setRewardInput('');
+        alert("Success! 0.0005 TON added to your balance.");
+      }
+    } else {
+      alert("Invalid Reward Code!");
+    }
   };
 
   const handleTaskAction = (id, link) => {
@@ -132,7 +149,18 @@ function App() {
                 <button style={styles.yellowBtn} onClick={() => window.open(APP_CONFIG.ADMIN_TELEGRAM)}>CONFIRM & SEND PROOF</button>
               </div>
             )}
-            {activeTab === 'reward' && (<div><input style={styles.input} placeholder="Enter Reward Code" /><button style={styles.yellowBtn}>CLAIM REWARD</button></div>)}
+            
+            {activeTab === 'reward' && (
+              <div>
+                <input 
+                  style={styles.input} 
+                  placeholder="Enter Reward Code" 
+                  value={rewardInput}
+                  onChange={(e) => setRewardInput(e.target.value)}
+                />
+                <button style={styles.yellowBtn} onClick={handleClaimReward}>CLAIM REWARD</button>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -154,7 +182,7 @@ function App() {
         <div style={styles.card}>
           <h3 style={{fontWeight:'900'}}>WITHDRAW</h3>
           <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
-          <button style={styles.yellowBtn}>WITHDRAW NOW</button>
+          <button style={styles.yellowBtn} onClick={() => alert("Withdrawal processing...")}>WITHDRAW NOW</button>
           <h4 style={{marginTop:'20px'}}>WITHDRAW HISTORY</h4>
           {withdrawHistory.map(h => (
             <div key={h.id} style={styles.row}><span>{h.amount} TON</span><span style={{color:'#f59e0b', fontWeight:'bold'}}>Pending</span></div>
