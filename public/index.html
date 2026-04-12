@@ -6,33 +6,33 @@
     <title>TON Reward App</title>
     <script src="https://adsgram.ai/sdk-v1.js"></script>
     <style>
-        :root { --primary: #fbbf24; --bg: #020617; --card: #1e293b; --text: #ffffff; --muted: #94a3b8; }
-        body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; padding-bottom: 80px; }
+        :root { --primary: #fbbf24; --bg: #020617; --card: #1e293b; --text: #ffffff; --muted: #94a3b8; --success: #10b981; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; padding-bottom: 90px; overflow-x: hidden; }
         .container { padding: 15px; }
         .header { text-align: center; border: 1px solid var(--primary); padding: 20px; border-radius: 20px; margin-bottom: 20px; }
-        .balance { font-size: 36px; color: var(--primary); margin: 5px 0; }
+        .balance { font-size: 32px; color: var(--primary); margin: 5px 0; font-weight: bold; }
         
-        /* Tabs */
+        /* Tabs System */
         .tabs { display: flex; gap: 8px; margin-bottom: 15px; }
-        .tab-btn { flex: 1; padding: 12px; border-radius: 10px; border: none; background: var(--card); color: white; font-weight: bold; font-size: 11px; cursor: pointer; }
+        .tab-btn { flex: 1; padding: 12px; border-radius: 10px; border: none; background: var(--card); color: white; font-weight: bold; font-size: 10px; cursor: pointer; text-transform: uppercase; }
         .tab-btn.active { background: var(--primary); color: black; }
 
-        /* Card & List */
-        .card { background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 10px; border: 1px solid #334155; }
-        .item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .btn-yellow { width: 100%; padding: 12px; border-radius: 10px; background: var(--primary); border: none; font-weight: bold; cursor: pointer; color: black; }
-        .btn-copy { background: #334155; color: var(--primary); border: none; padding: 4px 8px; border-radius: 5px; font-size: 10px; cursor: pointer; }
+        /* Card Designs */
+        .card { background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 12px; border: 1px solid #334155; position: relative; }
+        .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .btn-yellow { width: 100%; padding: 14px; border-radius: 12px; background: var(--primary); border: none; font-weight: bold; cursor: pointer; color: black; font-size: 14px; }
+        .btn-copy { background: #334155; color: var(--primary); border: none; padding: 6px 10px; border-radius: 6px; font-size: 10px; cursor: pointer; font-weight: bold; }
         
         /* Form Inputs */
-        input, select { width: 100%; padding: 12px; border-radius: 10px; background: #0f172a; color: white; border: 1px solid #334155; margin-bottom: 10px; box-sizing: border-box; }
+        input, select { width: 100%; padding: 12px; border-radius: 10px; background: #0f172a; color: white; border: 1px solid #334155; margin-bottom: 12px; box-sizing: border-box; outline: none; }
         
-        /* Footer Nav */
-        .footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; padding: 12px; background: var(--card); border-top: 1px solid #334155; }
-        .nav-item { text-align: center; color: var(--muted); font-size: 11px; cursor: pointer; }
-        .nav-item.active { color: var(--primary); }
+        /* Footer Navigation */
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; padding: 12px; background: var(--card); border-top: 1px solid #334155; z-index: 100; }
+        .nav-item { text-align: center; color: var(--muted); font-size: 10px; cursor: pointer; flex: 1; transition: 0.3s; }
+        .nav-item.active { color: var(--primary); transform: scale(1.1); }
         
         .hidden { display: none; }
-        .warning-card { border: 1px solid #ef4444; padding: 15px; border-radius: 15px; margin-top: 20px; text-align: center; }
+        .status-badge { background: var(--success); color: white; padding: 4px 8px; border-radius: 5px; font-size: 10px; }
     </style>
 </head>
 <body>
@@ -50,4 +50,265 @@
             <button class="tab-btn" onclick="switchTab('social')">SOCIAL</button>
         </div>
 
-        <div id
+        <div id="botTab">
+            <div id="botList"></div>
+        </div>
+
+        <div id="rewardTab" class="hidden">
+            <div class="card" id="rewardInputContainer">
+                <h4 style="margin-top:0">DAILY REWARD CODE</h4>
+                <div id="rewardContent">
+                    <input type="text" id="giftCodeInput" placeholder="Enter Reward Code Here...">
+                    <button class="btn-yellow" onclick="claimReward()">CLAIM NOW</button>
+                    <p style="font-size: 10px; color: var(--muted); margin-top: 10px;">* Each code can be claimed only once per user.</p>
+                </div>
+                <div id="rewardClaimedMsg" class="hidden" style="text-align: center; padding: 20px;">
+                    <div style="font-size: 40px;">✅</div>
+                    <p style="color: var(--success); font-weight: bold;">Reward Already Claimed!</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="socialTab" class="hidden">
+            <button class="btn-yellow" style="margin-bottom:15px" onclick="toggleAddTaskMenu()">+ ADD TASK</button>
+            <div id="addTaskMenu" class="card hidden">
+                <div id="formOptions">
+                    <div style="display:flex; gap:10px">
+                        <button class="btn-yellow" onclick="showForm('add')">ADD TASK</button>
+                        <button class="btn-yellow" style="background:#334155; color:white" onclick="showForm('my')">MY TASK</button>
+                    </div>
+                </div>
+                <div id="actualForm" class="hidden">
+                    <h4 style="text-align:center">ADD NEW TASK</h4>
+                    <input type="text" id="taskName" placeholder="Channel Name (e.g. @MyChannel)">
+                    <input type="text" id="taskLink" placeholder="Telegram Link">
+                    <select id="taskPlan">
+                        <option value="0.2">100 Views - 0.2 TON</option>
+                        <option value="0.4">200 Views - 0.4 TON</option>
+                        <option value="0.5">300 Views - 0.5 TON</option>
+                    </select>
+                    <div style="background:#0f172a; padding:12px; border-radius:10px; font-size:11px; margin-bottom:12px">
+                        <p style="margin:0 0 5px 0">Send TON to Address:</p>
+                        <p style="color:var(--primary); word-break:break-all; margin:0 0 10px 0">UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9</p>
+                        <p style="margin:0">Required MEMO (UID): <b style="color:var(--primary)" id="memoUID">1793453606</b></p>
+                    </div>
+                    <button class="btn-yellow" onclick="submitPayment()">SUBMIT PAYMENT</button>
+                    <button class="btn-yellow" style="background:none; color:var(--muted)" onclick="toggleAddTaskMenu()">CANCEL</button>
+                </div>
+            </div>
+            <div id="socialList"></div>
+        </div>
+    </div>
+
+    <div id="invitePanel" class="hidden">
+        <div class="card" style="text-align:center">
+            <h2 style="color:var(--primary)">INVITE FRIENDS</h2>
+            <p style="font-size: 14px;">Get <b style="color:var(--primary)">0.0005 TON</b> for every friend who joins!</p>
+            <div id="referralLinkDisplay" style="background:#0f172a; padding:15px; border-radius:10px; font-size:12px; color:var(--primary); word-break:break-all; margin-bottom: 10px;"></div>
+            <button class="btn-yellow" onclick="copyText(document.getElementById('referralLinkDisplay').innerText)">COPY REFERRAL LINK</button>
+        </div>
+        <h3>INVITE HISTORY</h3>
+        <div class="card">Total Friends Invited: <span id="inviteCount" style="color:var(--primary)">0</span></div>
+    </div>
+
+    <div id="withdrawPanel" class="hidden">
+        <h3>WITHDRAW TON</h3>
+        <div class="card">
+            <label style="font-size: 12px; color: var(--muted);">Amount to Withdraw:</label>
+            <input type="number" placeholder="Minimum 0.1 TON">
+            <label style="font-size: 12px; color: var(--muted);">Your TON Wallet Address:</label>
+            <input type="text" placeholder="Enter TON address">
+            <button class="btn-yellow" onclick="alert('Balance insufficient for withdrawal!')">WITHDRAW NOW</button>
+        </div>
+        <h3>HISTORY</h3>
+        <div class="card" style="text-align: center; color: var(--muted);">No withdrawal history found.</div>
+    </div>
+
+    <div id="profilePanel" class="hidden">
+        <div style="text-align:center; padding:10px">
+            <div style="font-size:60px; margin-bottom: 10px;">👤</div>
+            <h3 id="pUID" style="margin:0">UID: 1793453606</h3>
+            <span class="status-badge">VERIFIED USER</span>
+            <div class="card" style="border: 1px solid #ef4444; margin-top: 25px; background: rgba(239, 68, 68, 0.1);">
+                <h4 style="color:#ef4444; margin:0 0 10px 0">⚠️ SECURITY WARNING</h4>
+                <p style="font-size:12px; margin:0; line-height: 1.5; color: #fca5a5;">Creating fake accounts, using scripts, or manipulating ads will result in an <b>IMMEDIATE & PERMANENT BAN</b>. Our system tracks IP and device ID.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    <div class="nav-item active" onclick="switchPanel('earn', this)">💰<br>EARN</div>
+    <div class="nav-item" onclick="switchPanel('invite', this)">👥<br>INVITE</div>
+    <div class="nav-item" onclick="switchPanel('withdraw', this)">💸<br>WITHDRAW</div>
+    <div class="nav-item" onclick="switchPanel('profile', this)">👤<br>PROFILE</div>
+</div>
+
+<script>
+    const userUID = "1793453606";
+    let balance = parseFloat(localStorage.getItem('ton_balance')) || 0.0000;
+    let completedTasks = JSON.parse(localStorage.getItem('completed_tasks')) || [];
+    let isRewardClaimed = localStorage.getItem('reward_claimed_status') === 'true';
+
+    const botTasks = [
+        { id: 'b1', name: "GROW TEA BOT", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+        { id: 'b2', name: "GOLDEN MINER BOT", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+        { id: 'b3', name: "WORKERS ON TON BOT", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+        { id: 'b4', name: "EASY BONUS BOT", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+        { id: 'b5', name: "TON DRAGON BOT", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+        { id: 'b6', name: "POBUZZ BOT", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
+    ];
+
+    const socialChannels = [
+        "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", "@M9460",
+        "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO",
+        "@kombo_crypta", "@easytonfree", "@WORLDBESTCRYTO1", "@MONEYHUB9_69",
+        "@zrbtua", "@perviu1million"
+    ].map((name, i) => ({ id: `s${i}`, name, link: `https://t.me/${name.replace('@','')}` }));
+
+    function init() {
+        document.getElementById('balanceDisplay').innerText = balance.toFixed(4) + " TON";
+        document.getElementById('memoUID').innerText = userUID;
+        document.getElementById('referralLinkDisplay').innerText = "https://t.me/YourBot?start=" + userUID;
+        
+        if(isRewardClaimed) {
+            document.getElementById('rewardContent').classList.add('hidden');
+            document.getElementById('rewardClaimedMsg').classList.remove('hidden');
+        }
+        
+        renderBots();
+        renderSocials();
+    }
+
+    function renderBots() {
+        const list = document.getElementById('botList');
+        list.innerHTML = botTasks.map(t => `
+            <div class="card">
+                <div class="item-header">
+                    <span style="font-size:13px; font-weight:bold">${t.name}</span>
+                    <button class="btn-copy" onclick="copyText('${t.link}')">COPY LINK</button>
+                </div>
+                <button class="btn-yellow" id="btn-${t.id}" onclick="handleTaskClick('${t.id}', '${t.link}')">
+                    ${completedTasks.includes(t.id) ? 'COMPLETED' : 'START BOT'}
+                </button>
+            </div>
+        `).join('');
+    }
+
+    function renderSocials() {
+        const list = document.getElementById('socialList');
+        list.innerHTML = socialChannels.map(t => `
+            <div class="card">
+                <div class="item-header">
+                    <span style="font-size:13px; font-weight:bold">${t.name}</span>
+                </div>
+                <button class="btn-yellow" id="btn-${t.id}" onclick="handleTaskClick('${t.id}', '${t.link}')">
+                    ${completedTasks.includes(t.id) ? 'JOINED' : 'JOIN CHANNEL'}
+                </button>
+            </div>
+        `).join('');
+    }
+
+    function handleTaskClick(id, link) {
+        if(completedTasks.includes(id)) return;
+        window.open(link, '_blank');
+        const btn = document.getElementById('btn-' + id);
+        btn.innerText = "CHECKING...";
+        btn.style.background = "#64748b";
+        
+        setTimeout(() => {
+            btn.innerText = "VERIFY AD";
+            btn.style.background = var(--success);
+            btn.style.color = "white";
+            btn.onclick = () => runAdsgram(id);
+        }, 3000);
+    }
+
+    function runAdsgram(id) {
+        if (window.Adsgram) {
+            window.Adsgram.init({ blockId: "27393" }).show().then(() => {
+                balance += 0.0005;
+                completedTasks.push(id);
+                saveData();
+                init();
+                alert("Success! 0.0005 TON added.");
+            }).catch(() => alert("Ad not finished. Please try again."));
+        }
+    }
+
+    function claimReward() {
+        const code = document.getElementById('giftCodeInput').value.trim();
+        if(code === "") return alert("Please enter a code!");
+        
+        // Example Code: GIFT77
+        if(code.toUpperCase() === "GIFT77") {
+            balance += 0.0100;
+            isRewardClaimed = true;
+            saveData();
+            init();
+            alert("Reward Claimed! 0.0100 TON added.");
+        } else {
+            alert("Invalid or Expired Code!");
+        }
+    }
+
+    function saveData() {
+        localStorage.setItem('ton_balance', balance);
+        localStorage.setItem('completed_tasks', JSON.stringify(completedTasks));
+        localStorage.setItem('reward_claimed_status', isRewardClaimed);
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('botTab').classList.toggle('hidden', tab !== 'bot');
+        document.getElementById('rewardTab').classList.toggle('hidden', tab !== 'reward');
+        document.getElementById('socialTab').classList.toggle('hidden', tab !== 'social');
+    }
+
+    function switchPanel(panel, el) {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('earnPanel').classList.toggle('hidden', panel !== 'earn');
+        document.getElementById('invitePanel').classList.toggle('hidden', panel !== 'invite');
+        document.getElementById('withdrawPanel').classList.toggle('hidden', panel !== 'withdraw');
+        document.getElementById('profilePanel').classList.toggle('hidden', panel !== 'profile');
+    }
+
+    function copyText(text) {
+        const el = document.createElement('textarea');
+        el.value = text;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        alert("Link copied to clipboard!");
+    }
+
+    function toggleAddTaskMenu() {
+        const menu = document.getElementById('addTaskMenu');
+        menu.classList.toggle('hidden');
+        document.getElementById('socialList').classList.toggle('hidden', !menu.classList.contains('hidden'));
+        document.getElementById('actualForm').classList.add('hidden');
+        document.getElementById('formOptions').classList.remove('hidden');
+    }
+
+    function showForm(type) {
+        if(type === 'add') {
+            document.getElementById('formOptions').classList.add('hidden');
+            document.getElementById('actualForm').classList.remove('hidden');
+        } else {
+            alert("No active tasks found in your history.");
+        }
+    }
+
+    function submitPayment() {
+        alert("Admin notified! Your task will appear in the Social tab after payment verification (1-24 hours).");
+        toggleAddTaskMenu();
+    }
+
+    init();
+</script>
+
+</body>
+</html>
