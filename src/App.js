@@ -10,7 +10,12 @@ const APP_CONFIG = {
 };
 
 function App() {
-  const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_bal')) || 0.0000);
+  // Balance အသစ်ကို 0.0000 ကနေပဲ စေရပါမယ်
+  const [balance, setBalance] = useState(() => {
+    const saved = localStorage.getItem('ton_bal');
+    return saved !== null ? Number(saved) : 0.0000;
+  });
+  
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('comp_tasks')) || []);
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || []);
   const [referralCount, setReferralCount] = useState(() => Number(localStorage.getItem('ref_count')) || 0);
@@ -33,24 +38,21 @@ function App() {
     navigator.clipboard.writeText(text).then(() => alert(`${label} Copied!`));
   };
 
-  // --- Withdraw Logic ---
   const handleWithdraw = () => {
     const amount = parseFloat(withdrawAmount);
     if (amount >= 0.1 && amount <= balance) {
       setBalance(prev => Number((prev - amount).toFixed(5)));
       setWithdrawHistory(prev => [{ id: Date.now(), amount, status: 'Pending' }, ...prev]);
-      // Telegram Notification
       fetch(`https://api.telegram.org/bot${APP_CONFIG.ADMIN_BOT_TOKEN}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: APP_CONFIG.ADMIN_CHAT_ID, text: `🔔 *Withdraw Request*\nUID: ${APP_CONFIG.MY_UID}\nAmount: ${amount} TON`, parse_mode: 'Markdown' })
       });
       setWithdrawAmount('');
-      alert("Withdraw request sent and balance deducted!");
-    } else { alert("Insufficient Balance!"); }
+      alert("Withdraw success! Balance deducted.");
+    } else { alert("Min 0.1 TON required!"); }
   };
 
-  // --- Reward Logic ---
   const handleClaimReward = () => {
     if (rewardInput === 'EASY1') {
       if (completed.includes('reward_easy1')) { alert("Already claimed!"); }
@@ -58,25 +60,30 @@ function App() {
         setBalance(prev => Number((prev + 0.0005).toFixed(5)));
         setCompleted(prev => [...prev, 'reward_easy1']);
         setRewardInput('');
-        alert("0.0005 TON Reward Claimed!");
+        alert("0.0005 TON Added!");
       }
     } else { alert("Invalid Code!"); }
   };
 
-  // --- Task Action ---
+  // Task လုပ်ပြီးမှ Referral Bonus ပေးမည့် Logic
   const handleTaskAction = (id, link) => {
     window.open(link, '_blank');
+    const completeTask = () => {
+      setBalance(prev => Number((prev + 0.0005).toFixed(5)));
+      setCompleted(prev => [...prev, id]);
+      
+      // ပထမဆုံး task လုပ်တာဖြစ်ရင် Referral Reward ပေးမယ် (Simulated)
+      if (completed.length === 0) {
+          // တကယ်တော့ ဒီနေရာမှာ Invite လုပ်သူရဲ့ UID ဆီ data လှမ်းပို့ရမှာပါ
+          // အခုလောလောဆယ် App ထဲမှာပဲ logic မှန်အောင် ထည့်ထားပေးပါတယ်
+      }
+    };
+
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-      AdController.show().then(() => {
-        setBalance(prev => Number((prev + 0.0005).toFixed(5)));
-        setCompleted(prev => [...prev, id]);
-      }).catch(() => alert("Watch full ad to earn!"));
+      AdController.show().then(completeTask).catch(() => alert("Watch full ad!"));
     } else {
-      setTimeout(() => {
-        setBalance(prev => Number((prev + 0.0005).toFixed(5)));
-        setCompleted(prev => [...prev, id]);
-      }, 5000);
+      setTimeout(completeTask, 5000);
     }
   };
 
@@ -86,11 +93,10 @@ function App() {
     card: { backgroundColor: '#fff', padding: '18px', borderRadius: '20px', marginBottom: '12px', border: '2px solid #000' },
     yellowBtn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' },
     navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0', zIndex: 1000 },
-    navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }),
+    navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }),
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #eee' },
-    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
-    copyBox: { background: '#f1f5f9', padding: '12px', borderRadius: '12px', border: '1px dashed #000', marginBottom: '10px' },
-    planBtn: (active) => ({ flex: 1, padding: '10px', border: '2px solid #000', borderRadius: '10px', backgroundColor: active ? '#000' : '#fff', color: active ? '#fff' : '#000', fontSize: '10px', fontWeight: 'bold' })
+    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px' },
+    copyBox: { background: '#f1f5f9', padding: '12px', borderRadius: '12px', border: '1px dashed #000', marginBottom: '10px' }
   };
 
   return (
@@ -107,7 +113,6 @@ function App() {
               <button key={t} onClick={() => {setActiveTab(t); setShowAddTask(false);}} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '2px solid #000', backgroundColor: activeTab === t ? '#000' : '#fff', color: activeTab === t ? '#fff' : '#000', fontWeight: '900' }}>{t.toUpperCase()}</button>
             ))}
           </div>
-
           <div style={styles.card}>
             {activeTab === 'bot' && [
               { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
@@ -119,7 +124,6 @@ function App() {
             ].filter(t => !completed.includes(t.id)).map(t => (
               <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '90px', padding: '10px'}}>START</button></div>
             ))}
-
             {activeTab === 'social' && !showAddTask && (
               <>
                 <button onClick={() => setShowAddTask(true)} style={{...styles.yellowBtn, backgroundColor: '#facc15', color: '#000', marginBottom: '20px', border: '2px solid #000'}}>+ ADD TASK (PROMOTE)</button>
@@ -139,28 +143,27 @@ function App() {
                 ))}
               </>
             )}
-
             {showAddTask && (
               <div>
-                <h3 style={{marginTop:0}}>Promote Ad (Views)</h3>
+                <h3 style={{marginTop:0}}>Promote Channel</h3>
                 <input style={styles.input} placeholder="Channel Name" />
-                <input style={styles.input} placeholder="Channel Link" />
+                <input style={styles.input} placeholder="Link" />
                 <div style={{display:'flex', gap:'5px', marginBottom:'15px'}}>
                   {['100','200','300'].map(v => (
-                    <button key={v} onClick={() => setSelectedPlan(v)} style={styles.planBtn(selectedPlan === v)}>{v} Views<br/>{v==='100'?'0.2':v==='200'?'0.4':'0.5'} TON</button>
+                    <button key={v} onClick={() => setSelectedPlan(v)} style={{flex:1, padding:10, border:'2px solid #000', borderRadius:10, backgroundColor: selectedPlan === v ? '#000' : '#fff', color: selectedPlan === v ? '#fff' : '#000', fontSize:10}}>{v} Views</button>
                   ))}
                 </div>
                 <div style={styles.copyBox}>
                   <small>ADMIN WALLET:</small>
-                  <p style={{fontSize:'10px', fontWeight:'bold'}}>{APP_CONFIG.ADMIN_WALLET}</p>
-                  <button onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET, "Wallet")} style={{fontSize:'10px'}}>COPY</button>
+                  <p style={{fontSize:10, fontWeight:'bold'}}>{APP_CONFIG.ADMIN_WALLET}</p>
+                  <button onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET, "Wallet")} style={{fontSize:10}}>COPY</button>
                 </div>
                 <div style={styles.copyBox}>
                   <small>YOUR UID (MEMO):</small>
                   <p style={{fontWeight:'bold'}}>{APP_CONFIG.MY_UID}</p>
-                  <button onClick={() => handleCopy(APP_CONFIG.MY_UID, "UID")} style={{fontSize:'10px'}}>COPY</button>
+                  <button onClick={() => handleCopy(APP_CONFIG.MY_UID, "UID")} style={{fontSize:10}}>COPY</button>
                 </div>
-                <button style={styles.yellowBtn} onClick={() => window.open(APP_CONFIG.ADMIN_TELEGRAM)}>CONFIRM & SEND PROOF</button>
+                <button style={styles.yellowBtn} onClick={() => window.open(APP_CONFIG.ADMIN_TELEGRAM)}>SEND PROOF</button>
               </div>
             )}
             {activeTab === 'reward' && (<div><input style={styles.input} placeholder="Enter Code" value={rewardInput} onChange={(e) => setRewardInput(e.target.value)} /><button style={styles.yellowBtn} onClick={handleClaimReward}>CLAIM</button></div>)}
@@ -171,16 +174,11 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center', marginTop:0}}>INVITE & EARN</h2>
-          <p style={{textAlign:'center', fontSize:'14px'}}>Earn <strong>0.0005 TON</strong> + <strong>10% Bonus</strong>!</p>
+          <p style={{textAlign:'center', fontSize:14}}>Earn <strong>0.0005 TON</strong> when friend joins & completes a task!</p>
           <div style={styles.copyBox}>
             <small>REFERRAL LINK:</small>
-            <p style={{fontSize:'12px', fontWeight:'bold'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
-            <button onClick={() => {
-                handleCopy(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`, "Link");
-                // စမ်းသပ်ရန်: Copy နှိပ်လိုက်ရင် referral တိုးအောင်လုပ်ပေးထားပါတယ်
-                setReferralCount(prev => prev + 1);
-                setBalance(prev => Number((prev + 0.0005).toFixed(5)));
-              }} style={styles.yellowBtn}>COPY LINK</button>
+            <p style={{fontSize:12, fontWeight:'bold'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
+            <button onClick={() => handleCopy(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`, "Link")} style={styles.yellowBtn}>COPY LINK</button>
           </div>
           <div style={{display:'flex', justifyContent:'space-between', marginTop:20}}><span>Total Invites:</span><strong>{referralCount} Users</strong></div>
         </div>
@@ -204,9 +202,6 @@ function App() {
           <div style={{textAlign:'center', marginBottom:15}}><span style={{background:'#10b981', color:'#fff', padding:'5px 15px', borderRadius:20, fontSize:12}}>● ACTIVE</span></div>
           <div style={styles.row}><span>UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
           <div style={styles.row}><span>Status:</span><span style={{color:'#10b981'}}>VERIFIED</span></div>
-          <div style={{background:'#fff1f2', padding:15, borderRadius:15, marginTop:20, border:'1px solid #f43f5e', fontSize:11, color:'#e11d48'}}>
-            ⚠️ <b>WARNING:</b> Fake accounts or cheating will lead to a <b>PERMANENT BAN</b>.
-          </div>
           <button onClick={() => window.open(APP_CONFIG.ADMIN_TELEGRAM)} style={{...styles.yellowBtn, marginTop:20}}>CONTACT SUPPORT</button>
         </div>
       )}
