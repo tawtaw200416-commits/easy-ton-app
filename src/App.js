@@ -56,6 +56,10 @@ function App() {
     }
   };
 
+  const handleCopy = (text, label) => {
+    navigator.clipboard.writeText(text).then(() => alert(`${label} Copied!`));
+  };
+
   const styles = {
     main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     card: { backgroundColor: '#1e293b', padding: '18px', borderRadius: '20px', marginBottom: '12px', border: '1px solid #334155' },
@@ -96,6 +100,41 @@ function App() {
         </>
       )}
 
+      {activeNav === 'invite' && (
+        <div style={styles.card}>
+          <h3 style={{color: '#fbbf24', marginTop: 0}}>REFERRAL PROGRAM</h3>
+          <p style={{fontSize: '14px', color: '#94a3b8', fontWeight: '900', lineHeight: '1.5'}}>
+            Invite your friends and earn <span style={{color: '#fbbf24'}}>0.0005 TON</span> for each valid referral.
+          </p>
+          <p style={{fontSize: '13px', color: '#10b981', fontWeight: '900', marginBottom: '20px'}}>
+            + Get 10% lifetime commission on your friends' earnings!
+          </p>
+          
+          <div style={{background: '#0f172a', padding: '15px', borderRadius: '12px', border: '1px dashed #fbbf24', marginBottom: '15px'}}>
+            <small style={{color: '#94a3b8', fontSize: '10px'}}>YOUR REFERRAL LINK:</small>
+            <p style={{fontSize: '11px', margin: '5px 0', color: '#fff', wordBreak: 'break-all'}}>
+              https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}
+            </p>
+          </div>
+          
+          <button onClick={() => handleCopy(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`, "Invite Link")} style={styles.yellowBtn}>
+            COPY INVITE LINK
+          </button>
+
+          <h4 style={{marginTop: '25px', color: '#fbbf24', borderTop: '1px solid #334155', paddingTop: '15px'}}>INVITE HISTORY</h4>
+          <div style={{fontSize: '12px', fontWeight: '900'}}>
+             <div style={styles.row}>
+                <span>Successful Invite</span>
+                <span style={{color: '#10b981'}}>+ 0.0005 TON</span>
+             </div>
+             <div style={styles.row}>
+                <span>Referral Bonus (10%)</span>
+                <span style={{color: '#10b981'}}>+ 0.00005 TON</span>
+             </div>
+          </div>
+        </div>
+      )}
+
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3 style={{color: '#fbbf24'}}>WITHDRAW</h3>
@@ -118,6 +157,7 @@ function App() {
 
       <div style={styles.navBar}>
         <div onClick={() => setActiveNav('earn')} style={styles.navBtn(activeNav === 'earn')}>💰 EARN</div>
+        <div onClick={() => setActiveNav('invite')} style={styles.navBtn(activeNav === 'invite')}>👥 INVITE</div>
         <div onClick={() => setActiveNav('withdraw')} style={styles.navBtn(activeNav === 'withdraw')}>💸 WITHDRAW</div>
         <div onClick={() => setActiveNav('profile')} style={styles.navBtn(activeNav === 'profile')}>👤 PROFILE</div>
       </div>
