@@ -13,7 +13,7 @@ function App() {
   const [showForm, setShowForm] = useState(false);
 
   const walletAddress = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
-  const ADS_BLOCK_ID = "27393"; // Block ID Fixed
+  const ADS_BLOCK_ID = "27393";
 
   // --- Persistence ---
   useEffect(() => {
@@ -25,7 +25,7 @@ function App() {
   // --- Logic ---
   const copyToClipboard = (txt) => {
     navigator.clipboard.writeText(txt);
-    alert("Copied!");
+    alert("Link Copied!");
   };
 
   const handleTaskAction = (id, link) => {
@@ -40,7 +40,7 @@ function App() {
           window.Adsgram.init({ blockId: ADS_BLOCK_ID }).show().then(() => {
             setBalance(p => p + 0.0005);
             setCompleted(p => [...p, id]);
-            alert("Reward Added!");
+            alert("Reward 0.0005 TON Added!");
           });
         }
       };
@@ -57,10 +57,10 @@ function App() {
 
   return (
     <div style={styles.main}>
-      {/* --- BALANCE HEADER --- */}
-      <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '25px', borderRadius: '25px', marginBottom: '20px', background: 'rgba(251, 191, 36, 0.05)' }}>
+      {/* --- HEADER --- */}
+      <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px', background: 'rgba(251, 191, 36, 0.03)' }}>
         <small style={{ color: '#94a3b8' }}>TOTAL BALANCE</small>
-        <h1 style={{ color: '#fbbf24', margin: '10px 0', fontSize: '32px' }}>{balance.toFixed(4)} TON</h1>
+        <h1 style={{ color: '#fbbf24', margin: '5px 0', fontSize: '32px' }}>{balance.toFixed(4)} TON</h1>
       </div>
 
       {activeNav === 'earn' && (
@@ -71,102 +71,111 @@ function App() {
             ))}
           </div>
 
+          {/* BOT TASKS */}
           {activeTab === 'bot' && [
             { id: 'b1', name: "GROW TEA BOT", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-            { id: 'b2', name: "GOLDEN MINER BOT", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" }
+            { id: 'b2', name: "GOLDEN MINER BOT", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+            { id: 'b3', name: "WORKERS ON TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" }
           ].map(b => (
             <div key={b.id} style={styles.card}>
-              <div style={{ marginBottom: '12px', fontWeight: 'bold' }}>{b.name}</div>
+              <div style={{ marginBottom: '10px', fontWeight: 'bold' }}>{b.name}</div>
               <button id={`btn-${b.id}`} onClick={() => handleTaskAction(b.id, b.link)} style={{...styles.yellowBtn, backgroundColor: completed.includes(b.id) ? '#334155' : '#fbbf24', color: completed.includes(b.id) ? '#fbbf24' : '#000'}}>
                 {completed.includes(b.id) ? '✅ COMPLETED' : 'START BOT'}
               </button>
             </div>
           ))}
 
+          {/* REWARD CODE */}
           {activeTab === 'reward' && (
             <div style={styles.card}>
               <h4 style={{marginTop: 0, color: '#fbbf24'}}>DAILY GIFT CODE</h4>
-              {isClaimed ? <p style={{color:'#10b981', textAlign:'center', fontWeight:'bold'}}>✅ ALREADY CLAIMED</p> : (
+              {isClaimed ? <div style={{textAlign:'center', color:'#10b981', fontWeight:'bold', padding:'10px'}}>✅ GIFT CLAIMED</div> : (
                 <>
-                  <input id="giftInput" type="password" style={styles.input} placeholder="Enter secret code..." />
+                  <input id="giftInput" type="password" style={styles.input} placeholder="Enter hidden code..." />
                   <button onClick={() => {
                     const code = document.getElementById('giftInput').value.toUpperCase();
-                    if(code === "GIFT77"){
-                      setBalance(b => b + 0.01); setIsClaimed(true); alert("0.01 TON Claimed!");
-                    } else { alert("Invalid Code!"); }
-                  }} style={styles.yellowBtn}>CLAIM</button>
+                    if(code === "GIFT77"){ setBalance(b => b + 0.01); setIsClaimed(true); alert("0.01 TON Claimed!"); }
+                    else { alert("Invalid Code!"); }
+                  }} style={styles.yellowBtn}>CLAIM REWARD</button>
                 </>
               )}
             </div>
           )}
 
+          {/* SOCIAL TASKS */}
           {activeTab === 'social' && (
             <div>
-              <button style={styles.yellowBtn} onClick={() => setShowForm(!showForm)}>+ ADD TASK</button>
-              {showForm && (
-                <div style={{...styles.card, marginTop: '15px'}}>
-                   <input style={styles.input} placeholder="Channel Name" />
-                   <select style={styles.input}>
-                     <option>100 Views - 0.2 TON</option>
-                     <option>200 Views - 0.4 TON</option>
-                     <option>300 Views - 0.5 TON</option>
-                   </select>
-                   <button style={styles.yellowBtn} onClick={()=>setShowForm(false)}>SUBMIT</button>
+              <button style={{...styles.yellowBtn, marginBottom:'15px'}} onClick={() => setShowForm(!showForm)}>+ ADD MISSION</button>
+              {[
+                { id: 's1', name: "JOIN OUR CHANNEL", link: "https://t.me/WORLDBESTCRYTO" },
+                { id: 's2', name: "JOIN ADS TON", link: "https://t.me/ADS_TON1" }
+              ].map(s => (
+                <div key={s.id} style={styles.card}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{fontWeight:'bold'}}>{s.name}</span>
+                    <button id={`btn-${s.id}`} onClick={() => handleTaskAction(s.id, s.link)} style={{...styles.yellowBtn, width: '100px', padding: '8px', marginTop: 0, backgroundColor: completed.includes(s.id) ? '#334155' : '#fbbf24', color: completed.includes(s.id) ? '#fbbf24' : '#000'}}>
+                      {completed.includes(s.id) ? '✅' : 'JOIN'}
+                    </button>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
           )}
         </>
       )}
 
+      {/* --- INVITE PANEL --- */}
       {activeNav === 'invite' && (
         <div style={{ textAlign: 'center' }}>
           <div style={{ ...styles.card, border: '1px solid #fbbf24' }}>
             <h2 style={{ color: '#fbbf24', margin: '0 0 15px 0' }}>INVITE FRIENDS</h2>
-            <div style={{ background: '#0f172a', padding: '20px', borderRadius: '15px', marginBottom: '15px' }}>
-              <p>လူတစ်ယောက်ဖိတ်လျှင် <b style={{ color: '#fbbf24' }}>0.0005 TON</b> ရမည်</p>
-              <div style={{ height: '1px', background: '#334155', margin: '12px 0' }}></div>
-              <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>+ 10% COMMISSION</p>
+            <div style={{ background: '#0f172a', padding: '15px', borderRadius: '15px', marginBottom: '15px' }}>
+              <p style={{margin: '5px 0'}}>Invite ၁ ယောက်လျှင် <b style={{color: '#fbbf24'}}>0.0005 TON</b> ရမည်</p>
+              <div style={{height: '1px', background: '#334155', margin: '10px 0'}}></div>
+              <p style={{fontSize: '18px', fontWeight: 'bold', color: '#10b981', margin: 0}}>+ 10% COMMISSION</p>
+              <small style={{color: '#94a3b8'}}>From friend's task earnings</small>
             </div>
-            <button onClick={() => copyToClipboard(`https://t.me/Bot?start=${userUID}`)} style={styles.yellowBtn}>COPY LINK</button>
+            <div style={{...styles.input, color: '#fbbf24', fontSize: '11px', overflow: 'hidden'}}>{`https://t.me/YourBot?start=${userUID}`}</div>
+            <button onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={styles.yellowBtn}>COPY LINK</button>
+          </div>
+          <div style={styles.card}>
+            <div style={{display:'flex', justifyContent:'space-between'}}>
+              <span>Total Invited:</span>
+              <b style={{color: '#fbbf24'}}>{invites} Users</b>
+            </div>
           </div>
         </div>
       )}
 
+      {/* --- WITHDRAW & PROFILE --- */}
       {activeNav === 'withdraw' && (
-        <div>
-          <div style={styles.card}>
-            <h3 style={{color:'#fbbf24', marginTop: 0}}>WITHDRAW</h3>
-            <input style={styles.input} placeholder="Amount" type="number" />
-            <input style={styles.input} placeholder="Wallet Address" />
-            <button style={styles.yellowBtn} onClick={()=>alert("Insufficient Balance")}>WITHDRAW NOW</button>
-          </div>
-          <h4 style={{marginLeft: '5px'}}>HISTORY</h4>
-          <div style={{...styles.card, textAlign: 'center', color: '#64748b'}}>No records found.</div>
+        <div style={styles.card}>
+          <h3 style={{color:'#fbbf24', marginTop: 0}}>WITHDRAW</h3>
+          <input style={styles.input} placeholder="Min: 0.1 TON" type="number" />
+          <input style={styles.input} placeholder="TON Address" />
+          <button style={styles.yellowBtn} onClick={() => alert("Balance Low")}>WITHDRAW NOW</button>
         </div>
       )}
 
       {activeNav === 'profile' && (
-        <div style={{ textAlign: 'center' }}>
+        <div style={{textAlign: 'center'}}>
           <div style={styles.card}>
-            <div style={{ fontSize: '60px', marginBottom: '10px' }}>👤</div>
-            <h2 style={{ color: '#fbbf24', margin: '0' }}>PROFILE</h2>
-            <p>User ID: {userUID}</p>
-            <p>Balance: {balance.toFixed(4)} TON</p>
+            <div style={{fontSize: '50px', marginBottom: '10px'}}>👤</div>
+            <p>ID: <span style={{color: '#fbbf24'}}>{userUID}</span></p>
+            <p>Balance: <span style={{color: '#fbbf24'}}>{balance.toFixed(4)} TON</span></p>
           </div>
-          <div style={{ ...styles.card, border: '1px solid #ef4444', background: 'rgba(239,68,68,0.1)' }}>
-            <p style={{ color: '#ef4444', fontSize: '12px', fontWeight: 'bold', margin: 0 }}>
-              ⚠️ WARNING: Multiple accounts သို့မဟုတ် လိမ်လည်မှုများပြုလုပ်ပါက အကောင့်ပိတ်သိမ်းခံရမည်။
-            </p>
+          <div style={{...styles.card, border: '1px solid #ef4444', background: 'rgba(239, 68, 68, 0.1)'}}>
+            <p style={{color:'#ef4444', fontSize:'12px', fontWeight:'bold', margin:0}}>⚠️ WARNING: တစ်ဦးထက်ပိုသော အကောင့်များသုံးခြင်း သို့မဟုတ် လိမ်လည်ခြင်းများ ပြုလုပ်ပါက အကောင့်ပိတ်ခံရမည်။</p>
           </div>
         </div>
       )}
 
+      {/* --- FOOTER --- */}
       <div style={styles.footer}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => setActiveNav(n)} style={{ textAlign: 'center', color: activeNav === n ? '#fbbf24' : '#64748b', flex: 1, cursor: 'pointer' }}>
-            <span>{n === 'earn' ? '💰' : n === 'invite' ? '👥' : n === 'withdraw' ? '💸' : '👤'}</span><br/>
-            <small style={{fontSize: '9px'}}>{n.toUpperCase()}</small>
+            <span style={{fontSize: '20px'}}>{n === 'earn' ? '💰' : n === 'invite' ? '👥' : n === 'withdraw' ? '💸' : '👤'}</span><br/>
+            <small style={{fontSize: '10px'}}>{n.toUpperCase()}</small>
           </div>
         ))}
       </div>
