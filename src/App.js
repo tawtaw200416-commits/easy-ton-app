@@ -4,7 +4,7 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: "1793453606",
   ADMIN_TELEGRAM: "https://t.me/GrowTeaNews",
-  ADSGRAM_BLOCK_ID: "27393"
+  ADSGRAM_BLOCK_ID: "27578"
 };
 
 function App() {
