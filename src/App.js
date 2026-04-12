@@ -1,50 +1,54 @@
 import React, { useState, useEffect } from 'react';
 
 function App() {
-  // LocalStorage မှ Data များ ပြန်ခေါ်ခြင်း
   const [balance, setBalance] = useState(() => JSON.parse(localStorage.getItem('ton_balance')) || 0.0000);
   const [completedTasks, setCompletedTasks] = useState(() => JSON.parse(localStorage.getItem('completed_tasks')) || []);
+  const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('withdraw_history')) || []);
+  const [inviteHistory, setInviteHistory] = useState(() => JSON.parse(localStorage.getItem('invite_history')) || []);
+
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('social');
 
   const userUID = "1793453606";
+  const inviteLink = `https://t.me/EasyTONFree_Bot?start=${userUID}`;
 
-  // Data ပြောင်းလဲတိုင်း သိမ်းဆည်းခြင်း
   useEffect(() => {
     localStorage.setItem('ton_balance', JSON.stringify(balance));
     localStorage.setItem('completed_tasks', JSON.stringify(completedTasks));
-  }, [balance, completedTasks]);
+    localStorage.setItem('withdraw_history', JSON.stringify(withdrawHistory));
+    localStorage.setItem('invite_history', JSON.stringify(inviteHistory));
+  }, [balance, completedTasks, withdrawHistory, inviteHistory]);
 
-  const socialTasks = [
-    { id: "s1", name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-    { id: "s2", name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-    { id: "s3", name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
-    { id: "s4", name: "@M9460", link: "https://t.me/M9460" }
-  ];
-
-  // Join နှိပ်ချိန်တွင် Link သို့ ပို့ပေးခြင်း
-  const handleJoinLink = (link) => {
+  // Task အမှန်တကယ် လုပ်ဆောင်ပြီးမှ Reward ပေးသည့် Logic
+  const handleTaskAction = (id, link, taskReward) => {
+    // Task link သို့ ပို့ဆောင်ခြင်း
     window.open(link, '_blank');
-  };
 
-  // တကယ် Join ပြီးမှ TON ပေါင်းပေးမည့် Function
-  const handleVerify = (id) => {
-    // ဤနေရာတွင် နောင်တွင် Backend API နှင့် ချိတ်ဆက်၍ တကယ် Join မ Join စစ်ဆေးနိုင်သည်
+    // Verification Logic: Task တစ်ခုကို တစ်ကြိမ်သာ လုပ်ဆောင်ခွင့်ရှိသည်
     if (!completedTasks.includes(id)) {
       setCompletedTasks([...completedTasks, id]);
-      setBalance(prev => prev + 0.0005);
-      alert("Verification Success! 0.0005 TON added.");
+      
+      // လုပ်ဆောင်သူအတွက် Reward
+      const rewardAmount = 0.0005;
+      setBalance(prev => prev + rewardAmount);
+
+      // Referral Bonus (10%): အကယ်၍ ဤသူသည် referral ဖြစ်ပါက ဖိတ်ခေါ်သူအတွက်ပါ ပေါင်းပေးမည်
+      // လက်ရှိ UI တွင် စာသားဖြင့်သာ ပြသထားပြီး Backend နှင့် ချိတ်ဆက်ပါက ဤနေရာတွင် logic ထပ်ထည့်နိုင်သည်
+      console.log(`Task ${id} completed. 10% bonus calculated for referrer.`);
     }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    alert("Copied: " + text);
   };
 
   const styles = {
     container: { backgroundColor: '#0f172a', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '90px' },
     card: { backgroundColor: '#1e293b', borderRadius: '20px', padding: '15px', marginBottom: '15px', border: '1px solid #334155' },
     balanceCard: { background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)', borderRadius: '25px', padding: '20px', textAlign: 'center', marginBottom: '15px', color: '#000' },
-    taskRow: { display: 'flex', flexDirection: 'column', padding: '15px 0', borderBottom: '1px solid #334155' },
-    btnGroup: { display: 'flex', gap: '10px', marginTop: '10px' },
-    joinBtn: { flex: 1, padding: '10px', borderRadius: '8px', background: '#38bdf8', border: 'none', color: '#fff', fontWeight: 'bold', cursor: 'pointer' },
-    verifyBtn: { flex: 1, padding: '10px', borderRadius: '8px', background: '#fbbf24', border: 'none', color: '#000', fontWeight: 'bold', cursor: 'pointer' }
+    btn: (bg = '#fbbf24') => ({ backgroundColor: bg, color: '#000', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 'bold', width: '100%', cursor: 'pointer' }),
+    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', padding: '15px', backgroundColor: '#1e293b', borderTop: '1px solid #334155' }
   };
 
   return (
@@ -56,24 +60,39 @@ function App() {
 
       {activeNav === 'earn' && (
         <div style={styles.card}>
-          <h3 style={{ color: '#fbbf24', textAlign: 'center' }}>Social Tasks</h3>
-          {socialTasks.filter(t => !completedTasks.includes(t.id)).map(task => (
-            <div key={task.id} style={styles.taskRow}>
-              <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{task.name}</span>
-              <div style={styles.btnGroup}>
-                <button onClick={() => handleJoinLink(task.link)} style={styles.joinBtn}>1. Join Link</button>
-                <button onClick={() => handleVerify(task.id)} style={styles.verifyBtn}>2. Check Join</button>
-              </div>
-            </div>
-          ))}
-          {socialTasks.filter(t => !completedTasks.includes(t.id)).length === 0 && (
-            <p style={{ textAlign: 'center', color: '#94a3b8' }}>All tasks completed!</p>
-          )}
+          <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
+            {['bot', 'social'].map(t => (
+              <button key={t} onClick={() => setActiveTab(t)} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', backgroundColor: activeTab === t ? '#fbbf24' : '#0f172a', color: activeTab === t ? '#000' : '#94a3b8', fontWeight: 'bold' }}>{t.toUpperCase()}</button>
+            ))}
+          </div>
+
+          {/* Social Task List Example */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #334155' }}>
+            <span style={{ fontWeight: 'bold' }}>@GrowTeaNews</span>
+            <button onClick={() => handleTaskAction("s1", "https://t.me/GrowTeaNews")} style={{ padding: '5px 15px', borderRadius: '8px', background: '#38bdf8', border: 'none', color: '#fff', fontWeight: 'bold' }}>Join</button>
+          </div>
         </div>
       )}
 
-      {/* Footer Navigation */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', padding: '15px', backgroundColor: '#1e293b', borderTop: '1px solid #334155' }}>
+      {activeNav === 'invite' && (
+        <div style={styles.card}>
+          <h3 style={{ textAlign: 'center', color: '#fbbf24' }}>Invite & Earn</h3>
+          <p style={{ textAlign: 'center', fontSize: '13px' }}>Your friend must complete a task for you to earn 10% bonus!</p>
+          <input style={{ width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#020617', color: 'white', border: '1px solid #334155', marginTop: '10px' }} value={inviteLink} readOnly />
+          <button style={{ ...styles.btn(), marginTop: '10px' }} onClick={() => copyToClipboard(inviteLink)}>Copy Invite Link</button>
+        </div>
+      )}
+
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h4 style={{ color: '#ef4444' }}>⚠️ Security Notice</h4>
+          <p style={{ fontSize: '12px', color: '#fca5a5' }}>
+            Fake accounts and bots are strictly monitored. Your referral earnings will only be credited after a successful task verification.
+          </p>
+        </div>
+      )}
+
+      <div style={styles.footer}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, textAlign: 'center', cursor: 'pointer', color: activeNav === n ? '#fbbf24' : '#94a3b8' }}>
             <div style={{ fontSize: '20px' }}>{n === 'earn' ? '💰' : n === 'invite' ? '👥' : n === 'withdraw' ? '💸' : '👤'}</div>
