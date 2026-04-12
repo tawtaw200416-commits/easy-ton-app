@@ -1,22 +1,12 @@
-  const handleTaskAction = (id, link) => {
-    window.open(link, '_blank');
-    
-    // Adsgram Script ရှိမရှိ စစ်ဆေးခြင်း
-    if (window.Adsgram) {
-      const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-      AdController.show().then(() => {
-        // ကြော်ငြာကြည့်ပြီးလျှင် Balance တိုးမည်
-        setBalance(prev => Number((prev + 0.0005).toFixed(5)));
-        setCompleted(prev => [...prev, id]);
-      }).catch((result) => {
-        console.error("Adsgram Error:", result);
-        alert("Please watch the full ad to get reward!");
-      });
-    } else {
-      // Adsgram မရှိလျှင် (ဥပမာ Script မတက်လျှင်) 5 စက္ကန့်အကြာတွင် Reward ပေးမည်
-      setTimeout(() => {
-        setBalance(prev => Number((prev + 0.0005).toFixed(5)));
-        setCompleted(prev => [...prev, id]);
-      }, 5000);
-    }
-  };
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Easy TON App</title>
+    <script src="https://adsgram.ai/sdk-v1.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
