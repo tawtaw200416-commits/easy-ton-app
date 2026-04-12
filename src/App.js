@@ -30,15 +30,15 @@ function App() {
         setBalance(prev => prev + 0.0005);
         setCompletedTasks(prev => [...prev, taskId]);
         setChecking(null);
-        alert("✅ Verification Successful! 0.0005 TON added.");
+        alert("✅ Task Verified! +0.0005 TON added.");
       }
     }).catch((result) => {
-      // User closed the ad or error
-      alert("⚠️ You must watch the full video to claim your reward.");
+      // User closed the ad or error occurred
+      alert("⚠️ You must watch the full video to verify the task.");
     });
   };
 
-  // --- START BOT LIST (6 Links) ---
+  // --- TASK LISTS ---
   const botTasks = [
     { id: 'b1', name: "GROW TEA BOT", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "GOLDEN MINER BOT", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -89,6 +89,7 @@ function App() {
 
           {!showPayForm ? (
             <div>
+              {/* START BOT LIST */}
               {activeTab === 'bot' && botTasks.filter(t => !completedTasks.includes(t.id)).map(t => (
                 <div key={t.id} style={styles.card}>
                   <div style={{display:'flex', justifyContent:'space-between', alignItems: 'center'}}>
@@ -102,58 +103,42 @@ function App() {
                 </div>
               ))}
 
-              {activeTab === 'social' && socialTasks.filter(t => !completedTasks.includes(t.id)).map(t => (
-                <div key={t.id} style={styles.card}>
-                  <div style={{display:'flex', justifyContent:'space-between', alignItems: 'center'}}>
-                    <b style={{fontSize: '12px'}}>{t.name}</b>
-                    {checking === t.id ? (
-                      <button style={{backgroundColor: '#10b981', color: '#fff', padding: '8px 15px', borderRadius: '10px', border: 'none', fontWeight: '900'}} onClick={() => showAdAndVerify(t.id)}>CHECK</button>
-                    ) : (
-                      <button style={{color:'#38bdf8', background:'none', border:'none', fontWeight:'900'}} onClick={() => startTask(t)}>JOIN</button>
-                    )}
-                  </div>
-                </div>
-              ))}
+              {/* SOCIAL LIST */}
+              {activeTab === 'social' && (
+                <>
+                  <button style={{...styles.btn, marginBottom: '15px'}} onClick={() => setShowPayForm(true)}>+ ADD TASK</button>
+                  {socialTasks.filter(t => !completedTasks.includes(t.id)).map(t => (
+                    <div key={t.id} style={styles.card}>
+                      <div style={{display:'flex', justifyContent:'space-between', alignItems: 'center'}}>
+                        <b style={{fontSize: '12px'}}>{t.name}</b>
+                        {checking === t.id ? (
+                          <button style={{backgroundColor: '#10b981', color: '#fff', padding: '8px 15px', borderRadius: '10px', border: 'none', fontWeight: '900'}} onClick={() => showAdAndVerify(t.id)}>CHECK</button>
+                        ) : (
+                          <button style={{color:'#38bdf8', background:'none', border:'none', fontWeight:'900'}} onClick={() => startTask(t)}>JOIN</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           ) : (
+            /* ADD TASK UI */
             <div style={styles.card}>
-              <div style={{display: 'flex', gap: '5px', marginBottom: '15px'}}>
+              <div style={{display: 'flex', gap: '5px', marginBottom: '20px'}}>
                 <button style={styles.tabBtn(taskSubTab === 'add')} onClick={() => setTaskSubTab('add')}>ADD TASK</button>
                 <button style={styles.tabBtn(taskSubTab === 'my')} onClick={() => setTaskSubTab('my')}>MY TASK</button>
               </div>
               <input style={styles.input} placeholder="NAME" />
               <input style={styles.input} placeholder="LINK" />
-              <button style={styles.btn}>CONFIRM & PAY</button>
-              <button style={{...styles.btn, background:'none', color:'#94a3b8', marginTop:'10px'}} onClick={() => setShowPayForm(false)}>BACK</button>
+              <button style={styles.btn} onClick={() => alert("✅ Order Sent!")}>CONFIRM & PAY</button>
+              <button style={{...styles.btn, background:'none', color:'#94a3b8', marginTop: '10px'}} onClick={() => setShowPayForm(false)}>BACK</button>
             </div>
           )}
         </>
       )}
 
-      {activeNav === 'withdraw' && (
-        <div style={styles.card}>
-          <h2 style={{color: '#fbbf24', fontWeight: '950'}}>WITHDRAW</h2>
-          <input style={styles.input} placeholder="AMOUNT (MIN 0.1)" />
-          <input style={styles.input} placeholder="TON ADDRESS" />
-          <button style={styles.btn}>WITHDRAW NOW</button>
-
-          <h4 style={{marginTop: '30px', borderTop: '1px solid #334155', paddingTop: '15px', fontWeight: '900'}}>WITHDRAW HISTORY</h4>
-          <table style={{width: '100%', marginTop: '10px', fontSize: '12px', borderCollapse: 'collapse'}}>
-            <thead>
-              <tr style={{color: '#94a3b8', borderBottom: '1px solid #334155', textAlign: 'left'}}>
-                <th style={{padding: '10px 5px'}}>Amount</th>
-                <th style={{padding: '10px 5px'}}>Status</th>
-                <th style={{padding: '10px 5px'}}>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colSpan="3" style={{textAlign: 'center', padding: '20px', color: '#64748b'}}>No Withdraw Records</td></tr>
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Nav Footer */}
+      {/* FOOTER NAVIGATION */}
       <div style={styles.footer}>
         <div style={{textAlign:'center', color: activeNav==='earn'?'#fbbf24':'#64748b', fontWeight: '900'}} onClick={()=>setActiveNav('earn')}>💰<br/><small>EARN</small></div>
         <div style={{textAlign:'center', color: activeNav==='invite'?'#fbbf24':'#64748b', fontWeight: '900'}} onClick={()=>setActiveNav('invite')}>👥<br/><small>INVITE</small></div>
