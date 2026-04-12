@@ -50,22 +50,22 @@ function App() {
 
   const styles = {
     main: { backgroundColor: '#facc15', color: '#000', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
-    headerCard: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '20px', border: '4px solid #fff' },
+    headerCard: { textAlign: 'center', background: 'linear-gradient(135deg, #000, #1e293b)', padding: '25px', borderRadius: '25px', marginBottom: '20px', border: '4px solid #fff', boxShadow: '0 8px 16px rgba(0,0,0,0.2)' },
     card: { backgroundColor: '#fff', padding: '18px', borderRadius: '20px', marginBottom: '12px', border: '2px solid #000' },
-    yellowBtn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900' },
-    navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0' },
-    navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '12px', fontWeight: '900' }),
+    yellowBtn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' },
+    navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0', zIndex: 1000 },
+    navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }),
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #eee' },
-    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
-    copyBox: { background: '#f1f5f9', padding: '10px', borderRadius: '12px', border: '1px dashed #000', marginBottom: '10px' },
-    planBtn: (active) => ({ flex: 1, padding: '10px', border: '2px solid #000', borderRadius: '10px', backgroundColor: active ? '#000' : '#fff', color: active ? '#fff' : '#000', fontSize: '11px', fontWeight: 'bold' })
+    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box', fontWeight: 'bold' },
+    copyBox: { background: '#f1f5f9', padding: '12px', borderRadius: '12px', border: '1px dashed #000', marginBottom: '10px' },
+    planBtn: (active) => ({ flex: 1, padding: '10px', border: '2px solid #000', borderRadius: '10px', backgroundColor: active ? '#000' : '#fff', color: active ? '#fff' : '#000', fontSize: '11px', fontWeight: '900' })
   };
 
   return (
     <div style={styles.main}>
       <div style={styles.headerCard}>
-        <small style={{ color: '#facc15' }}>CURRENT BALANCE</small>
-        <h1 style={{ color: '#fff', fontSize: '38px', margin: '5px 0' }}>{balance.toFixed(5)} TON</h1>
+        <small style={{ color: '#facc15', fontWeight: 'bold' }}>CURRENT BALANCE</small>
+        <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0', fontWeight: '900' }}>{balance.toFixed(5)} <span style={{fontSize:'18px', color: '#facc15'}}>TON</span></h1>
       </div>
 
       {activeNav === 'earn' && (
@@ -85,7 +85,7 @@ function App() {
               { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
               { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
             ].filter(t => !completed.includes(t.id)).map(t => (
-              <div key={t.id} style={styles.row}><span>{t.name}</span><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '80px', padding: '8px'}}>START</button></div>
+              <div key={t.id} style={styles.row}><span style={{fontWeight:'bold'}}>{t.name}</span><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '90px', padding: '10px'}}>START</button></div>
             ))}
 
             {activeTab === 'social' && !showAddTask && (
@@ -95,37 +95,44 @@ function App() {
                   { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
                   { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
                   { id: 's3', name: "@cryptogold_online", link: "https://t.me/cryptogold_online_official" },
+                  { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
+                  { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
+                  { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+                  { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+                  { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+                  { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
                   { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
                 ].filter(t => !completed.includes(t.id)).map(t => (
-                  <div key={t.id} style={styles.row}><span>{t.name}</span><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '80px', padding: '8px'}}>JOIN</button></div>
+                  <div key={t.id} style={styles.row}><span style={{fontWeight:'bold'}}>{t.name}</span><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '90px', padding: '10px'}}>JOIN</button></div>
                 ))}
               </>
             )}
 
             {showAddTask && (
               <div>
-                <h4 style={{marginTop:0}}>Promote Ad (Views)</h4>
+                <h3 style={{marginTop:0}}>Promote Channel (Views)</h3>
                 <input style={styles.input} placeholder="Channel Name (@Username)" />
                 <input style={styles.input} placeholder="Channel Link" />
+                <p style={{fontSize:'12px', fontWeight:'900', marginBottom:'10px'}}>Select Plan:</p>
                 <div style={{display:'flex', gap:'5px', marginBottom:'15px'}}>
-                  <button onClick={() => setSelectedPlan('100')} style={styles.planBtn(selectedPlan === '100')}>100 Views<br/>0.2 TON</button>
-                  <button onClick={() => setSelectedPlan('200')} style={styles.planBtn(selectedPlan === '200')}>200 Views<br/>0.4 TON</button>
-                  <button onClick={() => setSelectedPlan('300')} style={styles.planBtn(selectedPlan === '300')}>300 Views<br/>0.5 TON</button>
+                  {['100', '200', '300'].map(p => (
+                    <button key={p} onClick={() => setSelectedPlan(p)} style={styles.planBtn(selectedPlan === p)}>{p} Views<br/>{p === '100' ? '0.2' : p === '200' ? '0.4' : '0.5'} TON</button>
+                  ))}
                 </div>
                 <div style={styles.copyBox}>
-                  <small>ADMIN WALLET:</small>
-                  <p style={{fontSize:'10px', wordBreak:'break-all'}}>{APP_CONFIG.ADMIN_WALLET}</p>
-                  <button onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET, "Address")} style={{padding:'2px 8px', fontSize:'10px'}}>COPY ADDRESS</button>
+                  <small style={{color:'#64748b'}}>ADMIN WALLET:</small>
+                  <p style={{fontSize:'11px', wordBreak:'break-all', fontWeight:'bold'}}>{APP_CONFIG.ADMIN_WALLET}</p>
+                  <button onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET, "Wallet")} style={{background:'#000', color:'#fff', border:'none', padding:'5px 10px', borderRadius:'6px', fontSize:'10px'}}>COPY ADDRESS</button>
                 </div>
                 <div style={styles.copyBox}>
-                  <small>USER UID (MEMO):</small>
-                  <p style={{fontWeight:'bold'}}>{APP_CONFIG.MY_UID}</p>
-                  <button onClick={() => handleCopy(APP_CONFIG.MY_UID, "UID")} style={{padding:'2px 8px', fontSize:'10px'}}>COPY UID</button>
+                  <small style={{color:'#64748b'}}>MEMO (USER UID):</small>
+                  <p style={{fontSize:'16px', fontWeight:'900'}}>{APP_CONFIG.MY_UID}</p>
+                  <button onClick={() => handleCopy(APP_CONFIG.MY_UID, "UID")} style={{background:'#000', color:'#fff', border:'none', padding:'5px 10px', borderRadius:'6px', fontSize:'10px'}}>COPY UID</button>
                 </div>
-                <button style={styles.yellowBtn} onClick={() => window.open(APP_CONFIG.ADMIN_TELEGRAM)}>CONFIRM & SEND SCREENSHOT</button>
+                <button style={styles.yellowBtn} onClick={() => window.open(APP_CONFIG.ADMIN_TELEGRAM)}>CONFIRM & SEND PROOF</button>
               </div>
             )}
-            {activeTab === 'reward' && (<div><input style={styles.input} placeholder="Enter Reward Code" /><button style={styles.yellowBtn}>CLAIM</button></div>)}
+            {activeTab === 'reward' && (<div><input style={styles.input} placeholder="Enter Reward Code" /><button style={styles.yellowBtn}>CLAIM REWARD</button></div>)}
           </div>
         </>
       )}
@@ -133,45 +140,45 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center', marginTop:0}}>INVITE & EARN</h2>
-          <p style={{textAlign:'center', fontSize:'14px'}}>Earn <strong>0.0005 TON</strong> + <strong>10% Bonus</strong> from friends!</p>
+          <p style={{textAlign:'center', fontSize:'14px', color:'#64748b'}}>Earn <strong>0.0005 TON</strong> + <strong>10% Bonus</strong> from friends!</p>
           <div style={styles.copyBox}>
-            <small>YOUR LINK:</small>
-            <p style={{fontSize:'12px'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
+            <small style={{color:'#64748b'}}>YOUR REFERRAL LINK:</small>
+            <p style={{fontSize:'12px', fontWeight:'bold', margin:'10px 0'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
             <button onClick={() => handleCopy(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`, "Link")} style={styles.yellowBtn}>COPY LINK</button>
           </div>
-          <div style={{display:'flex', justifyContent:'space-between', marginTop:'20px'}}><span>Total Referrals:</span><strong>{referralCount} Users</strong></div>
+          <div style={{...styles.row, borderBottom:'none', background:'#f1f5f9', padding:'15px', borderRadius:'15px'}}><span>Total Referrals:</span><strong>{referralCount} Users</strong></div>
         </div>
       )}
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h4>WITHDRAW</h4>
-          <input style={styles.input} type="number" placeholder="Min 0.1 TON" />
+          <h3 style={{fontWeight:'900'}}>WITHDRAW</h3>
+          <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
           <button style={styles.yellowBtn}>WITHDRAW NOW</button>
-          <h4 style={{marginTop:'20px'}}>HISTORY</h4>
+          <h4 style={{marginTop:'20px'}}>WITHDRAW HISTORY</h4>
           {withdrawHistory.map(h => (
-            <div key={h.id} style={styles.row}><span>{h.amount} TON</span><span style={{color:'orange'}}>Pending</span></div>
+            <div key={h.id} style={styles.row}><span>{h.amount} TON</span><span style={{color:'#f59e0b', fontWeight:'bold'}}>Pending</span></div>
           ))}
         </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h2 style={{textAlign:'center', marginTop:0}}>PROFILE</h2>
-          <div style={{textAlign:'center', marginBottom:'15px'}}><span style={{background:'#10b981', color:'#fff', padding:'3px 10px', borderRadius:'15px', fontSize:'11px'}}>● ACTIVE</span></div>
+          <h2 style={{textAlign:'center', marginTop:0}}>USER PROFILE</h2>
+          <div style={{textAlign:'center', marginBottom:'15px'}}><span style={{background:'#10b981', color:'#fff', padding:'4px 12px', borderRadius:'20px', fontSize:'12px', fontWeight:'900'}}>● ACTIVE</span></div>
           <div style={styles.row}><span>UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
-          <div style={styles.row}><span>Status:</span><span style={{color:'#10b981'}}>VERIFIED</span></div>
-          <div style={{background:'#fff1f2', padding:'10px', borderRadius:'10px', marginTop:'15px', border:'1px solid #f43f5e', fontSize:'11px'}}>
-            ⚠️ WARNING: Using fake accounts or cheating will result in a PERMANENT BAN.
+          <div style={styles.row}><span>Status:</span><span style={{color:'#10b981', fontWeight:'bold'}}>VERIFIED</span></div>
+          <div style={{background:'#fff1f2', padding:'15px', borderRadius:'15px', marginTop:'20px', border:'1px solid #f43f5e', fontSize:'12px', color:'#e11d48'}}>
+            ⚠️ <strong>WARNING:</strong> Fake accounts or cheating will lead to a <strong>PERMANENT BAN</strong>.
           </div>
+          <button onClick={() => window.open(APP_CONFIG.ADMIN_TELEGRAM)} style={{...styles.yellowBtn, marginTop:'20px'}}>CONTACT SUPPORT</button>
         </div>
       )}
 
       <div style={styles.navBar}>
-        <div onClick={() => setActiveNav('earn')} style={styles.navBtn(activeNav === 'earn')}>EARN</div>
-        <div onClick={() => setActiveNav('invite')} style={styles.navBtn(activeNav === 'invite')}>INVITE</div>
-        <div onClick={() => setActiveNav('withdraw')} style={styles.navBtn(activeNav === 'withdraw')}>WITHDRAW</div>
-        <div onClick={() => setActiveNav('profile')} style={styles.navBtn(activeNav === 'profile')}>PROFILE</div>
+        {['earn', 'invite', 'withdraw', 'profile'].map(n => (
+          <div key={n} onClick={() => setActiveNav(n)} style={styles.navBtn(activeNav === n)}>{n.toUpperCase()}</div>
+        ))}
       </div>
     </div>
   );
