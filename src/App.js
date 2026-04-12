@@ -6,7 +6,7 @@ function App() {
   const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_bal')) || 0.0000);
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('comp_tasks')) || []);
   const [isClaimed, setIsClaimed] = useState(() => localStorage.getItem('gift_claimed') === 'true');
-  const [invites, setInvites] = useState(() => Number(localStorage.getItem('invite_count')) || 0);
+  const [invites] = useState(0);
   
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
@@ -20,8 +20,7 @@ function App() {
     localStorage.setItem('ton_bal', balance.toString());
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
     localStorage.setItem('gift_claimed', isClaimed);
-    localStorage.setItem('invite_count', invites.toString());
-  }, [balance, completed, isClaimed, invites]);
+  }, [balance, completed, isClaimed]);
 
   // --- Data Lists ---
   const botTasks = [
@@ -77,7 +76,7 @@ function App() {
 
   return (
     <div style={styles.main}>
-      {/* --- HEADER --- */}
+      {/* --- BALANCE --- */}
       <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px' }}>
         <small style={{ color: '#94a3b8' }}>TOTAL BALANCE</small>
         <h1 style={{ color: '#fbbf24', margin: '5px 0' }}>{balance.toFixed(4)} TON</h1>
@@ -106,7 +105,9 @@ function App() {
           {activeTab === 'reward' && (
             <div style={styles.card}>
               <h4 style={{marginTop: 0}}>DAILY REWARD CODE</h4>
-              {isClaimed ? <p style={{ color: '#fbbf24', textAlign: 'center' }}>✅ Code Already Claimed</p> : (
+              {isClaimed ? (
+                <p style={{ color: '#fbbf24', textAlign: 'center', fontWeight: 'bold' }}>✅ CODE ALREADY CLAIMED</p>
+              ) : (
                 <><input id="giftInput" style={styles.input} placeholder="Enter code (e.g. GIFT77)" />
                 <button onClick={() => {if(document.getElementById('giftInput').value.toUpperCase()==="GIFT77"){setBalance(b=>b+0.01);setIsClaimed(true);alert("0.01 TON Claimed!")}}} style={styles.yellowBtn}>CLAIM REWARD</button></>
               )}
@@ -115,7 +116,7 @@ function App() {
 
           {activeTab === 'social' && (
             <div>
-              <button style={{ ...styles.yellowBtn, marginBottom: '15px' }} onClick={() => setShowForm(!showForm)}>+ ADD TASK</button>
+              <button style={{ ...styles.yellowBtn, marginBottom: '15px' }} onClick={() => {setShowForm(!showForm); setFormType('menu')}}>+ ADD TASK</button>
               {showForm && (
                 <div style={{ ...styles.card, border: '1px solid #fbbf24' }}>
                   {formType === 'menu' ? (
@@ -125,19 +126,19 @@ function App() {
                     </div>
                   ) : (
                     <div>
-                      <input style={styles.input} placeholder="Name" />
-                      <input style={styles.input} placeholder="Link" />
+                      <input style={styles.input} placeholder="Channel Name" />
+                      <input style={styles.input} placeholder="Telegram Link" />
                       <div style={{ fontSize: '11px', background: '#0f172a', padding: '12px', borderRadius: '10px', marginBottom: '10px', border: '1px solid #334155' }}>
-                        <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px'}}>
-                          <span>Addr: {walletAddress.slice(0,8)}...</span>
-                          <button onClick={() => copyToClipboard(walletAddress)} style={styles.copySmall}>COPY ADDR</button>
+                        <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px'}}>
+                          <span>Addr: <small style={{color:'#fbbf24'}}>{walletAddress.slice(0,15)}...</small></span>
+                          <button onClick={() => copyToClipboard(walletAddress, "Address Copied!")} style={styles.copySmall}>COPY</button>
                         </div>
                         <div style={{display:'flex', justifyContent:'space-between'}}>
                           <span>MEMO: <b style={{color:'#fbbf24'}}>{userUID}</b></span>
-                          <button onClick={() => copyToClipboard(userUID)} style={styles.copySmall}>COPY MEMO</button>
+                          <button onClick={() => copyToClipboard(userUID, "Memo Copied!")} style={styles.copySmall}>COPY</button>
                         </div>
                       </div>
-                      <button style={styles.yellowBtn} onClick={() => setFormType('menu')}>BACK</button>
+                      <button style={{...styles.yellowBtn, background:'#334155', color:'#fff'}} onClick={() => setFormType('menu')}>BACK</button>
                     </div>
                   )}
                 </div>
@@ -146,11 +147,11 @@ function App() {
                 <div key={s.id} style={styles.card}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '13px' }}>{s.name}</span>
-                    <button id={`btn-${s.id}`} onClick={() => handleTaskAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '90px', fontSize: '11px' }}>JOIN</button>
+                    <button id={`btn-${s.id}`} onClick={() => handleTaskAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '90px', fontSize: '11px', marginTop: 0 }}>JOIN</button>
                   </div>
                 </div>
               ))}
-              <button style={{ ...styles.yellowBtn, marginTop: '10px' }} onClick={() => setShowForm(!showForm)}>+ ADD TASK</button>
+              <button style={{ ...styles.yellowBtn, marginTop: '10px' }} onClick={() => {setShowForm(!showForm); setFormType('menu')}}>+ ADD TASK</button>
             </div>
           )}
         </>
@@ -161,22 +162,22 @@ function App() {
           <div style={{ ...styles.card, border: '1px solid #fbbf24' }}>
             <h2 style={{ color: '#fbbf24', marginBottom: '15px' }}>INVITE FRIENDS</h2>
             <div style={{ background: '#0f172a', padding: '15px', borderRadius: '12px', marginBottom: '15px' }}>
-              <p style={{ fontSize: '14px', margin: '0' }}>Get <b style={{color:'#fbbf24'}}>0.0005 TON</b> per friend</p>
+              <p style={{ fontSize: '14px', margin: '0' }}>Earn <b style={{color:'#fbbf24'}}>0.0005 TON</b> per friend</p>
               <div style={{ height: '1px', background: '#334155', margin: '12px 0' }}></div>
               <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981', margin: '0' }}>+ 10% COMMISSION</p>
               <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '5px' }}>(from every task they complete)</p>
             </div>
-            <div style={{ ...styles.input, color: '#fbbf24', fontSize: '11px' }}>https://t.me/Bot?start={userUID}</div>
+            <div style={{ ...styles.input, color: '#fbbf24', fontSize: '11px', textAlign: 'center' }}>https://t.me/Bot?start={userUID}</div>
             <button onClick={() => copyToClipboard(`https://t.me/Bot?start=${userUID}`)} style={styles.yellowBtn}>COPY REFER LINK</button>
           </div>
-          <h3 style={{ textAlign: 'left', paddingLeft: '5px' }}>INVITE HISTORY</h3>
+          <h3 style={{ textAlign: 'left', paddingLeft: '5px', marginTop: '20px' }}>INVITE HISTORY</h3>
           <div style={styles.card}>
-             <div style={{display:'flex', justifyContent:'space-between'}}><span>Total Invited:</span><b>{invites} Users</b></div>
+             <div style={{display:'flex', justifyContent:'space-between'}}><span>Total Invited:</span><b style={{color:'#fbbf24'}}>{invites} Users</b></div>
           </div>
         </div>
       )}
 
-      {/* Footer Nav as per user style */}
+      {/* --- FOOTER NAV --- */}
       <div style={styles.footer}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => setActiveNav(n)} style={{ textAlign: 'center', color: activeNav === n ? '#fbbf24' : '#64748b', flex: 1, cursor: 'pointer' }}>
