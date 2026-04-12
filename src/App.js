@@ -2,54 +2,19 @@ import React, { useState, useEffect } from 'react';
 
 function App() {
   const [userUID] = useState("1793453606");
-  const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_balance')) || 0.0000);
-  const [completedTasks, setCompletedTasks] = useState(() => JSON.parse(localStorage.getItem('completed_tasks')) || []);
-  const [rewardClaimed, setRewardClaimed] = useState(() => localStorage.getItem('reward_claimed') === 'true');
+  const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_bal')) || 0.0000);
+  const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('comp_tasks')) || []);
+  const [isClaimed, setIsClaimed] = useState(() => localStorage.getItem('gift_claimed') === 'true');
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
-  const [showAddTaskMenu, setShowAddTaskMenu] = useState(false);
-  const [showForm, setShowForm] = useState(null);
-  const [checking, setChecking] = useState(null);
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [formStep, setFormStep] = useState('menu'); // 'menu', 'add', 'my'
 
   useEffect(() => {
-    localStorage.setItem('ton_balance', balance.toString());
-    localStorage.setItem('completed_tasks', JSON.stringify(completedTasks));
-    localStorage.setItem('reward_claimed', rewardClaimed);
-  }, [balance, completedTasks, rewardClaimed]);
-
-  const handleShowAd = (taskId) => {
-    if (window.Adsgram) {
-      const AdController = window.Adsgram.init({ blockId: "27393" });
-      AdController.show().then(() => {
-        if (!completedTasks.includes(taskId)) {
-          setBalance(prev => prev + 0.0005);
-          setCompletedTasks(prev => [...prev, taskId]);
-          setChecking(null);
-          alert("Success! 0.0005 TON added.");
-        }
-      }).catch(() => alert("Please watch the full ad."));
-    }
-  };
-
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    alert("Copied to clipboard!");
-  };
-
-  const claimRewardCode = (code) => {
-    if (rewardClaimed) {
-      alert("You have already claimed this reward!");
-      return;
-    }
-    // ဒီမှာ မိတ်ဆွေ ပေးချင်တဲ့ Code ကို သတ်မှတ်ပါ (ဥပမာ: GIFT77)
-    if (code.toUpperCase() === "GIFT77") {
-      setBalance(prev => prev + 0.005); // Reward အနေနဲ့ 0.005 ပေးမယ်ဆိုပါစို့
-      setRewardClaimed(true);
-      alert("Congratulations! 0.005 TON rewarded.");
-    } else {
-      alert("Invalid Reward Code!");
-    }
-  };
+    localStorage.setItem('ton_bal', balance.toString());
+    localStorage.setItem('comp_tasks', JSON.stringify(completed));
+    localStorage.setItem('gift_claimed', isClaimed);
+  }, [balance, completed, isClaimed]);
 
   const botTasks = [
     { id: 'b1', name: "GROW TEA BOT", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
@@ -60,81 +25,127 @@ function App() {
     { id: 'b6', name: "POBUZZ BOT", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
   ];
 
+  const copyLink = (txt) => {
+    navigator.clipboard.writeText(txt);
+    alert("Copied!");
+  };
+
+  const handleClaim = () => {
+    const code = document.getElementById('giftInput').value;
+    if (code.toUpperCase() === "GIFT77") {
+      setBalance(prev => prev + 0.01);
+      setIsClaimed(true);
+      alert("0.01 TON Claimed!");
+    } else {
+      alert("Invalid Code!");
+    }
+  };
+
+  const startTask = (id, link) => {
+    window.open(link, '_blank');
+    const btn = document.getElementById(`btn-${id}`);
+    btn.innerText = "VERIFY AD";
+    btn.style.backgroundColor = "#10b981";
+    btn.onclick = () => {
+      if (window.Adsgram) {
+        window.Adsgram.init({ blockId: "27393" }).show().then(() => {
+          if (!completed.includes(id)) {
+            setBalance(prev => prev + 0.0005);
+            setCompleted(prev => [...prev, id]);
+            alert("Added 0.0005 TON");
+          }
+        });
+      }
+    };
+  };
+
   const styles = {
-    container: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '100px', fontFamily: 'sans-serif' },
+    main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '80px', fontFamily: 'sans-serif' },
+    header: { textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px' },
     card: { backgroundColor: '#1e293b', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '1px solid #334155' },
-    tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', backgroundColor: active ? '#fbbf24' : '#1e293b', color: active ? '#000' : '#fff', fontWeight: 'bold', fontSize: '11px' }),
-    input: { width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#0f172a', color: '#fff', border: '1px solid #334155', marginBottom: '10px', boxSizing: 'border-box' },
-    btnYellow: { width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#fbbf24', color: '#000', fontWeight: 'bold', border: 'none', cursor: 'pointer' },
+    tabBtn: (active) => ({ flex: 1, padding: '12px', border: 'none', borderRadius: '10px', backgroundColor: active ? '#fbbf24' : '#1e293b', color: active ? '#000' : '#fff', fontWeight: 'bold', fontSize: '11px' }),
+    yellowBtn: { width: '100%', padding: '12px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
     footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b', borderTop: '1px solid #334155' }
   };
 
   return (
-    <div style={styles.container}>
-      {/* Balance */}
-      <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px' }}>
+    <div style={styles.main}>
+      <div style={styles.header}>
         <small style={{ color: '#94a3b8' }}>TOTAL BALANCE</small>
-        <h1 style={{ color: '#fbbf24', fontSize: '36px', margin: '5px 0' }}>{balance.toFixed(4)} TON</h1>
+        <h1 style={{ color: '#fbbf24', margin: '5px 0' }}>{balance.toFixed(4)} TON</h1>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
-            <button style={styles.tabBtn(activeTab === 'bot')} onClick={() => setActiveTab('bot')}>START BOT</button>
-            <button style={styles.tabBtn(activeTab === 'reward')} onClick={() => setActiveTab('reward')}>REWARD</button>
-            <button style={styles.tabBtn(activeTab === 'social')} onClick={() => setActiveTab('social')}>SOCIAL</button>
+            {['bot', 'reward', 'social'].map(t => (
+              <button key={t} style={styles.tabBtn(activeTab === t)} onClick={() => {setActiveTab(t); setShowAddTask(false)}}>{t.toUpperCase()}</button>
+            ))}
           </div>
 
-          {/* Start Bot with COPY Link */}
-          {activeTab === 'bot' && botTasks.map(t => (
-            <div key={t.id} style={styles.card}>
+          {activeTab === 'bot' && botTasks.map(b => (
+            <div key={b.id} style={styles.card}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{t.name}</span>
-                <button onClick={() => copyToClipboard(t.link)} style={{ background: '#334155', color: '#fbbf24', border: 'none', padding: '5px 10px', borderRadius: '5px', fontSize: '10px' }}>COPY</button>
+                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{b.name}</span>
+                <button onClick={() => copyLink(b.link)} style={{ background: '#334155', color: '#fbbf24', border: 'none', padding: '4px 8px', borderRadius: '5px', fontSize: '10px' }}>COPY LINK</button>
               </div>
-              <button onClick={() => { window.open(t.link, '_blank'); setChecking(t.id); }} style={styles.btnYellow}>START BOT</button>
-              {checking === t.id && (
-                <button onClick={() => handleShowAd(t.id)} style={{ ...styles.btnYellow, backgroundColor: '#10b981', color: '#fff', marginTop: '10px' }}>CHECK TASK</button>
-              )}
+              <button id={`btn-${b.id}`} onClick={() => startTask(b.id, b.link)} style={styles.yellowBtn}>
+                {completed.includes(b.id) ? 'COMPLETED' : 'START BOT'}
+              </button>
             </div>
           ))}
 
-          {/* Reward Tab (Single Use Code) */}
           {activeTab === 'reward' && (
             <div style={styles.card}>
-              <h4 style={{ marginTop: 0 }}>DAILY REWARD CODE</h4>
-              {rewardClaimed ? (
-                <p style={{ color: '#10b981', textAlign: 'center' }}>✅ Code already claimed!</p>
+              <h4>ENTER REWARD CODE</h4>
+              {isClaimed ? (
+                <p style={{ color: '#fbbf24', textAlign: 'center' }}>✅ Code Already Claimed</p>
               ) : (
                 <>
-                  <input id="rewardInput" style={styles.input} type="text" placeholder="Enter code (e.g. GIFT77)" />
-                  <button 
-                    style={styles.btnYellow} 
-                    onClick={() => claimRewardCode(document.getElementById('rewardInput').value)}
-                  >
-                    CLAIM REWARD
-                  </button>
+                  <input id="giftInput" style={{ width: '100%', padding: '12px', marginBottom: '10px', boxSizing: 'border-box', borderRadius: '10px', background: '#0f172a', color: '#fff', border: '1px solid #334155' }} placeholder="Enter code..." />
+                  <button onClick={handleClaim} style={styles.yellowBtn}>CLAIM NOW</button>
                 </>
               )}
-              <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '10px' }}>* You can claim a reward code only once.</p>
             </div>
           )}
 
-          {/* Social Tab (Same logic) */}
           {activeTab === 'social' && (
-            <div style={{ textAlign: 'center' }}>
-               <button style={styles.btnYellow} onClick={() => alert("Social tasks coming soon!")}>+ ADD TASK</button>
+            <div>
+              <button style={{ ...styles.yellowBtn, marginBottom: '15px' }} onClick={() => setShowAddTask(true)}>+ ADD TASK</button>
+              {showAddTask && (
+                <div style={styles.card}>
+                  {formStep === 'menu' ? (
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button style={styles.yellowBtn} onClick={() => setFormStep('add')}>ADD TASK</button>
+                      <button style={{ ...styles.yellowBtn, background: '#334155', color: '#fff' }} onClick={() => setFormStep('my')}>MY TASK</button>
+                    </div>
+                  ) : formStep === 'add' ? (
+                    <div>
+                      <input style={{ width: '100%', padding: '10px', marginBottom: '10px', boxSizing: 'border-box' }} placeholder="Channel Name" />
+                      <select style={{ width: '100%', padding: '10px', marginBottom: '10px' }}>
+                        <option>100 Views - 0.2 TON</option>
+                        <option>200 Views - 0.4 TON</option>
+                      </select>
+                      <div style={{ fontSize: '11px', color: '#fbbf24', marginBottom: '10px' }}>MEMO: {userUID}</div>
+                      <button style={styles.yellowBtn} onClick={() => {alert("Submitted!"); setShowAddTask(false); setFormStep('menu')}}>SUBMIT</button>
+                    </div>
+                  ) : (
+                    <button style={styles.yellowBtn} onClick={() => setFormStep('menu')}>BACK</button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </>
       )}
 
-      {/* Footer Nav */}
+      {/* Nav Footer */}
       <div style={styles.footer}>
-        <div onClick={() => setActiveNav('earn')} style={{ textAlign: 'center', color: activeNav === 'earn' ? '#fbbf24' : '#64748b' }}>💰<br/><small>EARN</small></div>
-        <div onClick={() => setActiveNav('invite')} style={{ textAlign: 'center', color: activeNav === 'invite' ? '#fbbf24' : '#64748b' }}>👥<br/><small>INVITE</small></div>
-        <div onClick={() => setActiveNav('history')} style={{ textAlign: 'center', color: activeNav === 'history' ? '#fbbf24' : '#64748b' }}>💸<br/><small>WITHDRAW</small></div>
-        <div onClick={() => setActiveNav('profile')} style={{ textAlign: 'center', color: activeNav === 'profile' ? '#fbbf24' : '#64748b' }}>👤<br/><small>PROFILE</small></div>
+        {['earn', 'invite', 'withdraw', 'profile'].map(n => (
+          <div key={n} onClick={() => setActiveNav(n)} style={{ textAlign: 'center', color: activeNav === n ? '#fbbf24' : '#64748b', cursor: 'pointer' }}>
+            {n === 'earn' ? '💰' : n === 'invite' ? '👥' : n === 'withdraw' ? '💸' : '👤'}<br/><small>{n.toUpperCase()}</small>
+          </div>
+        ))}
       </div>
     </div>
   );
