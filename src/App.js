@@ -22,7 +22,7 @@ function App() {
     localStorage.setItem('wd_hist', JSON.stringify(withdrawHistory));
   }, [balance, completed, withdrawHistory]);
 
-  // ✅ 24-Hour Success Check for Withdrawals
+  // ✅ Withdraw 24 Hours Auto-Success
   useEffect(() => {
     const timer = setInterval(() => {
       const now = Date.now();
@@ -35,11 +35,11 @@ function App() {
       if (JSON.stringify(updatedHistory) !== JSON.stringify(withdrawHistory)) {
         setWithdrawHistory(updatedHistory);
       }
-    }, 60000);
+    }, 30000);
     return () => clearInterval(timer);
   }, [withdrawHistory]);
 
-  // ✅ Start Bot Tasks (6 Bots Updated)
+  // ✅ Start Bot Tasks (၆ ခု အတိအကျ Updated)
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -87,20 +87,21 @@ function App() {
     input: { width: '100%', padding: '14px', borderRadius: '12px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '12px', boxSizing: 'border-box', fontWeight: '900', fontSize: '15px' },
     navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#1e293b', borderTop: '2px solid #fbbf24', padding: '10px 0' },
     navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#fbbf24' : '#94a3b8', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }),
-    row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #334155' }
+    row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #334155' },
+    warningBox: { marginTop: '20px', padding: '15px', backgroundColor: '#450a0a', border: '2px solid #ef4444', borderRadius: '12px', textAlign: 'center' }
   };
 
   return (
     <div style={styles.main}>
-      {/* 💰 Balance Banner */}
-      <div style={{ textAlign: 'center', background: 'linear-gradient(145deg, #1e293b, #0f172a)', padding: '30px', borderRadius: '25px', marginBottom: '20px', border: '2px solid #fbbf24' }}>
+      {/* 💰 BALANCE */}
+      <div style={{ textAlign: 'center', background: 'linear-gradient(145deg, #1e293b, #0f172a)', padding: '30px', borderRadius: '25px', marginBottom: '25px', border: '2px solid #fbbf24' }}>
         <small style={{ color: '#94a3b8', fontWeight: '900' }}>TOTAL BALANCE</small>
         <h1 style={{ color: '#fbbf24', fontSize: '42px', margin: '5px 0', fontWeight: '900' }}>{balance.toFixed(4)} <span style={{fontSize:'18px'}}>TON</span></h1>
       </div>
 
       {activeNav === 'earn' && (
         <>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
             {['bot', 'social', 'reward'].map(t => (
               <button key={t} onClick={() => {setActiveTab(t); setShowAddTask(false);}} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', backgroundColor: activeTab === t ? '#fbbf24' : '#1e293b', color: activeTab === t ? '#000' : '#fff', fontWeight: '900' }}>{t.toUpperCase()}</button>
             ))}
@@ -135,8 +136,8 @@ function App() {
 
             {showAddTask && (
               <div>
-                <h3 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>Promote Ad</h3>
-                <input style={styles.input} placeholder="Channel Name" />
+                <h3 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>Promote Channel</h3>
+                <input style={styles.input} placeholder="Channel Name (@Username)" />
                 <input style={styles.input} placeholder="Link" />
                 <select style={styles.input}>
                   <option>100 Views - 0.2 TON</option>
@@ -145,9 +146,9 @@ function App() {
                 </select>
                 <div style={{background: '#0f172a', padding: '15px', borderRadius: '12px', border: '1px dashed #fbbf24', marginBottom: '15px'}}>
                   <p style={{fontSize: '11px', fontWeight: '900'}}>ADDRESS: <b style={{color:'#fbbf24'}}>{APP_CONFIG.ADMIN_WALLET}</b></p>
-                  <button onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET, "Address")} style={{background:'#fbbf24', border:'none', padding:'4px 8px', borderRadius:'4px', fontWeight:'900', fontSize:'10px'}}>COPY</button>
-                  <p style={{fontSize: '11px', fontWeight: '900', marginTop:'10px'}}>MEMO (UID): <b style={{color:'#fbbf24'}}>{APP_CONFIG.MY_UID}</b></p>
-                  <button onClick={() => handleCopy(APP_CONFIG.MY_UID, "MEMO")} style={{background:'#fbbf24', border:'none', padding:'4px 8px', borderRadius:'4px', fontWeight:'900', fontSize:'10px'}}>COPY</button>
+                  <button onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET, "Address")} style={{background:'#fbbf24', border:'none', padding:'5px 10px', borderRadius:'5px', fontWeight:'900', fontSize:'10px', marginBottom:'10px'}}>COPY ADDRESS</button>
+                  <p style={{fontSize: '11px', fontWeight: '900'}}>MEMO (UID): <b style={{color:'#fbbf24'}}>{APP_CONFIG.MY_UID}</b></p>
+                  <button onClick={() => handleCopy(APP_CONFIG.MY_UID, "MEMO")} style={{background:'#fbbf24', border:'none', padding:'5px 10px', borderRadius:'5px', fontWeight:'900', fontSize:'10px'}}>COPY MEMO</button>
                 </div>
                 <button style={styles.yellowBtn} onClick={() => { window.open(`${APP_CONFIG.ADMIN_TELEGRAM}?text=Payment_Done_UID_${APP_CONFIG.MY_UID}`, '_blank'); setShowAddTask(false); }}>CONFIRM PAYMENT</button>
               </div>
@@ -167,10 +168,10 @@ function App() {
               setBalance(prev => prev - amt);
               setWithdrawHistory([newWD, ...withdrawHistory]);
               setWithdrawAmount('');
-              alert("Submitted!");
+              alert("Withdraw Request Submitted!");
             }
           }}>WITHDRAW NOW</button>
-          <h4 style={{marginTop:'30px', fontWeight:'900', borderTop:'1px solid #334155', paddingTop:'15px'}}>HISTORY</h4>
+          <h4 style={{marginTop:'30px', fontWeight:'900', borderTop:'1px solid #334155', paddingTop:'15px'}}>WITHDRAW HISTORY</h4>
           {withdrawHistory.map(w => (
             <div key={w.id} style={{...styles.row, fontSize:'13px', fontWeight:'900'}}>
               <span>{w.amount} TON</span>
@@ -183,25 +184,24 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>INVITE</h2>
-          <p style={{fontWeight:'900', color:'#94a3b8', fontSize:'14px'}}>Share your link and earn 10% bonus!</p>
+          <p style={{fontWeight:'900', color:'#94a3b8'}}>Invite friends and earn 10% bonus!</p>
           <div style={{...styles.input, padding:'15px', fontSize:'12px', background:'#0f172a'}}>{`https://t.me/YourBot?start=${APP_CONFIG.MY_UID}`}</div>
-          <button style={styles.yellowBtn} onClick={() => alert("Link Copied!")}>COPY LINK</button>
-          
+          <button style={styles.yellowBtn} onClick={() => alert("Link Copied!")}>COPY INVITE LINK</button>
           <h4 style={{marginTop:'30px', fontWeight:'900', borderTop:'1px solid #334155', paddingTop:'15px'}}>INVITE HISTORY</h4>
-          <div style={styles.row}><span style={{fontWeight:'900'}}>Friend Joining Reward</span><span style={{color:'#10b981', fontWeight:'900'}}>+ 0.0005 TON</span></div>
+          <div style={styles.row}><span style={{fontWeight:'900'}}>Friend Reward</span><span style={{color:'#10b981', fontWeight:'900'}}>+ 0.0005 TON</span></div>
         </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
           <h2 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>USER PROFILE</h2>
-          <div style={{...styles.row, border:'none'}}><span style={{fontWeight:'900'}}>User ID:</span><span style={{fontWeight:'900'}}>{APP_CONFIG.MY_UID}</span></div>
-          <div style={{...styles.row, border:'none'}}><span style={{fontWeight:'900'}}>Status:</span><span style={{color:'#10b981', fontWeight:'900'}}>Active</span></div>
+          <div style={{...styles.row, border:'none'}}><span style={{fontWeight:'900'}}>Your ID:</span><span style={{fontWeight:'900'}}>{APP_CONFIG.MY_UID}</span></div>
+          <div style={{...styles.row, border:'none'}}><span style={{fontWeight:'900'}}>Status:</span><span style={{color:'#10b981', fontWeight:'900'}}>Verified</span></div>
           
-          {/* ✅ Fake Account Warning in English */}
-          <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#450a0a', border: '2px solid #ef4444', borderRadius: '12px', textAlign: 'center' }}>
+          {/* ✅ Warning Message for Fake Accounts */}
+          <div style={styles.warningBox}>
             <p style={{ color: '#fca5a5', fontWeight: '900', margin: 0, fontSize: '14px' }}>
-              ⚠️ WARNING: <br/> Using fake accounts or multiple accounts to cheat the system will lead to a PERMANENT BAN.
+              ⚠️ ATTENTION: <br/> Using fake accounts or multiple IDs to exploit the reward system will result in a PERMANENT BAN.
             </p>
           </div>
         </div>
