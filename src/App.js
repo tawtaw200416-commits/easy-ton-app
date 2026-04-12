@@ -59,18 +59,16 @@ function App() {
   };
 
   const styles = {
-    main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '100px', fontFamily: 'sans-serif' },
-    card: { backgroundColor: '#1e293b', padding: '15px', borderRadius: '15px', marginBottom: '8px', border: '1px solid #334155' },
-    taskRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #334155' },
+    main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
+    card: { backgroundColor: '#1e293b', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '1px solid #334155' },
+    taskRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #334155' },
     yellowBtn: { width: '100%', padding: '12px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
     input: { width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '10px', boxSizing: 'border-box' },
-    copyBox: { background: 'rgba(251,191,36,0.1)', padding: '12px', borderRadius: '10px', border: '1px solid #fbbf24', textAlign: 'center', cursor: 'pointer', marginBottom: '10px' },
     footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b', borderTop: '1px solid #334155', zIndex: 1000 }
   };
 
   return (
     <div style={styles.main}>
-      {/* --- BALANCE --- */}
       <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px' }}>
         <small style={{ color: '#94a3b8' }}>TOTAL BALANCE</small>
         <h1 style={{ color: '#fbbf24', margin: '5px 0' }}>{balance.toFixed(4)} TON</h1>
@@ -80,60 +78,63 @@ function App() {
         <>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
             {['bot', 'social', 'reward'].map(t => (
-              <button key={t} onClick={() => setActiveTab(t)} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', backgroundColor: activeTab === t ? '#fbbf24' : '#1e293b', color: activeTab === t ? '#000' : '#fff', fontWeight: 'bold' }}>{t.toUpperCase()}</button>
+              <button key={t} onClick={() => {setActiveTab(t); setSocialView('list')}} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', backgroundColor: activeTab === t ? '#fbbf24' : '#1e293b', color: activeTab === t ? '#000' : '#fff', fontWeight: 'bold' }}>{t.toUpperCase()}</button>
             ))}
           </div>
 
-          {/* SOCIAL LIST - ပုံထဲကအတိုင်း ကပ်လျက်ဖြစ်အောင် Card တစ်ခုတည်းထဲထည့်ထားပါတယ် */}
-          {activeTab === 'social' && socialView === 'list' && (
-            <div style={styles.card}>
-              {socialTasks.filter(t => !completed.includes(t.id)).map(s => (
-                <div key={s.id} style={styles.taskRow}>
-                  <span style={{ fontSize: '13px' }}>{s.name}</span>
-                  <button id={`btn-${s.id}`} onClick={() => handleAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '75px', padding: '6px', fontSize: '11px' }}>JOIN</button>
+          {activeTab === 'social' && (
+            <>
+              {socialView === 'list' ? (
+                /* Card တစ်ခုတည်းမှာ Task တွေရော ခလုတ်ပါ အတူတူ ထည့်ထားပါတယ် */
+                <div style={styles.card}>
+                  <div style={{ marginBottom: '10px' }}>
+                    {socialTasks.filter(t => !completed.includes(t.id)).map(s => (
+                      <div key={s.id} style={styles.taskRow}>
+                        <span style={{ fontSize: '13px' }}>{s.name}</span>
+                        <button id={`btn-${s.id}`} onClick={() => handleAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '75px', padding: '6px', fontSize: '11px' }}>JOIN</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button 
+                    style={{ ...styles.yellowBtn, marginTop: '5px' }} 
+                    onClick={() => setSocialView('add')}
+                  >
+                    + ADD TASK
+                  </button>
                 </div>
-              ))}
-              <button 
-                style={{ ...styles.yellowBtn, marginTop: '10px' }} 
-                onClick={() => setSocialView('add')}
-              >
-                + ADD TASK
-              </button>
+              ) : (
+                <div style={styles.card}>
+                  <h3 style={{ marginTop: 0, color: '#fbbf24' }}>Create Task</h3>
+                  <input style={styles.input} placeholder="Task Name" />
+                  <input style={styles.input} placeholder="Link" />
+                  <button style={styles.yellowBtn} onClick={() => setSocialView('list')}>CONFIRM PAYMENT</button>
+                  <button style={{ ...styles.yellowBtn, background: 'none', color: '#94a3b8', marginTop: '5px' }} onClick={() => setSocialView('list')}>Cancel</button>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'bot' && (
+            <div style={styles.card}>
+              <p style={{textAlign: 'center', color:'#94a3b8'}}>Bot tasks loading...</p>
             </div>
           )}
 
-          {/* ADD TASK FORM */}
-          {activeTab === 'social' && socialView === 'add' && (
+          {activeTab === 'reward' && (
             <div style={styles.card}>
-              <h3 style={{ marginTop: 0, color: '#fbbf24' }}>Add New Task</h3>
-              <input style={styles.input} placeholder="Task Name" />
-              <input style={styles.input} placeholder="Link (https://...)" />
-              <select style={styles.input}>
-                <option>100 Views - 0.2 TON</option>
-                <option>200 Views - 0.4 TON</option>
-                <option>300 Views - 0.5 TON</option>
-              </select>
-              <div style={styles.copyBox} onClick={() => copyToClipboard(adminWallet)}>
-                <small style={{color: '#94a3b8'}}>Address (Click to Copy)</small><br/>
-                <span style={{fontWeight: 'bold', fontSize: '11px'}}>{adminWallet}</span>
-              </div>
-              <div style={styles.copyBox} onClick={() => copyToClipboard(userUID)}>
-                <small style={{color: '#94a3b8'}}>MEMO / UID (Click to Copy)</small><br/>
-                <span style={{fontWeight: 'bold', fontSize: '18px', color: '#fbbf24'}}>{userUID}</span>
-              </div>
-              <button style={styles.yellowBtn} onClick={() => {alert("Submitted!"); setSocialView('list')}}>CONFIRM PAYMENT</button>
-              <button style={{ ...styles.yellowBtn, background: 'none', color: '#94a3b8', marginTop: '5px' }} onClick={() => setSocialView('list')}>Cancel</button>
+              <h4 style={{marginTop:0}}>GIFT CODE</h4>
+              <input style={styles.input} placeholder="Enter Code" />
+              <button style={styles.yellowBtn}>CLAIM</button>
             </div>
           )}
         </>
       )}
 
-      {/* --- INVITE SECTION WITH HISTORY --- */}
       {activeNav === 'invite' && (
         <div>
           <div style={styles.card}>
             <h2 style={{ color: '#fbbf24', marginBottom: '5px', textAlign:'center' }}>INVITE FRIENDS</h2>
-            <p style={{textAlign:'center'}}>Reward: <b>0.0005 TON</b> + <b>10% Com</b></p>
+            <p style={{textAlign:'center', fontSize:'14px'}}>Get <b>0.0005 TON</b> per referral</p>
             <div onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={{ ...styles.input, color: '#fbbf24', fontSize: '12px', marginTop: '10px', cursor: 'pointer', textAlign:'center' }}>
                 https://t.me/YourBot?start={userUID}
             </div>
@@ -145,14 +146,14 @@ function App() {
             <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ color: '#64748b', borderBottom: '1px solid #334155' }}>
-                  <th style={{ paddingBottom: '10px', textAlign: 'left' }}>User ID</th>
-                  <th style={{ paddingBottom: '10px', textAlign: 'center' }}>Status</th>
-                  <th style={{ paddingBottom: '10px', textAlign: 'right' }}>Bonus</th>
+                  <th style={{ paddingBottom: '10px', textAlign: 'left' }}>UID</th>
+                  <th style={{ paddingBottom: '10px', textAlign: 'center' }}>STATUS</th>
+                  <th style={{ paddingBottom: '10px', textAlign: 'right' }}>BONUS</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td colSpan="3" style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>No active referrals found</td>
+                  <td colSpan="3" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>No referrals yet</td>
                 </tr>
               </tbody>
             </table>
@@ -160,7 +161,6 @@ function App() {
         </div>
       )}
 
-      {/* --- FOOTER --- */}
       <div style={styles.footer}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => setActiveNav(n)} style={{ textAlign: 'center', color: activeNav === n ? '#fbbf24' : '#64748b', flex: 1, cursor: 'pointer' }}>
