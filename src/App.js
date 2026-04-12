@@ -4,7 +4,7 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: "1793453606",
   ADMIN_TELEGRAM: "https://t.me/GrowTeaNews",
-  ADSGRAM_BLOCK_ID: "27578",
+  ADSGRAM_BLOCK_ID: "27578", 
   // Bro ပေးထားတဲ့ Bot Info များ
   ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_CHAT_ID: "5020977059"
@@ -30,7 +30,7 @@ function App() {
     localStorage.setItem('ref_count', referralCount.toString());
   }, [balance, completed, withdrawHistory, referralCount]);
 
-  // --- Telegram Notification Logic (အသစ်တိုးထားတာပါ) ---
+  // --- Telegram Notification Logic ---
   const sendWithdrawNotification = (amount) => {
     const message = `🔔 *Withdraw Request!*\n\n👤 User UID: ${APP_CONFIG.MY_UID}\n💰 Amount: ${amount} TON\n📅 Date: ${new Date().toLocaleString()}`;
     
@@ -94,23 +94,26 @@ function App() {
     return hoursPast >= 24 ? 'Complete' : 'Pending';
   };
 
-  // --- Styles ---
+  // --- Styles (ဒီမှာ နောက်ခံအရောင် ပြောင်းထားပါတယ်) ---
   const styles = {
-    main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
+    // #020617 (အမဲ) မှ #052e16 (Dark Green) သို့ ပြောင်းလဲခြင်း
+    main: { backgroundColor: '#052e16', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
     card: { backgroundColor: '#1e293b', padding: '18px', borderRadius: '20px', marginBottom: '12px', border: '1px solid #334155' },
     yellowBtn: { width: '100%', padding: '15px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', fontSize: '15px' },
     navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#1e293b', borderTop: '2px solid #fbbf24', padding: '15px 0', height: '85px', zIndex: 100 },
     navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#fbbf24' : '#94a3b8', fontSize: '12px', fontWeight: '900', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }),
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #334155' },
-    input: { width: '100%', padding: '14px', borderRadius: '12px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '12px', boxSizing: 'border-box', fontWeight: '900' },
+    // Input နောက်ခံအရောင် #0f172a မှ #14532d (Dark Green lighter) သို့ ပြောင်းလဲခြင်း
+    input: { width: '100%', padding: '14px', borderRadius: '12px', backgroundColor: '#14532d', color: 'white', border: '1px solid #334155', marginBottom: '12px', boxSizing: 'border-box', fontWeight: '900' },
     planBtn: (active) => ({ flex: 1, padding: '10px', borderRadius: '10px', border: active ? '2px solid #fbbf24' : '1px solid #334155', backgroundColor: active ? '#fbbf24' : '#1e293b', color: active ? '#000' : '#fff', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }),
-    copyBox: { background: '#0f172a', padding: '12px', borderRadius: '12px', border: '1px dashed #fbbf24', marginBottom: '10px' }
+    // CopyBox နောက်ခံအရောင် #0f172a မှ #14532d (Dark Green lighter) သို့ ပြောင်းလဲခြင်း
+    copyBox: { background: '#14532d', padding: '12px', borderRadius: '12px', border: '1px dashed #fbbf24', marginBottom: '10px' }
   };
 
   return (
     <div style={styles.main}>
       {/* Header - Total Balance */}
-      <div style={{ textAlign: 'center', background: 'linear-gradient(145deg, #1e293b, #0f172a)', padding: '30px', borderRadius: '25px', marginBottom: '25px', border: '2px solid #fbbf24' }}>
+      <div style={{ textAlign: 'center', background: 'linear-gradient(145deg, #1e293b, #052e16)', padding: '30px', borderRadius: '25px', marginBottom: '25px', border: '2px solid #fbbf24' }}>
         <small style={{ color: '#94a3b8', fontWeight: '900' }}>TOTAL BALANCE</small>
         <h1 style={{ color: '#fbbf24', fontSize: '42px', margin: '5px 0', fontWeight: '900' }}>{balance.toFixed(4)} <span style={{fontSize:'18px'}}>TON</span></h1>
       </div>
