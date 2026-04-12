@@ -1,50 +1,33 @@
 import React, { useState, useEffect } from 'react';
 
 function App() {
-  // --- States ---
   const [userUID] = useState("1793453606");
   const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_bal')) || 0.0000);
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('comp_tasks')) || []);
   const [isClaimed, setIsClaimed] = useState(() => localStorage.getItem('gift_claimed') === 'true');
-  const [invites, setInvites] = useState(() => Number(localStorage.getItem('invite_count')) || 0);
+  const [invites] = useState(0);
   
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState('menu');
 
-  // --- Persistence ---
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
     localStorage.setItem('gift_claimed', isClaimed);
-    localStorage.setItem('invite_count', invites.toString());
-  }, [balance, completed, isClaimed, invites]);
+  }, [balance, completed, isClaimed]);
 
-  // --- Logic ---
+  const socialChannels = [
+    "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", "@M9460",
+    "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO",
+    "@kombo_crypta", "@easytonfree", "@WORLDBESTCRYTO1", "@MONEYHUB9_69",
+    "@zrbtua", "@perviu1million"
+  ].map((ch, i) => ({ id: `s${i}`, name: ch, link: `https://t.me/${ch.replace('@','')}` }));
+
   const copyToClipboard = (txt) => {
     navigator.clipboard.writeText(txt);
     alert("Copied!");
-  };
-
-  const handleTaskAction = (id, link) => {
-    window.open(link, '_blank');
-    const btn = document.getElementById(`btn-${id}`);
-    if (btn) {
-      btn.innerText = "VERIFY AD";
-      btn.style.backgroundColor = "#10b981";
-      btn.onclick = () => {
-        if (window.Adsgram) {
-          window.Adsgram.init({ blockId: "27393" }).show().then(() => {
-            if (!completed.includes(id)) {
-              setBalance(p => p + 0.0005);
-              setCompleted(p => [...p, id]);
-              alert("0.0005 TON Reward Added!");
-            }
-          });
-        }
-      };
-    }
   };
 
   const styles = {
@@ -78,47 +61,47 @@ function App() {
               {isClaimed ? (
                 <div style={{ textAlign: 'center', padding: '10px' }}>
                   <p style={{ color: '#fbbf24', fontSize: '14px', fontWeight: 'bold' }}>✅ CODE ALREADY CLAIMED</p>
-                  <p style={{ color: '#94a3b8', fontSize: '11px' }}>တစ်ယောက်လျှင် တစ်ကြိမ်သာ အသုံးပြုနိုင်ပါသည်။</p>
                 </div>
               ) : (
-                <>
-                  <input id="giftInput" style={styles.input} placeholder="Enter gift code..." />
-                  <button onClick={() => {
-                    const code = document.getElementById('giftInput').value.toUpperCase();
-                    if(code === "GIFT77"){
-                      setBalance(b => b + 0.01);
-                      setIsClaimed(true);
-                      alert("0.01 TON Claimed!");
-                    } else { alert("Invalid Code!"); }
-                  }} style={styles.yellowBtn}>CLAIM REWARD</button>
-                </>
+                <><input id="giftInput" style={styles.input} placeholder="Enter code..." />
+                <button onClick={() => {if(document.getElementById('giftInput').value.toUpperCase()==="GIFT77"){setBalance(b=>b+0.01);setIsClaimed(true);alert("0.01 TON Claimed!")}}} style={styles.yellowBtn}>CLAIM</button></>
               )}
             </div>
           )}
 
-          {/* Social Tab နေရာတွင် မူလအတိုင်း Social channels များနှင့် Add Task ပါဝင်မည် */}
           {activeTab === 'social' && (
             <div>
               <button style={{ ...styles.yellowBtn, marginBottom: '15px' }} onClick={() => setShowForm(!showForm)}>+ ADD TASK</button>
-              {/* Social Channels list... */}
-              <p style={{ textAlign: 'center', color: '#64748b' }}>Social tasks list will appear here.</p>
+              {socialChannels.map(s => (
+                <div key={s.id} style={styles.card}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '13px' }}>{s.name}</span>
+                    <button style={{ ...styles.yellowBtn, width: '90px', fontSize: '11px' }}>JOIN</button>
+                  </div>
+                </div>
+              ))}
               <button style={{ ...styles.yellowBtn, marginTop: '10px' }} onClick={() => setShowForm(!showForm)}>+ ADD TASK</button>
             </div>
           )}
         </>
       )}
 
-      {/* --- INVITE PANEL (Updated) --- */}
+      {/* --- INVITE PANEL (Updated UI) --- */}
       {activeNav === 'invite' && (
         <div style={{ textAlign: 'center' }}>
-          <div style={styles.card}>
+          <div style={{ ...styles.card, border: '1px solid #fbbf24' }}>
             <h2 style={{ margin: '0 0 10px 0', color: '#fbbf24' }}>INVITE FRIENDS</h2>
-            {/* မိတ်ဆွေတောင်းဆိုထားသော စာသားကို ဤနေရာတွင် ထည့်သွင်းထားပါသည် */}
-            <p style={{ fontSize: '14px', marginBottom: '15px' }}>
-              လူတစ်ယောက်ဖိတ်လျှင် <b style={{ color: '#fbbf24' }}>0.0005 TON</b> ရရှိပါမည်။
-              <br/>
-              <small style={{ color: '#94a3b8' }}>+ 10% Referral Commission</small>
-            </p>
+            
+            <div style={{ padding: '10px', background: '#0f172a', borderRadius: '10px', marginBottom: '15px' }}>
+               <p style={{ fontSize: '14px', margin: '5px 0' }}>
+                 လူတစ်ယောက်ဖိတ်လျှင် <b style={{ color: '#fbbf24' }}>0.0005 TON</b> ရရှိမည်။
+               </p>
+               <div style={{ height: '1px', background: '#334155', margin: '10px 0' }}></div>
+               <p style={{ fontSize: '14px', margin: '5px 0', color: '#10b981' }}>
+                 ဖိတ်ထားသောသူ Task တစ်ခုလုပ်တိုင်း <b style={{ fontSize: '16px' }}>10%</b> ထပ်ဆောင်းရရှိမည်။
+               </p>
+            </div>
+
             <div style={{ ...styles.input, color: '#fbbf24', fontSize: '11px', overflow: 'hidden' }}>https://t.me/YourBot?start={userUID}</div>
             <button onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={styles.yellowBtn}>COPY REFER LINK</button>
           </div>
@@ -127,13 +110,11 @@ function App() {
           <div style={styles.card}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Total Invited:</span>
-              <span style={{ color: '#fbbf24' }}>{invites} Users</span>
+              <b style={{ color: '#fbbf24' }}>{invites} Users</b>
             </div>
           </div>
         </div>
       )}
-
-      {/* --- WITHDRAW & PROFILE Panels remain as before --- */}
 
       {/* --- FOOTER NAV --- */}
       <div style={styles.footer}>
