@@ -49,17 +49,16 @@ function App() {
     window.open(link, '_blank');
     const btn = document.getElementById(`btn-${id}`);
     if (btn) {
-      btn.innerText = "VERIFY TASK";
+      btn.innerText = "VERIFYING...";
       btn.style.backgroundColor = "#10b981";
-      btn.onclick = () => {
+      setTimeout(() => {
         if (window.Adsgram) {
           window.Adsgram.init({ blockId: adsBlockId }).show().then(() => {
             setBalance(p => p + 0.0005);
             setCompleted(p => [...p, id]);
-            alert("Reward 0.0005 TON Added!");
           });
         }
-      };
+      }, 1000);
     }
   };
 
@@ -79,6 +78,7 @@ function App() {
 
   return (
     <div style={styles.main}>
+      {/* BALANCE HEADER */}
       <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px' }}>
         <small style={{ color: '#94a3b8' }}>TOTAL BALANCE</small>
         <h1 style={{ color: '#fbbf24', margin: '5px 0' }}>{balance.toFixed(4)} TON</h1>
@@ -92,6 +92,7 @@ function App() {
             ))}
           </div>
 
+          {/* BOT TAB */}
           {activeTab === 'bot' && botTasks.filter(t => !completed.includes(t.id)).map(b => (
             <div key={b.id} style={styles.card}>
               <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>{b.name}</p>
@@ -99,8 +100,9 @@ function App() {
             </div>
           ))}
 
+          {/* SOCIAL TAB - +ADD TASK ကို list အောက်မှာ ကပ်လျက်ထားထားပါတယ် */}
           {activeTab === 'social' && socialView === 'list' && (
-            <div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               {socialTasks.filter(t => !completed.includes(t.id)).map(s => (
                 <div key={s.id} style={styles.card}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -109,10 +111,17 @@ function App() {
                   </div>
                 </div>
               ))}
-              <button style={{ ...styles.yellowBtn, marginTop: '2px' }} onClick={() => setSocialView('add')}>+ ADD TASK</button>
+              {/* ပုံထဲကအတိုင်း social list တွေနဲ့ ကပ်လျက် Button */}
+              <button 
+                style={{ ...styles.yellowBtn, marginTop: '2px', height: '50px' }} 
+                onClick={() => setSocialView('add')}
+              >
+                + ADD TASK
+              </button>
             </div>
           )}
 
+          {/* ADD TASK SYSTEM */}
           {activeTab === 'social' && socialView === 'add' && (
             <div style={styles.card}>
               <h3 style={{ marginTop: 0, color: '#fbbf24' }}>Add New Task</h3>
@@ -126,7 +135,7 @@ function App() {
               
               <div style={styles.copyBox} onClick={() => copyToClipboard(adminWallet)}>
                 <small style={{color: '#94a3b8'}}>TON Address (Click to Copy)</small><br/>
-                <span style={{fontWeight: 'bold', fontSize: '13px'}}>{adminWallet.slice(0,20)}...</span>
+                <span style={{fontWeight: 'bold', fontSize: '13px'}}>{adminWallet}</span>
               </div>
 
               <div style={styles.copyBox} onClick={() => copyToClipboard(userUID)}>
@@ -134,14 +143,14 @@ function App() {
                 <span style={{fontWeight: 'bold', fontSize: '20px', color: '#fbbf24'}}>{userUID}</span>
               </div>
 
-              <button style={styles.yellowBtn} onClick={() => {alert("Submitted!"); setSocialView('list')}}>CONFIRM PAYMENT</button>
-              <p style={{textAlign:'center', marginTop:'10px', cursor:'pointer'}} onClick={()=>setSocialView('list')}>Back</p>
+              <button style={styles.yellowBtn} onClick={() => {alert("Submitted to Admin!"); setSocialView('list')}}>CONFIRM PAYMENT</button>
+              <p style={{textAlign:'center', marginTop:'15px', cursor:'pointer', color:'#94a3b8'}} onClick={()=>setSocialView('list')}>Back to list</p>
             </div>
           )}
 
           {activeTab === 'reward' && (
             <div style={styles.card}>
-              <h4>DAILY GIFT CODE</h4>
+              <h4>GIFT CODE</h4>
               {isClaimed ? <p style={{ color: '#10b981', textAlign: 'center' }}>CLAIMED ✅</p> : (
                 <>
                   <input id="gift" type="password" style={styles.input} placeholder="Enter Code" />
@@ -153,6 +162,7 @@ function App() {
         </>
       )}
 
+      {/* INVITE & OTHERS */}
       {activeNav === 'invite' && (
         <div style={{ textAlign: 'center' }}>
           <div style={styles.card}>
@@ -179,7 +189,7 @@ function App() {
             <h4>HISTORY</h4>
             <table style={{ width: '100%', fontSize: '12px' }}>
               <thead><tr style={{ color: '#64748b', textAlign: 'left' }}><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
-              <tbody><tr><td colSpan="3" style={{ textAlign: 'center', padding: '10px' }}>No records</td></tr></tbody>
+              <tbody><tr><td colSpan="3" style={{ textAlign: 'center', padding: '10px' }}>No records found</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -194,12 +204,13 @@ function App() {
           </div>
           <div style={{ ...styles.card, border: '1px solid #ef4444', background: 'rgba(239, 68, 68, 0.1)' }}>
             <p style={{ color: '#ef4444', fontSize: '12px', fontWeight: 'bold' }}>
-              ⚠️ WARNING: NO SCREENSHOT REQUIRED. Fake accounts or multiple registrations will be banned instantly.
+              ⚠️ WARNING: NO SCREENSHOT REQUIRED. Fake accounts will be banned instantly.
             </p>
           </div>
         </div>
       )}
 
+      {/* FOOTER NAV */}
       <div style={styles.footer}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => setActiveNav(n)} style={{ textAlign: 'center', color: activeNav === n ? '#fbbf24' : '#64748b', flex: 1, cursor: 'pointer' }}>
