@@ -8,7 +8,7 @@ function App() {
   
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
-  const [socialView, setSocialView] = useState('list'); // list, add
+  const [socialView, setSocialView] = useState('list');
 
   const adminWallet = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
   const adsBlockId = "27393";
@@ -65,7 +65,7 @@ function App() {
 
   const styles = {
     main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '90px', fontFamily: 'sans-serif' },
-    card: { backgroundColor: '#1e293b', padding: '15px', borderRadius: '15px', marginBottom: '12px', border: '1px solid #334155' },
+    card: { backgroundColor: '#1e293b', padding: '15px', borderRadius: '15px', marginBottom: '8px', border: '1px solid #334155' },
     yellowBtn: { width: '100%', padding: '12px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
     input: { width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '10px', boxSizing: 'border-box' },
     footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b', borderTop: '1px solid #334155' }
@@ -73,7 +73,6 @@ function App() {
 
   return (
     <div style={styles.main}>
-      {/* --- BALANCE --- */}
       <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px' }}>
         <small style={{ color: '#94a3b8' }}>TOTAL BALANCE</small>
         <h1 style={{ color: '#fbbf24', margin: '5px 0' }}>{balance.toFixed(4)} TON</h1>
@@ -87,7 +86,6 @@ function App() {
             ))}
           </div>
 
-          {/* BOT TAB */}
           {activeTab === 'bot' && botTasks.filter(t => !completed.includes(t.id)).map(b => (
             <div key={b.id} style={styles.card}>
               <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>{b.name}</p>
@@ -95,7 +93,6 @@ function App() {
             </div>
           ))}
 
-          {/* SOCIAL TAB */}
           {activeTab === 'social' && socialView === 'list' && (
             <div>
               {socialTasks.filter(t => !completed.includes(t.id)).map(s => (
@@ -106,15 +103,14 @@ function App() {
                   </div>
                 </div>
               ))}
-              <button style={{ ...styles.yellowBtn, marginTop: '10px' }} onClick={() => setSocialView('add')}>+ ADD TASK</button>
+              <button style={{ ...styles.yellowBtn, marginTop: '5px' }} onClick={() => setSocialView('add')}>+ ADD TASK</button>
             </div>
           )}
 
-          {/* ADD TASK FORM */}
           {activeTab === 'social' && socialView === 'add' && (
             <div style={styles.card}>
               <h3 style={{ marginTop: 0, color: '#fbbf24' }}>Create New Task</h3>
-              <input style={styles.input} placeholder="Channel/Task Name" />
+              <input style={styles.input} placeholder="Task Name" />
               <input style={styles.input} placeholder="Link (https://t.me/...)" />
               <select style={styles.input}>
                 <option>100 Views - 0.2 TON</option>
@@ -131,7 +127,6 @@ function App() {
             </div>
           )}
 
-          {/* REWARD TAB */}
           {activeTab === 'reward' && (
             <div style={styles.card}>
               <h4 style={{ marginTop: 0 }}>GIFT CODE</h4>
@@ -146,14 +141,13 @@ function App() {
         </>
       )}
 
-      {/* --- INVITE --- */}
       {activeNav === 'invite' && (
         <div style={{ textAlign: 'center' }}>
           <div style={styles.card}>
             <h2 style={{ color: '#fbbf24', marginBottom: '10px' }}>INVITE FRIENDS</h2>
             <p>Earn <b style={{ color: '#fbbf24' }}>0.0005 TON</b> per user</p>
             <p style={{ color: '#10b981', fontWeight: 'bold' }}>+ 10% LIFETIME COMMISSION</p>
-            <div style={{ ...styles.input, color: '#fbbf24', fontSize: '12px', marginTop: '15px' }}>https://t.me/YourBot?start={userUID}</div>
+            <div style={{ ...styles.input, color: '#fbbf24', fontSize: '12px', marginTop: '15px', wordBreak: 'break-all' }}>https://t.me/YourBot?start={userUID}</div>
             <button onClick={() => {navigator.clipboard.writeText(`https://t.me/YourBot?start=${userUID}`); alert("Copied!")}} style={styles.yellowBtn}>COPY REFER LINK</button>
           </div>
           <div style={styles.card}>
@@ -162,7 +156,6 @@ function App() {
         </div>
       )}
 
-      {/* --- WITHDRAW --- */}
       {activeNav === 'withdraw' && (
         <div>
           <div style={styles.card}>
@@ -181,7 +174,6 @@ function App() {
         </div>
       )}
 
-      {/* --- PROFILE --- */}
       {activeNav === 'profile' && (
         <div style={{ textAlign: 'center' }}>
           <div style={styles.card}>
@@ -197,7 +189,6 @@ function App() {
         </div>
       )}
 
-      {/* --- FOOTER --- */}
       <div style={styles.footer}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => setActiveNav(n)} style={{ textAlign: 'center', color: activeNav === n ? '#fbbf24' : '#64748b', flex: 1, cursor: 'pointer' }}>
