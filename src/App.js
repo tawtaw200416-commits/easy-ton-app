@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
 function App() {
-  // Persistence Data: LocalStorage မှ Data များ ပြန်ခေါ်ခြင်း
+  // Persistence Data
   const [balance, setBalance] = useState(() => JSON.parse(localStorage.getItem('ton_balance')) || 0.0000);
   const [completedTasks, setCompletedTasks] = useState(() => JSON.parse(localStorage.getItem('completed_tasks')) || []);
   const [rewardClaimed, setRewardClaimed] = useState(() => JSON.parse(localStorage.getItem('reward_claimed')) || false);
+  const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem('user_history')) || []);
   
   // UI States
   const [activeNav, setActiveNav] = useState('earn');
@@ -13,208 +14,185 @@ function App() {
   const [rewardInput, setRewardInput] = useState("");
   const [selectedPlan, setSelectedPlan] = useState(100);
 
-  // User & Admin Info
   const userUID = "1793453606";
   const adminWallet = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
 
-  // Data ပြောင်းလဲတိုင်း LocalStorage မှာ အလိုအလျောက် သိမ်းခြင်း
   useEffect(() => {
     localStorage.setItem('ton_balance', JSON.stringify(balance));
     localStorage.setItem('completed_tasks', JSON.stringify(completedTasks));
     localStorage.setItem('reward_claimed', JSON.stringify(rewardClaimed));
-  }, [balance, completedTasks, rewardClaimed]);
+    localStorage.setItem('user_history', JSON.stringify(history));
+  }, [balance, completedTasks, rewardClaimed, history]);
 
-  // Social Tasks List (image_7.png ပါအတိုင်း)
-  const socialTasks = [
-    { id: "s1", name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-    { id: "s2", name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-    { id: "s3", name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
-    { id: "s4", name: "@M9460", link: "https://t.me/M9460" }
+  const botMissions = [
+    { id: "b1", name: "GrowTea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: "b2", name: "GoldenMiner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: "b3", name: "WorkersOnTon Bot", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: "b4", name: "EasyBonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: "b5", name: "TonDragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: "b6", name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
   ];
 
-  // Bot Missions List (image_8.png ပါအတိုင်း)
-  const botTasks = [
-    { id: "b1", name: "GrowTea Bot Mission", link: "https://t.me/GrowTeaBot" },
-    { id: "b2", name: "GoldenMiner Bot Mission", link: "https://t.me/GoldenMinerBot" }
-  ];
+  const socialChannels = [
+    "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", "@M9460", 
+    "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO", 
+    "@kombo_crypta", "@easytonfree", "@WORLDBESTCRYTO1", "@MONEYHUB9_69", 
+    "@zrbtua", "@perviu1million"
+  ].map((name, index) => ({ id: `s${index}`, name, link: `https://t.me/${name.replace('@', '')}` }));
 
-  // Task Verification Logic
-  const handleVerify = (id) => {
-    // ဤနေရာတွင် နောင် Backend နှင့် ချိတ်ဆက်ရန်
-    if (!completedTasks.includes(id)) {
-      setCompletedTasks([...completedTasks, id]);
+  const handleCompleteTask = (task) => {
+    if (!completedTasks.includes(task.id)) {
+      setCompletedTasks([...completedTasks, task.id]);
       setBalance(prev => prev + 0.0005);
-      alert("Verification Success! 0.0005 TON added to your balance.");
-    } else {
-      alert("Already Completed!");
+      setHistory([{ type: 'Task Reward', amount: 0.0005, date: new Date().toLocaleString(), name: task.name }, ...history]);
+      alert(`${task.name} Completed! 0.0005 TON added.`);
     }
   };
 
-  // Reward Code Logic
   const handleClaimReward = () => {
-    if (rewardClaimed) return alert("You have already claimed this reward!");
+    if (rewardClaimed) return alert("Already Claimed!");
     if (rewardInput.toUpperCase() === "YTTPO") {
       setBalance(prev => prev + 0.0005);
       setRewardClaimed(true);
+      setHistory([{ type: 'Promo Reward', amount: 0.0005, date: new Date().toLocaleString(), name: 'YTTPO Code' }, ...history]);
       setRewardInput("");
-      alert("Reward Claimed! 0.0005 TON added.");
+      alert("0.0005 TON Claimed!");
     } else {
-      alert("Wrong Code! Please try again.");
+      alert("Incorrect Code!");
     }
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    alert("Copied: " + text);
-  };
-
-  // Styles based on screenshots
   const styles = {
-    container: { backgroundColor: '#0b1120', color: 'white', minHeight: '100vh', padding: '15px', fontFamily: 'Inter, sans-serif', paddingBottom: '90px' },
-    balanceCard: { background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)', borderRadius: '28px', padding: '30px 20px', textAlign: 'center', marginBottom: '20px', boxShadow: '0 10px 25px -5px rgba(234, 179, 8, 0.3)' },
-    tabBar: { display: 'flex', backgroundColor: '#1e293b', borderRadius: '16px', padding: '6px', marginBottom: '20px' },
-    tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', backgroundColor: active ? '#eab308' : 'transparent', color: active ? '#000' : '#94a3b8', fontWeight: '800', fontSize: '14px', cursor: 'pointer', transition: '0.3s' }),
+    container: { backgroundColor: '#0b1120', color: 'white', minHeight: '100vh', padding: '15px', fontFamily: 'Arial, sans-serif', paddingBottom: '90px' },
+    balanceCard: { backgroundColor: '#1e293b', borderRadius: '24px', padding: '30px 15px', textAlign: 'center', marginBottom: '20px', border: '1px solid #334155' },
+    balanceText: { fontSize: '40px', fontWeight: '900', color: '#eab308', margin: '10px 0' },
+    tabBar: { display: 'flex', backgroundColor: '#1e293b', borderRadius: '14px', padding: '4px', marginBottom: '20px' },
+    tabBtn: (active) => ({ flex: 1, padding: '12px', borderRadius: '11px', border: 'none', backgroundColor: active ? '#eab308' : 'transparent', color: active ? '#000' : '#94a3b8', fontWeight: '900', cursor: 'pointer', fontSize: '14px' }),
     card: { backgroundColor: '#1e293b', borderRadius: '24px', padding: '20px', border: '1px solid #334155' },
-    input: { width: '100%', padding: '16px', borderRadius: '14px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '12px', fontSize: '15px', outline: 'none', boxSizing: 'border-box' },
-    taskRow: { marginBottom: '25px', borderBottom: '1px solid #334155', paddingBottom: '15px' },
-    joinBtn: { flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#38bdf8', border: 'none', color: '#fff', fontWeight: '800', cursor: 'pointer' },
-    verifyBtn: { flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: '#eab308', border: 'none', color: '#000', fontWeight: '800', cursor: 'pointer' },
-    planBtn: (active) => ({ flex: 1, padding: '10px', borderRadius: '10px', border: active ? '2px solid #eab308' : '1px solid #334155', backgroundColor: active ? 'rgba(234,179,8,0.1)' : 'transparent', textAlign: 'center', cursor: 'pointer', transition: '0.2s' }),
-    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '15px', backgroundColor: '#0f172a', borderTop: '1px solid #1e293b' }
+    taskItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #334155' },
+    btnJoin: { backgroundColor: '#38bdf8', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '10px', fontWeight: '900', cursor: 'pointer' },
+    input: { width: '100%', padding: '15px', borderRadius: '12px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '12px', boxSizing: 'border-box', fontWeight: 'bold' },
+    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', padding: '15px', backgroundColor: '#0f172a', borderTop: '1px solid #1e293b', justifyContent: 'space-around' },
+    memoBox: { backgroundColor: '#0f172a', padding: '15px', borderRadius: '14px', border: '1px solid #eab308', marginTop: '15px' }
   };
 
   return (
     <div style={styles.container}>
-      {/* Header Balance (image_7.png style) */}
+      {/* Total Balance (image_1 style) */}
       <div style={styles.balanceCard}>
-        <div style={{ fontSize: '13px', fontWeight: '800', color: 'rgba(0,0,0,0.6)', marginBottom: '5px' }}>AVAILABLE BALANCE</div>
-        <div style={{ fontSize: '42px', fontWeight: '900', color: '#000' }}>{balance.toFixed(4)} TON</div>
+        <div style={{ fontWeight: '900', color: '#94a3b8', fontSize: '13px' }}>TOTAL BALANCE</div>
+        <div style={styles.balanceText}>{balance.toFixed(4)} TON</div>
       </div>
 
       {activeNav === 'earn' && (
         <>
-          {/* Tabs (image_8.png style) */}
           <div style={styles.tabBar}>
-            {['Start Bot', 'Social', 'Reward'].map(tab => (
-              <button key={tab} style={styles.tabBtn(activeTab === tab.toLowerCase())} onClick={() => {setActiveTab(tab.toLowerCase()); setShowPayForm(false)}}>
-                {tab}
-              </button>
+            {['Start Bot', 'Social', 'Reward'].map(t => (
+              <button key={t} onClick={() => {setActiveTab(t.toLowerCase()); setShowPayForm(false);}} style={styles.tabBtn(activeTab === t.toLowerCase())}>{t.toUpperCase()}</button>
             ))}
           </div>
 
           <div style={styles.card}>
-            {/* Social Tasks (image_7.png style) */}
             {activeTab === 'social' && !showPayForm && (
               <>
-                <button style={{ width: '100%', padding: '16px', borderRadius: '14px', backgroundColor: '#eab308', border: 'none', fontWeight: '900', color: '#000', marginBottom: '25px', fontSize: '16px' }} onClick={() => setShowPayForm(true)}>
-                  + Add Your Task
-                </button>
-                {socialTasks.filter(t => !completedTasks.includes(t.id)).map(task => (
-                  <div key={task.id} style={styles.taskRow}>
-                    <div style={{ fontWeight: '800', marginBottom: '10px', fontSize: '15px' }}>{task.name}</div>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button onClick={() => window.open(task.link, '_blank')} style={styles.joinBtn}>1. Join Link</button>
-                      <button onClick={() => handleVerify(task.id)} style={styles.verifyBtn}>2. Check Join</button>
-                    </div>
+                <button onClick={() => setShowPayForm(true)} style={{ width: '100%', padding: '16px', borderRadius: '12px', backgroundColor: '#eab308', border: 'none', fontWeight: '900', marginBottom: '20px', fontSize: '16px' }}>+ Add Your Task</button>
+                {socialChannels.filter(task => !completedTasks.includes(task.id)).map(task => (
+                  <div key={task.id} style={styles.taskItem}>
+                    <span style={{ fontWeight: '900' }}>{task.name}</span>
+                    <button onClick={() => { window.open(task.link, '_blank'); handleCompleteTask(task); }} style={styles.btnJoin}>Join</button>
                   </div>
                 ))}
-                {socialTasks.filter(t => !completedTasks.includes(t.id)).length === 0 && <p style={{textAlign:'center', color:'#94a3b8'}}>All Social Tasks Completed!</p>}
               </>
             )}
 
-            {/* Start Bot (image_8.png style) */}
             {activeTab === 'start bot' && (
               <>
-                <h3 style={{ textAlign: 'center', color: '#eab308' }}>Start Bot Missions</h3>
-                {botTasks.filter(t => !completedTasks.includes(t.id)).map(task => (
-                  <div key={task.id} style={styles.taskRow}>
-                    <div style={{ fontWeight: '800', marginBottom: '10px', fontSize: '15px' }}>{task.name}</div>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button onClick={() => window.open(task.link, '_blank')} style={styles.joinBtn}>1. Start Bot</button>
-                      <button onClick={() => handleVerify(task.id)} style={styles.verifyBtn}>2. Check Start</button>
-                    </div>
+                <h3 style={{ textAlign: 'center', color: '#eab308', fontWeight: '900' }}>Bot Missions</h3>
+                {botMissions.filter(task => !completedTasks.includes(task.id)).map(task => (
+                  <div key={task.id} style={styles.taskItem}>
+                    <span style={{ fontWeight: '900' }}>{task.name}</span>
+                    <button onClick={() => { window.open(task.link, '_blank'); handleCompleteTask(task); }} style={styles.btnJoin}>Start</button>
                   </div>
                 ))}
-                {botTasks.filter(t => !completedTasks.includes(t.id)).length === 0 && <p style={{textAlign:'center', color:'#94a3b8'}}>All Bot Missions Completed!</p>}
               </>
             )}
 
-            {/* Reward Section (image_8.png style) */}
             {activeTab === 'reward' && (
               <div style={{ textAlign: 'center' }}>
-                <h3 style={{ marginBottom: '20px' }}>Redeem Reward Code</h3>
+                <h3 style={{ fontWeight: '900', marginBottom: '20px' }}>Redeem Reward Code</h3>
                 <input 
-                  type="password"
+                  type="password" 
                   style={styles.input} 
                   placeholder="ENTER CODE (YTTPO)" 
                   value={rewardInput}
                   onChange={(e) => setRewardInput(e.target.value)}
                 />
-                <button style={{ width: '100%', padding: '16px', borderRadius: '12px', backgroundColor: '#eab308', border: 'none', fontWeight: '900', color: '#000', marginTop: '10px' }} onClick={handleClaimReward}>Claim Now</button>
+                <button onClick={handleClaimReward} style={{ width: '100%', padding: '16px', borderRadius: '12px', backgroundColor: '#eab308', border: 'none', fontWeight: '900', color: '#000' }}>Claim Now</button>
               </div>
             )}
 
-            {/* Order Placement Form (image_9.png style) */}
             {showPayForm && (
               <div>
-                <h3 style={{ textAlign: 'center', color: '#eab308', marginBottom: '20px' }}>Order Placement</h3>
-                <input style={styles.input} placeholder="Channel Username (e.g. @yourchannel)" />
-                <input style={styles.input} placeholder="Link (e.g. https://t.me/...)" />
+                <h3 style={{ textAlign: 'center', color: '#eab308', fontWeight: '900' }}>Order Placement</h3>
+                <input style={styles.input} placeholder="Channel Name (@username)" />
+                <input style={styles.input} placeholder="Task Link" />
                 
-                <p style={{ fontWeight: '800', fontSize: '13px', marginBottom: '10px' }}>Select Members:</p>
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                  {[{m:100, p:0.2}, {m:200, p:0.4}, {m:300, p:0.5}].map((plan, i) => (
-                    <div key={i} onClick={() => setSelectedPlan(plan.m)} style={styles.planBtn(selectedPlan === plan.m)}>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                  {[{m:100, p:0.2}, {m:200, p:0.4}, {m:300, p:0.5}].map(plan => (
+                    <div key={plan.m} onClick={() => setSelectedPlan(plan.m)} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: selectedPlan === plan.m ? '2px solid #eab308' : '1px solid #334155', textAlign: 'center', cursor: 'pointer', backgroundColor: selectedPlan === plan.m ? 'rgba(234,179,8,0.1)' : 'transparent' }}>
                       <div style={{ fontWeight: '900' }}>{plan.m}</div>
-                      <div style={{ fontSize: '10px' }}>{plan.p} TON</div>
+                      <div style={{ fontSize: '10px', fontWeight: 'bold' }}>{plan.p} TON</div>
                     </div>
                   ))}
                 </div>
 
-                <div style={{ backgroundColor: '#0f172a', padding: '15px', borderRadius: '16px', border: '1px solid #eab308', marginBottom: '15px' }}>
-                  <small style={{ color: '#94a3b8', fontWeight: '800', display: 'block', marginBottom: '5px' }}>ADMIN ADDRESS & MEMO (UID):</small>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <code style={{ fontSize: '11px', wordBreak: 'break-all', color: '#fff' }}>{adminWallet}</code>
-                    <button onClick={() => copyToClipboard(adminWallet)} style={{ background: '#eab308', border: 'none', padding: '4px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '10px' }}>COPY</button>
-                  </div>
-                  <div style={{ height: '1px', background: '#334155', margin: '10px 0' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <b style={{ color: '#eab308', fontSize: '18px' }}>MEMO: {userUID}</b>
-                    <button onClick={() => copyToClipboard(userUID)} style={{ background: '#eab308', border: 'none', padding: '4px 8px', borderRadius: '6px', fontWeight: '800', fontSize: '10px' }}>COPY</button>
-                  </div>
+                <div style={styles.memoBox}>
+                  <small style={{ color: '#94a3b8', fontWeight: 'bold' }}>ADMIN WALLET:</small>
+                  <p style={{ fontSize: '11px', wordBreak: 'break-all', margin: '5px 0', fontWeight: 'bold' }}>{adminWallet}</p>
+                  <div style={{ borderTop: '1px solid #334155', margin: '10px 0' }} />
+                  <div style={{ color: '#eab308', fontWeight: '900', fontSize: '18px' }}>MEMO: {userUID}</div>
                 </div>
 
-                <button style={{ width: '100%', padding: '16px', borderRadius: '12px', backgroundColor: '#eab308', border: 'none', fontWeight: '900', color: '#000', marginTop: '10px' }}>Confirm Payment</button>
-                <button style={{ width: '100%', background: 'none', border: 'none', color: '#94a3b8', marginTop: '15px', fontWeight: 'bold' }} onClick={() => setShowPayForm(false)}>Back</button>
+                <button onClick={() => alert("Sent to Admin for review!")} style={{ width: '100%', padding: '16px', borderRadius: '12px', backgroundColor: '#eab308', border: 'none', fontWeight: '900', marginTop: '20px' }}>Confirm Payment</button>
+                <button onClick={() => setShowPayForm(false)} style={{ width: '100%', background: 'none', border: 'none', color: '#94a3b8', marginTop: '10px', fontWeight: 'bold' }}>Back</button>
               </div>
             )}
           </div>
         </>
       )}
 
-      {/* Other Nav Sections Placeholders based on your logic */}
-      {activeNav === 'withdraw' && (
+      {activeNav === 'history' && (
         <div style={styles.card}>
-          <h3 style={{ textAlign: 'center', fontWeight: '900', color: '#eab308' }}>Withdraw TON</h3>
-          <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" />
-          <input style={styles.input} placeholder="TON Wallet Address" />
-          <div style={{ backgroundColor: 'rgba(234, 179, 8, 0.1)', padding: '15px', borderRadius: '15px', border: '1px solid #eab308', textAlign: 'center', marginBottom: '15px' }}>
-            <span style={{ fontWeight: '900', color: '#eab308' }}>MEMO: {userUID}</span>
-          </div>
-          <button style={{ width: '100%', padding: '16px', borderRadius: '14px', backgroundColor: '#eab308', border: 'none', fontWeight: '900', color: '#000' }}>Withdraw Now</button>
+          <h3 style={{ textAlign: 'center', fontWeight: '900', color: '#eab308' }}>Transaction History</h3>
+          {history.length === 0 ? <p style={{ textAlign: 'center', color: '#94a3b8' }}>No history found.</p> : 
+            history.map((h, i) => (
+              <div key={i} style={styles.taskItem}>
+                <div>
+                  <div style={{ fontWeight: '900', fontSize: '14px' }}>{h.name}</div>
+                  <small style={{ color: '#94a3b8' }}>{h.date}</small>
+                </div>
+                <div style={{ color: '#eab308', fontWeight: '900' }}>+{h.amount}</div>
+              </div>
+            ))
+          }
         </div>
       )}
 
-      {/* Footer Nav */}
+      {/* Footer Navigation (image_13 style) */}
       <div style={styles.footer}>
-        {['Earn', 'Invite', 'Withdraw', 'Profile'].map(nav => (
-          <div key={nav} onClick={() => {setActiveNav(nav.toLowerCase()); setShowPayForm(false);}} style={{ textAlign: 'center', flex: 1, cursor: 'pointer', transition: '0.3s' }}>
-            <div style={{ fontSize: '22px', marginBottom: '4px' }}>{nav === 'Earn' ? '💰' : nav === 'Invite' ? '👥' : nav === 'Withdraw' ? '💸' : '👤'}</div>
-            <div style={{ fontSize: '10px', fontWeight: '900', color: activeNav === nav.toLowerCase() ? '#eab308' : '#94a3b8' }}>{nav.toUpperCase()}</div>
-          </div>
-        ))}
+        <div onClick={() => setActiveNav('earn')} style={{ textAlign: 'center', color: activeNav === 'earn' ? '#eab308' : '#94a3b8', cursor: 'pointer' }}>
+          <div style={{ fontSize: '20px' }}>💰</div><div style={{ fontSize: '10px', fontWeight: '900' }}>EARN</div>
+        </div>
+        <div onClick={() => setActiveNav('invite')} style={{ textAlign: 'center', color: activeNav === 'invite' ? '#eab308' : '#94a3b8', cursor: 'pointer' }}>
+          <div style={{ fontSize: '20px' }}>👥</div><div style={{ fontSize: '10px', fontWeight: '900' }}>INVITE</div>
+        </div>
+        <div onClick={() => setActiveNav('history')} style={{ textAlign: 'center', color: activeNav === 'history' ? '#eab308' : '#94a3b8', cursor: 'pointer' }}>
+          <div style={{ fontSize: '20px' }}>📜</div><div style={{ fontSize: '10px', fontWeight: '900' }}>HISTORY</div>
+        </div>
+        <div onClick={() => setActiveNav('profile')} style={{ textAlign: 'center', color: activeNav === 'profile' ? '#eab308' : '#94a3b8', cursor: 'pointer' }}>
+          <div style={{ fontSize: '20px' }}>👤</div><div style={{ fontSize: '10px', fontWeight: '900' }}>PROFILE</div>
+        </div>
       </div>
-
     </div>
   );
 }
