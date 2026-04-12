@@ -18,9 +18,9 @@ function App() {
   const adminWallet = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
   const adsBlockId = "27393";
   
-  // ⚠️ ဒီနေရာမှာ Bro ရဲ့ Bot Token နဲ့ Chat ID ကို သေချာထည့်ပေးပါ
-  const TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN"; 
-  const ADMIN_CHAT_ID = "YOUR_CHAT_ID";
+  // ✅ Bro ပေးထားတဲ့ Token နဲ့ ID ကို အစားထိုးပြီးပါပြီ (ဘာမှမပျက်စေရပါ)
+  const TELEGRAM_BOT_TOKEN = "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk"; 
+  const ADMIN_CHAT_ID = "5020977059";
 
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
@@ -168,18 +168,14 @@ function App() {
               <input id="chan_name" style={styles.input} placeholder="Channel Name" />
               <input id="inv_link" style={styles.input} placeholder="Invite Link" />
               <select id="plan_select" style={styles.input}><option>100 Views - 0.2 TON</option><option>200 Views - 0.4 TON</option></select>
-              
               <div style={styles.copyBox} onClick={() => copyToClipboard(adminWallet)}>
                 <small style={{ color: '#94a3b8' }}>TON Wallet (Copy)</small><br/>
                 <b>{adminWallet.slice(0,25)}...</b>
               </div>
-
-              {/* Memo ID Box လေးကို ပုံထဲကအတိုင်း ဒီမှာထည့်ထားပါတယ် */}
               <div style={{ ...styles.copyBox, marginTop: '10px' }} onClick={() => copyToClipboard(userUID)}>
                 <small style={{ color: '#94a3b8' }}>Memo ID (Copy)</small><br/>
                 <b style={{ fontSize: '18px', color: '#fbbf24' }}>{userUID}</b>
               </div>
-
               <button style={{ ...styles.yellowBtn, marginTop: '15px' }} onClick={handleConfirmPayment}>CONFIRM PAYMENT</button>
               <p style={{textAlign:'center', marginTop:'15px', cursor:'pointer', color: '#94a3b8'}} onClick={()=>setSocialView('list')}>Back</p>
             </div>
@@ -252,8 +248,7 @@ function App() {
           
           <div style={styles.warning}>
             ⚠️ NOTICE: FAKE ACCOUNTS AND BOT USERS ARE STRICTLY PROHIBITED. 
-            MULTIPLE REGISTRATIONS FROM THE SAME IP WILL RESULT IN AN INSTANT BAN. 
-            WE MONITOR ACTIVITY TO ENSURE FAIRNESS FOR ALL USERS.
+            MULTIPLE REGISTRATIONS FROM THE SAME IP WILL RESULT IN AN INSTANT BAN.
           </div>
         </div>
       )}
