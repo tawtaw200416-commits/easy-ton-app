@@ -22,7 +22,7 @@ function App() {
     localStorage.setItem('wd_hist', JSON.stringify(withdrawHistory));
   }, [balance, completed, withdrawHistory]);
 
-  // ✅ Withdraw 24 Hours Auto-Success
+  // ✅ 24-Hour Success System
   useEffect(() => {
     const timer = setInterval(() => {
       const now = Date.now();
@@ -39,7 +39,7 @@ function App() {
     return () => clearInterval(timer);
   }, [withdrawHistory]);
 
-  // ✅ Start Bot Tasks (၆ ခု အတိအကျ Updated)
+  // ✅ Updated Bot Tasks (၆ ခု အတိအကျ)
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -88,14 +88,14 @@ function App() {
     navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#1e293b', borderTop: '2px solid #fbbf24', padding: '10px 0' },
     navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#fbbf24' : '#94a3b8', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }),
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #334155' },
-    warningBox: { marginTop: '20px', padding: '15px', backgroundColor: '#450a0a', border: '2px solid #ef4444', borderRadius: '12px', textAlign: 'center' }
+    warningCard: { marginTop: '20px', padding: '15px', backgroundColor: '#450a0a', border: '2px solid #ef4444', borderRadius: '15px', textAlign: 'center' }
   };
 
   return (
     <div style={styles.main}>
-      {/* 💰 BALANCE */}
+      {/* 💰 Balance Banner */}
       <div style={{ textAlign: 'center', background: 'linear-gradient(145deg, #1e293b, #0f172a)', padding: '30px', borderRadius: '25px', marginBottom: '25px', border: '2px solid #fbbf24' }}>
-        <small style={{ color: '#94a3b8', fontWeight: '900' }}>TOTAL BALANCE</small>
+        <small style={{ color: '#94a3b8', fontWeight: '900', letterSpacing: '1px' }}>TOTAL BALANCE</small>
         <h1 style={{ color: '#fbbf24', fontSize: '42px', margin: '5px 0', fontWeight: '900' }}>{balance.toFixed(4)} <span style={{fontSize:'18px'}}>TON</span></h1>
       </div>
 
@@ -168,8 +168,8 @@ function App() {
               setBalance(prev => prev - amt);
               setWithdrawHistory([newWD, ...withdrawHistory]);
               setWithdrawAmount('');
-              alert("Withdraw Request Submitted!");
-            }
+              alert("Submitted Successfully!");
+            } else { alert("Minimum 0.1 TON required!"); }
           }}>WITHDRAW NOW</button>
           <h4 style={{marginTop:'30px', fontWeight:'900', borderTop:'1px solid #334155', paddingTop:'15px'}}>WITHDRAW HISTORY</h4>
           {withdrawHistory.map(w => (
@@ -183,25 +183,25 @@ function App() {
 
       {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h2 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>INVITE</h2>
-          <p style={{fontWeight:'900', color:'#94a3b8'}}>Invite friends and earn 10% bonus!</p>
+          <h2 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>INVITE FRIENDS</h2>
+          <p style={{fontWeight:'900', color:'#94a3b8'}}>Earn 10% bonus from each friend!</p>
           <div style={{...styles.input, padding:'15px', fontSize:'12px', background:'#0f172a'}}>{`https://t.me/YourBot?start=${APP_CONFIG.MY_UID}`}</div>
-          <button style={styles.yellowBtn} onClick={() => alert("Link Copied!")}>COPY INVITE LINK</button>
-          <h4 style={{marginTop:'30px', fontWeight:'900', borderTop:'1px solid #334155', paddingTop:'15px'}}>INVITE HISTORY</h4>
-          <div style={styles.row}><span style={{fontWeight:'900'}}>Friend Reward</span><span style={{color:'#10b981', fontWeight:'900'}}>+ 0.0005 TON</span></div>
+          <button style={styles.yellowBtn} onClick={() => handleCopy(`https://t.me/YourBot?start=${APP_CONFIG.MY_UID}`, "Invite Link")}>COPY LINK</button>
+          <h4 style={{marginTop:'30px', fontWeight:'900', borderTop:'1px solid #334155', paddingTop:'15px'}}>HISTORY</h4>
+          <div style={styles.row}><span style={{fontWeight:'900'}}>Friend Joining Reward</span><span style={{color:'#10b981', fontWeight:'900'}}>+ 0.0005 TON</span></div>
         </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
           <h2 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>USER PROFILE</h2>
-          <div style={{...styles.row, border:'none'}}><span style={{fontWeight:'900'}}>Your ID:</span><span style={{fontWeight:'900'}}>{APP_CONFIG.MY_UID}</span></div>
+          <div style={{...styles.row, border:'none'}}><span style={{fontWeight:'900'}}>User UID:</span><span style={{fontWeight:'900'}}>{APP_CONFIG.MY_UID}</span></div>
           <div style={{...styles.row, border:'none'}}><span style={{fontWeight:'900'}}>Status:</span><span style={{color:'#10b981', fontWeight:'900'}}>Verified</span></div>
           
-          {/* ✅ Warning Message for Fake Accounts */}
-          <div style={styles.warningBox}>
+          {/* ✅ Mandatory Fake Account Warning */}
+          <div style={styles.warningCard}>
             <p style={{ color: '#fca5a5', fontWeight: '900', margin: 0, fontSize: '14px' }}>
-              ⚠️ ATTENTION: <br/> Using fake accounts or multiple IDs to exploit the reward system will result in a PERMANENT BAN.
+              ⚠️ WARNING: <br/> Using fake accounts or multiple IDs to cheat the system will lead to a PERMANENT BAN.
             </p>
           </div>
         </div>
