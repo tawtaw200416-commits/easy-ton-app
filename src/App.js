@@ -75,7 +75,7 @@ function App() {
     yellowBtn: { width: '100%', padding: '12px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
     input: { width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '10px', boxSizing: 'border-box' },
     copyBox: { background: 'rgba(251,191,36,0.1)', padding: '12px', borderRadius: '10px', border: '1px solid #fbbf24', textAlign: 'center', cursor: 'pointer', marginBottom: '10px' },
-    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b', borderTop: '1px solid #334155' }
+    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b', borderTop: '1px solid #334155', zIndex: 1000 }
   };
 
   return (
@@ -108,7 +108,7 @@ function App() {
                   <button id={`btn-${s.id}`} onClick={() => handleAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '85px', padding: '8px' }}>JOIN</button>
                 </div>
               ))}
-              {/* + ADD TASK ခလုတ်ကို Social list တွေရဲ့ အောက်ဆုံးမှာ တစ်ခါတည်း ကပ်လျက်ထည့်ထားပါတယ် */}
+              {/* + ADD TASK ခလုတ်ကို ပုံထဲကအတိုင်း Card ထဲမှာပဲ အောက်ဆုံးမှာ ကပ်လျက်ထားပေးထားပါတယ် */}
               <button 
                 style={{ ...styles.yellowBtn, marginTop: '15px' }} 
                 onClick={() => setSocialView('add')}
@@ -131,7 +131,7 @@ function App() {
               
               <div style={styles.copyBox} onClick={() => copyToClipboard(adminWallet)}>
                 <small style={{color: '#94a3b8'}}>TON Address (Click to Copy)</small><br/>
-                <span style={{fontWeight: 'bold', fontSize: '13px'}}>{adminWallet.slice(0,20)}...</span>
+                <span style={{fontWeight: 'bold', fontSize: '13px'}}>{adminWallet.slice(0,25)}...</span>
               </div>
 
               <div style={styles.copyBox} onClick={() => copyToClipboard(userUID)}>
@@ -206,7 +206,7 @@ function App() {
           </div>
           <div style={{ ...styles.card, border: '1px solid #ef4444', background: 'rgba(239, 68, 68, 0.1)' }}>
             <p style={{ color: '#ef4444', fontSize: '12px', fontWeight: 'bold' }}>
-              ⚠️ WARNING: NO SCREENSHOT REQUIRED. Fake accounts or multiple registrations will be banned instantly.
+              ⚠️ WARNING: NO SCREENSHOT REQUIRED. Fake accounts will be banned instantly.
             </p>
           </div>
         </div>
