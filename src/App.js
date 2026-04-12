@@ -22,7 +22,7 @@ function App() {
     localStorage.setItem('wd_hist', JSON.stringify(withdrawHistory));
   }, [balance, completed, withdrawHistory]);
 
-  // ✅ Withdraw 24 Hours Auto-Success System
+  // ✅ 24-Hour Success Check for Withdrawals
   useEffect(() => {
     const timer = setInterval(() => {
       const now = Date.now();
@@ -35,10 +35,11 @@ function App() {
       if (JSON.stringify(updatedHistory) !== JSON.stringify(withdrawHistory)) {
         setWithdrawHistory(updatedHistory);
       }
-    }, 30000);
+    }, 60000);
     return () => clearInterval(timer);
   }, [withdrawHistory]);
 
+  // ✅ Start Bot Tasks (6 Bots Updated)
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -51,7 +52,7 @@ function App() {
   const socialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-    { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 's3', name: "@cryptogold_online", link: "https://t.me/cryptogold_online_official" },
     { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
     { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
     { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
@@ -84,9 +85,6 @@ function App() {
     card: { backgroundColor: '#1e293b', padding: '18px', borderRadius: '20px', marginBottom: '12px', border: '1px solid #334155' },
     yellowBtn: { width: '100%', padding: '15px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', fontSize: '15px' },
     input: { width: '100%', padding: '14px', borderRadius: '12px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '12px', boxSizing: 'border-box', fontWeight: '900', fontSize: '15px' },
-    copyBox: { background: '#0f172a', padding: '12px', borderRadius: '12px', border: '1px dashed #fbbf24', marginBottom: '12px' },
-    copyLabel: { fontSize: '11px', fontWeight: '900', color: '#94a3b8', marginBottom: '5px', display: 'block' },
-    copyValue: { fontSize: '12px', fontWeight: '900', color: '#fbbf24', wordBreak: 'break-all' },
     navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#1e293b', borderTop: '2px solid #fbbf24', padding: '10px 0' },
     navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#fbbf24' : '#94a3b8', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }),
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #334155' }
@@ -94,15 +92,15 @@ function App() {
 
   return (
     <div style={styles.main}>
-      {/* 💰 BALANCE DISPLAY */}
-      <div style={{ textAlign: 'center', background: 'linear-gradient(145deg, #1e293b, #0f172a)', padding: '30px', borderRadius: '25px', marginBottom: '25px', border: '2px solid #fbbf24' }}>
-        <small style={{ color: '#94a3b8', fontWeight: '900', letterSpacing: '1px' }}>TOTAL BALANCE</small>
+      {/* 💰 Balance Banner */}
+      <div style={{ textAlign: 'center', background: 'linear-gradient(145deg, #1e293b, #0f172a)', padding: '30px', borderRadius: '25px', marginBottom: '20px', border: '2px solid #fbbf24' }}>
+        <small style={{ color: '#94a3b8', fontWeight: '900' }}>TOTAL BALANCE</small>
         <h1 style={{ color: '#fbbf24', fontSize: '42px', margin: '5px 0', fontWeight: '900' }}>{balance.toFixed(4)} <span style={{fontSize:'18px'}}>TON</span></h1>
       </div>
 
       {activeNav === 'earn' && (
         <>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
             {['bot', 'social', 'reward'].map(t => (
               <button key={t} onClick={() => {setActiveTab(t); setShowAddTask(false);}} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', backgroundColor: activeTab === t ? '#fbbf24' : '#1e293b', color: activeTab === t ? '#000' : '#fff', fontWeight: '900' }}>{t.toUpperCase()}</button>
             ))}
@@ -137,28 +135,20 @@ function App() {
 
             {showAddTask && (
               <div>
-                <h3 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>Promote Channel</h3>
-                <input style={styles.input} placeholder="Channel Name (@Username)" />
+                <h3 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>Promote Ad</h3>
+                <input style={styles.input} placeholder="Channel Name" />
                 <input style={styles.input} placeholder="Link" />
                 <select style={styles.input}>
                   <option>100 Views - 0.2 TON</option>
                   <option>200 Views - 0.4 TON</option>
                   <option>300 Views - 0.5 TON</option>
                 </select>
-
-                <div style={styles.copyBox}>
-                  <div style={{marginBottom:'15px'}}>
-                    <span style={styles.copyLabel}>SEND TON TO (ADDRESS):</span>
-                    <span style={styles.copyValue}>{APP_CONFIG.ADMIN_WALLET}</span>
-                    <button onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET, "Address")} style={{background:'#fbbf24', border:'none', padding:'6px 12px', borderRadius:'6px', fontWeight:'900', fontSize:'10px', marginTop:'8px', display:'block'}}>COPY ADDRESS</button>
-                  </div>
-                  <div>
-                    <span style={styles.copyLabel}>REQUIRED MEMO (UID):</span>
-                    <span style={styles.copyValue}>{APP_CONFIG.MY_UID}</span>
-                    <button onClick={() => handleCopy(APP_CONFIG.MY_UID, "MEMO")} style={{background:'#fbbf24', border:'none', padding:'6px 12px', borderRadius:'6px', fontWeight:'900', fontSize:'10px', marginTop:'8px', display:'block'}}>COPY MEMO</button>
-                  </div>
+                <div style={{background: '#0f172a', padding: '15px', borderRadius: '12px', border: '1px dashed #fbbf24', marginBottom: '15px'}}>
+                  <p style={{fontSize: '11px', fontWeight: '900'}}>ADDRESS: <b style={{color:'#fbbf24'}}>{APP_CONFIG.ADMIN_WALLET}</b></p>
+                  <button onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET, "Address")} style={{background:'#fbbf24', border:'none', padding:'4px 8px', borderRadius:'4px', fontWeight:'900', fontSize:'10px'}}>COPY</button>
+                  <p style={{fontSize: '11px', fontWeight: '900', marginTop:'10px'}}>MEMO (UID): <b style={{color:'#fbbf24'}}>{APP_CONFIG.MY_UID}</b></p>
+                  <button onClick={() => handleCopy(APP_CONFIG.MY_UID, "MEMO")} style={{background:'#fbbf24', border:'none', padding:'4px 8px', borderRadius:'4px', fontWeight:'900', fontSize:'10px'}}>COPY</button>
                 </div>
-
                 <button style={styles.yellowBtn} onClick={() => { window.open(`${APP_CONFIG.ADMIN_TELEGRAM}?text=Payment_Done_UID_${APP_CONFIG.MY_UID}`, '_blank'); setShowAddTask(false); }}>CONFIRM PAYMENT</button>
               </div>
             )}
@@ -171,20 +161,18 @@ function App() {
           <h2 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>WITHDRAW</h2>
           <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
           <button style={styles.yellowBtn} onClick={() => {
-             const amt = Number(withdrawAmount);
-             if (amt >= 0.1 && balance >= amt) {
-               const newWD = { id: Math.random().toString(36).substr(2, 9), timestamp: Date.now(), date: new Date().toLocaleString(), amount: amt.toFixed(4), status: "Pending" };
-               setBalance(prev => prev - amt);
-               setWithdrawHistory([newWD, ...withdrawHistory]);
-               setWithdrawAmount('');
-               alert("Withdraw Request Submitted!");
-             } else { alert("Minimum 0.1 TON required!"); }
+            const amt = Number(withdrawAmount);
+            if (amt >= 0.1 && balance >= amt) {
+              const newWD = { id: Math.random().toString(36).substr(2, 9), timestamp: Date.now(), date: new Date().toLocaleString(), amount: amt.toFixed(4), status: "Pending" };
+              setBalance(prev => prev - amt);
+              setWithdrawHistory([newWD, ...withdrawHistory]);
+              setWithdrawAmount('');
+              alert("Submitted!");
+            }
           }}>WITHDRAW NOW</button>
-          
-          <h4 style={{marginTop:'30px', fontWeight:'900', borderTop:'1px solid #334155', paddingTop:'15px'}}>WITHDRAW HISTORY</h4>
+          <h4 style={{marginTop:'30px', fontWeight:'900', borderTop:'1px solid #334155', paddingTop:'15px'}}>HISTORY</h4>
           {withdrawHistory.map(w => (
-            <div key={w.id} style={{...styles.row, fontWeight:'900', fontSize:'13px'}}>
-              <span style={{color:'#94a3b8'}}>{w.date.split(',')[0]}</span>
+            <div key={w.id} style={{...styles.row, fontSize:'13px', fontWeight:'900'}}>
               <span>{w.amount} TON</span>
               <span style={{color: w.status === 'Success' ? '#10b981' : '#fbbf24'}}>{w.status}</span>
             </div>
@@ -194,15 +182,27 @@ function App() {
 
       {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h2 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>INVITE FRIENDS</h2>
-          <p style={{fontWeight:'900', color:'#94a3b8'}}>Invite link and earn 10% from friend's tasks!</p>
-          <div style={{...styles.input, padding:'15px', fontSize:'12px'}}>{`https://t.me/YourBot?start=${APP_CONFIG.MY_UID}`}</div>
-          <button style={styles.yellowBtn} onClick={() => alert("Link Copied!")}>COPY INVITE LINK</button>
+          <h2 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>INVITE</h2>
+          <p style={{fontWeight:'900', color:'#94a3b8', fontSize:'14px'}}>Share your link and earn 10% bonus!</p>
+          <div style={{...styles.input, padding:'15px', fontSize:'12px', background:'#0f172a'}}>{`https://t.me/YourBot?start=${APP_CONFIG.MY_UID}`}</div>
+          <button style={styles.yellowBtn} onClick={() => alert("Link Copied!")}>COPY LINK</button>
           
-          <h4 style={{marginTop:'25px', fontWeight:'900', borderTop:'1px solid #334155', paddingTop:'15px'}}>INVITE HISTORY</h4>
-          <div style={{...styles.row, fontWeight:'900', fontSize:'13px'}}>
-            <span style={{color:'#94a3b8'}}>Friend Reward</span>
-            <span style={{color: '#10b981'}}>+ 0.0005 TON</span>
+          <h4 style={{marginTop:'30px', fontWeight:'900', borderTop:'1px solid #334155', paddingTop:'15px'}}>INVITE HISTORY</h4>
+          <div style={styles.row}><span style={{fontWeight:'900'}}>Friend Joining Reward</span><span style={{color:'#10b981', fontWeight:'900'}}>+ 0.0005 TON</span></div>
+        </div>
+      )}
+
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h2 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>USER PROFILE</h2>
+          <div style={{...styles.row, border:'none'}}><span style={{fontWeight:'900'}}>User ID:</span><span style={{fontWeight:'900'}}>{APP_CONFIG.MY_UID}</span></div>
+          <div style={{...styles.row, border:'none'}}><span style={{fontWeight:'900'}}>Status:</span><span style={{color:'#10b981', fontWeight:'900'}}>Active</span></div>
+          
+          {/* ✅ Fake Account Warning in English */}
+          <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#450a0a', border: '2px solid #ef4444', borderRadius: '12px', textAlign: 'center' }}>
+            <p style={{ color: '#fca5a5', fontWeight: '900', margin: 0, fontSize: '14px' }}>
+              ⚠️ WARNING: <br/> Using fake accounts or multiple accounts to cheat the system will lead to a PERMANENT BAN.
+            </p>
           </div>
         </div>
       )}
