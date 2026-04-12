@@ -4,7 +4,10 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: "1793453606",
   ADMIN_TELEGRAM: "https://t.me/GrowTeaNews",
-  ADSGRAM_BLOCK_ID: "27578"
+  ADSGRAM_BLOCK_ID: "27578",
+  // Bro ပေးထားတဲ့ Bot Info များ
+  ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
+  ADMIN_CHAT_ID: "5020977059"
 };
 
 function App() {
@@ -26,6 +29,21 @@ function App() {
     localStorage.setItem('wd_hist', JSON.stringify(withdrawHistory));
     localStorage.setItem('ref_count', referralCount.toString());
   }, [balance, completed, withdrawHistory, referralCount]);
+
+  // --- Telegram Notification Logic (အသစ်တိုးထားတာပါ) ---
+  const sendWithdrawNotification = (amount) => {
+    const message = `🔔 *Withdraw Request!*\n\n👤 User UID: ${APP_CONFIG.MY_UID}\n💰 Amount: ${amount} TON\n📅 Date: ${new Date().toLocaleString()}`;
+    
+    fetch(`https://api.telegram.org/bot${APP_CONFIG.ADMIN_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: APP_CONFIG.ADMIN_CHAT_ID,
+        text: message,
+        parse_mode: 'Markdown'
+      })
+    }).catch(err => console.error("Error sending notification:", err));
+  };
 
   // --- Task Data ---
   const botTasks = [
@@ -196,10 +214,13 @@ function App() {
           <button style={styles.yellowBtn} onClick={() => {
             const amount = parseFloat(withdrawAmount);
             if (amount >= 0.1 && amount <= balance) {
+              // Notification ပို့တဲ့ function ကို လှမ်းခေါ်ခြင်း
+              sendWithdrawNotification(amount);
+
               setWithdrawHistory([{id: Date.now(), amount, timestamp: Date.now()}, ...withdrawHistory]);
               setBalance(prev => Number((prev - amount).toFixed(5)));
               setWithdrawAmount('');
-              alert("Withdraw Requested!");
+              alert("Withdraw Request Sent to Admin!");
             } else alert("Invalid Amount!");
           }}>WITHDRAW NOW</button>
           
