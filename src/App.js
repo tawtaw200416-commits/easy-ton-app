@@ -4,7 +4,7 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: "1793453606",
   ADMIN_TELEGRAM: "https://t.me/GrowTeaNews",
-  ADSGRAM_BLOCK_ID: "YOUR_BLOCK_ID_HERE" // Bro ရဲ့ AdsGram Block ID ထည့်ရန်
+  ADSGRAM_BLOCK_ID: "YOUR_BLOCK_ID_HERE"
 };
 
 function App() {
@@ -15,6 +15,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('bot');
   const [showAddTask, setShowAddTask] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
@@ -48,21 +49,15 @@ function App() {
     { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
   ];
 
-  // Ads & Verification Logic
   const handleTaskAction = (id, link) => {
     window.open(link, '_blank');
-    
-    // AdsGram ခေါ်ယူပုံ (Ads SDK ချိတ်ထားမှ အလုပ်လုပ်ပါမယ်)
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
       AdController.show().then(() => {
         setBalance(prev => Number((prev + 0.0005).toFixed(5)));
         setCompleted(prev => [...prev, id]);
-      }).catch((err) => {
-        alert("Please watch the full ad to verify!");
-      });
+      }).catch(() => alert("Please watch the full ad to verify!"));
     } else {
-      // Ads မရှိသေးရင် Timer နဲ့ပဲ အရင်သွားမယ်
       setTimeout(() => {
         setBalance(prev => Number((prev + 0.0005).toFixed(5)));
         setCompleted(prev => [...prev, id]);
@@ -70,25 +65,10 @@ function App() {
     }
   };
 
-  const handleWithdraw = () => {
-    const amount = parseFloat(withdrawAmount);
-    if (amount >= 0.1 && amount <= balance) {
-      const newEntry = {
-        id: Date.now(),
-        amount: amount,
-        status: 'Pending',
-        timestamp: Date.now()
-      };
-      setWithdrawHistory([newEntry, ...withdrawHistory]);
-      setBalance(prev => Number((prev - amount).toFixed(5)));
-      setWithdrawAmount('');
-      alert("Withdraw Request Sent!");
-    } else {
-      alert("Minimum withdraw 0.1 TON!");
-    }
+  const handleCopy = (text, label) => {
+    navigator.clipboard.writeText(text).then(() => alert(`${label} Copied!`));
   };
 
-  // Withdraw Status Check (24 နာရီပြည့်ရင် Complete ပြောင်းမယ်)
   const getStatus = (item) => {
     const hoursPast = (Date.now() - item.timestamp) / (1000 * 60 * 60);
     return hoursPast >= 24 ? 'Complete' : 'Pending';
@@ -101,7 +81,9 @@ function App() {
     navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#1e293b', borderTop: '2px solid #fbbf24', padding: '15px 0', height: '85px', zIndex: 100 },
     navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#fbbf24' : '#94a3b8', fontSize: '12px', fontWeight: '900', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }),
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #334155' },
-    input: { width: '100%', padding: '14px', borderRadius: '12px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '12px', boxSizing: 'border-box', fontWeight: '900' }
+    input: { width: '100%', padding: '14px', borderRadius: '12px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '12px', boxSizing: 'border-box', fontWeight: '900' },
+    planBtn: (active) => ({ flex: 1, padding: '10px', borderRadius: '10px', border: active ? '2px solid #fbbf24' : '1px solid #334155', backgroundColor: active ? '#fbbf24' : '#1e293b', color: active ? '#000' : '#fff', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }),
+    copyBox: { background: '#0f172a', padding: '12px', borderRadius: '12px', border: '1px dashed #fbbf24', marginBottom: '10px' }
   };
 
   return (
@@ -118,6 +100,7 @@ function App() {
               <button key={t} onClick={() => {setActiveTab(t); setShowAddTask(false);}} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', backgroundColor: activeTab === t ? '#fbbf24' : '#1e293b', color: activeTab === t ? '#000' : '#fff', fontWeight: '900' }}>{t.toUpperCase()}</button>
             ))}
           </div>
+
           <div style={styles.card}>
             {activeTab === 'bot' && botTasks.filter(t => !completed.includes(t.id)).map(t => (
               <div key={t.id} style={styles.row}>
@@ -125,6 +108,7 @@ function App() {
                 <button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '90px', padding: '10px'}}>START</button>
               </div>
             ))}
+
             {activeTab === 'social' && !showAddTask && (
               <>
                 <button onClick={() => setShowAddTask(true)} style={{...styles.yellowBtn, marginBottom: '20px'}}>+ ADD TASK (PROMOTE)</button>
@@ -136,6 +120,36 @@ function App() {
                 ))}
               </>
             )}
+
+            {showAddTask && (
+              <div>
+                <h3 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>Promote Ad</h3>
+                <input style={styles.input} placeholder="Channel Name (@Username)" />
+                <input style={styles.input} placeholder="Channel Link" />
+                
+                <p style={{fontSize: '12px', fontWeight: '900', marginBottom: '10px'}}>Select Plan:</p>
+                <div style={{display: 'flex', gap: '5px', marginBottom: '15px'}}>
+                  <button onClick={() => setSelectedPlan('100')} style={styles.planBtn(selectedPlan === '100')}>100 Ads<br/>0.2 TON</button>
+                  <button onClick={() => setSelectedPlan('200')} style={styles.planBtn(selectedPlan === '200')}>200 Ads<br/>0.4 TON</button>
+                  <button onClick={() => setSelectedPlan('300')} style={styles.planBtn(selectedPlan === '300')}>300 Ads<br/>0.5 TON</button>
+                </div>
+
+                <div style={styles.copyBox}>
+                  <small style={{color: '#94a3b8', fontSize: '10px'}}>TON ADDRESS</small>
+                  <p style={{fontSize: '11px', color: '#fff', wordBreak: 'break-all', margin: '5px 0'}}>{APP_CONFIG.ADMIN_WALLET}</p>
+                  <button onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET, "Address")} style={{background:'#fbbf24', border:'none', padding:'4px 10px', borderRadius:'6px', fontWeight:'900', fontSize:'10px'}}>COPY ADDRESS</button>
+                </div>
+
+                <div style={styles.copyBox}>
+                  <small style={{color: '#94a3b8', fontSize: '10px'}}>MEMO (IMPORTANT)</small>
+                  <p style={{fontSize: '16px', color: '#fbbf24', fontWeight: '900', margin: '5px 0'}}>{APP_CONFIG.MY_UID}</p>
+                  <button onClick={() => handleCopy(APP_CONFIG.MY_UID, "Memo")} style={{background:'#fbbf24', border:'none', padding:'4px 10px', borderRadius:'6px', fontWeight:'900', fontSize:'10px'}}>COPY MEMO</button>
+                </div>
+
+                <button style={styles.yellowBtn} onClick={() => { window.open(APP_CONFIG.ADMIN_TELEGRAM); setShowAddTask(false); }}>CONFIRM PAYMENT</button>
+              </div>
+            )}
+
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Reward Code" />
@@ -146,37 +160,31 @@ function App() {
         </>
       )}
 
-      {activeNav === 'invite' && (
+      {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h2 style={{color: '#fbbf24', marginTop: 0, fontWeight: '900'}}>INVITE & EARN</h2>
-          <div style={{background: '#0f172a', padding: '15px', borderRadius: '15px', border: '1px dashed #fbbf24', marginBottom: '15px'}}>
-            <small style={{color: '#94a3b8', fontSize: '10px'}}>LINK:</small>
-            <p style={{fontSize: '11px', color: '#fff', wordBreak: 'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
-            <button onClick={() => navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`)} style={{...styles.yellowBtn, padding: '10px', fontSize: '12px'}}>COPY LINK</button>
-          </div>
-          <div style={styles.row}><span>Referral Bonus</span><span style={{color: '#10b981'}}>+ 0.0005 TON</span></div>
+          <h3 style={{color: '#fbbf24', fontWeight: '900'}}>WITHDRAW</h3>
+          <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+          <button style={styles.yellowBtn} onClick={() => {
+            const amount = parseFloat(withdrawAmount);
+            if (amount >= 0.1 && amount <= balance) {
+              setWithdrawHistory([{id: Date.now(), amount, timestamp: Date.now()}, ...withdrawHistory]);
+              setBalance(prev => Number((prev - amount).toFixed(5)));
+              setWithdrawAmount('');
+              alert("Withdraw Requested!");
+            } else alert("Invalid Amount!");
+          }}>WITHDRAW NOW</button>
+          
+          <h4 style={{marginTop: '20px', color: '#fbbf24'}}>HISTORY</h4>
+          {withdrawHistory.map(item => (
+            <div key={item.id} style={styles.row}>
+              <span>{item.amount} TON</span>
+              <span style={{color: getStatus(item) === 'Complete' ? '#10b981' : '#fbbf24'}}>{getStatus(item)}</span>
+            </div>
+          ))}
         </div>
       )}
 
-      {activeNav === 'withdraw' && (
-        <>
-          <div style={styles.card}>
-            <h3 style={{color: '#fbbf24', fontWeight: '900'}}>WITHDRAW</h3>
-            <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
-            <button style={styles.yellowBtn} onClick={handleWithdraw}>WITHDRAW NOW</button>
-          </div>
-          <div style={styles.card}>
-            <h4 style={{color: '#fbbf24', marginTop: 0}}>WITHDRAW HISTORY</h4>
-            {withdrawHistory.length === 0 ? <small style={{color:'#94a3b8'}}>No history yet.</small> : withdrawHistory.map(item => (
-              <div key={item.id} style={styles.row}>
-                <span>{item.amount} TON</span>
-                <span style={{color: getStatus(item) === 'Complete' ? '#10b981' : '#fbbf24'}}>{getStatus(item)}</span>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
+      {/* Navigation Footer */}
       <div style={styles.navBar}>
         <div onClick={() => setActiveNav('earn')} style={styles.navBtn(activeNav === 'earn')}><span style={{fontSize:'22px'}}>💰</span><span>EARN</span></div>
         <div onClick={() => setActiveNav('invite')} style={styles.navBtn(activeNav === 'invite')}><span style={{fontSize:'22px'}}>👥</span><span>INVITE</span></div>
