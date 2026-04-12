@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 function App() {
   // 1. Core State & Data
@@ -7,13 +7,22 @@ function App() {
     return tg?.initDataUnsafe?.user?.id?.toString() || "1793453606"; 
   });
 
-  const [balance, setBalance] = useState(0.0000);
+  // LocalStorage သုံးပြီး Balance နဲ့ Reward အခြေအနေကို သိမ်းထားမယ်
+  const [balance, setBalance] = useState(() => JSON.parse(localStorage.getItem('ton_balance')) || 0.0000);
+  const [rewardClaimed, setRewardClaimed] = useState(() => JSON.parse(localStorage.getItem('reward_claimed')) || false);
+  const [rewardInput, setRewardInput] = useState("");
+  
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [showPayForm, setShowPayForm] = useState(false);
   const adminAddress = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
 
-  // New Social Channels List
+  // Data ပြောင်းတိုင်း သိမ်းဆည်းပေးခြင်း
+  useEffect(() => {
+    localStorage.setItem('ton_balance', JSON.stringify(balance));
+    localStorage.setItem('reward_claimed', JSON.stringify(rewardClaimed));
+  }, [balance, rewardClaimed]);
+
   const socialTasks = [
     "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", 
     "@M9460", "@USDTcloudminer_channel", "@ADS_TON1", 
@@ -22,7 +31,6 @@ function App() {
     "@zrbtua", "@perviu1million"
   ];
 
-  // New Bot Links List
   const botTasks = [
     { name: "GrowTea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { name: "GoldenMiner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -32,13 +40,28 @@ function App() {
     { name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
   ];
 
+  // Reward Claim Logic
+  const handleClaimReward = () => {
+    if (rewardClaimed) {
+      alert("You have already claimed this reward!");
+      return;
+    }
+    if (rewardInput.toUpperCase() === "YTTPO") {
+      setBalance(prev => prev + 0.0005);
+      setRewardClaimed(true);
+      setRewardInput("");
+      alert("Success! 0.0005 TON added to your balance.");
+    } else {
+      alert("Invalid Code. Please try again.");
+    }
+  };
+
   const styles = {
     card: { backgroundColor: '#1e293b', padding: '20px', borderRadius: '20px', border: '1px solid #334155', marginBottom: '15px' },
     input: { width: '100%', padding: '14px', borderRadius: '12px', backgroundColor: '#0f172a', color: '#fff', border: '1px solid #475569', marginBottom: '12px', fontWeight: '900', outline: 'none', boxSizing: 'border-box' },
     btn: (bg = '#fbbf24') => ({ padding: '10px 15px', borderRadius: '10px', border: 'none', backgroundColor: bg, color: bg === 'transparent' ? '#fff' : '#000', fontWeight: '900', cursor: 'pointer' }),
-    copyBox: { backgroundColor: '#0f172a', padding: '10px', borderRadius: '10px', border: '1px dashed #334155', marginBottom: '10px' },
+    copyBox: { backgroundColor: '#0f172a', padding: '10px', borderRadius: '10px', border: '1px dashed #334155', marginBottom: '10px', cursor: 'pointer' },
     priceRow: { display: 'flex', justifyContent: 'space-between', padding: '8px 5px', fontWeight: '900' },
-    historyBox: { backgroundColor: '#0f172a', padding: '15px', borderRadius: '15px', marginTop: '10px' },
     footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '15px 0', backgroundColor: '#1e293b', borderTop: '2px solid #334155' }
   };
 
@@ -58,7 +81,6 @@ function App() {
 
       {activeNav === 'earn' && (
         <>
-          {/* Tabs - Hidden when Order Placement is open */}
           {!showPayForm && (
             <div style={{display: 'flex', backgroundColor: '#1e293b', borderRadius: '12px', padding: '5px', marginBottom: '15px'}}>
               <button style={{...styles.btn(activeTab === 'bot' ? '#fbbf24' : 'transparent'), flex: 1}} onClick={() => setActiveTab('bot')}>Start Bot</button>
@@ -67,7 +89,7 @@ function App() {
             </div>
           )}
 
-{!showPayForm ? (
+          {!showPayForm ? (
             <>
               {activeTab === 'bot' && (
                 <div style={styles.card}>
@@ -90,7 +112,7 @@ function App() {
                   {socialTasks.map((name, i) => (
                     <div key={i} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid #334155'}}>
                       <span style={{fontSize: '13px', fontWeight: '900'}}>{name}</span>
-                      <button style={styles.btn('#38bdf8')} onClick={() => window.open(https://t.me/${name.replace('@','')}, '_blank')}>Join</button>
+                      <button style={styles.btn('#38bdf8')} onClick={() => window.open(`https://t.me/${name.replace('@','')}`, '_blank')}>Join</button>
                     </div>
                   ))}
                 </div>
@@ -99,15 +121,22 @@ function App() {
               {activeTab === 'reward' && (
                 <div style={{...styles.card, textAlign: 'center'}}>
                   <h4 style={{fontWeight: '900'}}>Redeem Reward Code</h4>
-                  <input style={{...styles.input, textAlign: 'center'}} placeholder="ENTER CODE (YTTPO)" />
-                  <button style={{...styles.btn(), width: '100%'}}>Claim Now</button>
+                  {/* Password type သုံးထားလို့ Code ကို မမြင်ရတော့ပါဘူး */}
+                  <input 
+                    type="password" 
+                    style={{...styles.input, textAlign: 'center'}} 
+                    placeholder="ENTER CODE (YTTPO)" 
+                    value={rewardInput}
+                    onChange={(e) => setRewardInput(e.target.value)}
+                  />
+                  <button style={{...styles.btn(), width: '100%'}} onClick={handleClaimReward}>
+                    Claim Now
+                  </button>
                 </div>
               )}
             </>
           ) : (
-            /* Order Placement Section */
             <div style={styles.card}>
-              <button style={{...styles.btn('#10b981'), width: '100%', marginBottom: '15px'}} onClick={() => alert("No tasks submitted yet.")}>My Tasks</button>
               <h4 style={{fontWeight: '900', textAlign: 'center'}}>Order Placement</h4>
               <div style={{backgroundColor: '#0f172a', borderRadius: '12px', padding: '10px', marginBottom: '15px', border: '1px solid #334155'}}>
                 <div style={styles.priceRow}><span>100 Users</span><span style={{color: '#fbbf24'}}>0.2 TON</span></div>
@@ -130,18 +159,13 @@ function App() {
         </>
       )}
 
-{activeNav === 'invite' && (
+      {/* ကျန်တဲ့ Tab တွေက သင်ပေးထားတဲ့အတိုင်း အတူတူပါပဲ */}
+      {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3 style={{textAlign: 'center', fontWeight: '900'}}>Invite Friends</h3>
           <p style={{textAlign: 'center', fontSize: '13px', color: '#fbbf24', fontWeight: 'bold'}}>Get 0.0005 TON per invite!</p>
-          <input style={styles.input} value={https://t.me/EasyTONFree_Bot?start=${userUID}} readOnly />
-          <button style={{...styles.btn(), width: '100%'}} onClick={() => copyToClipboard(https://t.me/EasyTONFree_Bot?start=${userUID})}>Copy Link</button>
-          
-          <h4 style={{marginTop: '25px', fontWeight: '900'}}>Invite History</h4>
-          <div style={styles.historyBox}>
-            <div style={{display: 'flex', justifyContent: 'space-between', color: '#94a3b8', marginBottom: '5px', fontSize: '12px', fontWeight: '900'}}><span>User ID</span><span>Status</span></div>
-            <div style={{textAlign: 'center', color: '#64748b', padding: '5px', fontSize: '12px'}}>No invites yet.</div>
-          </div>
+          <input style={styles.input} value={`https://t.me/EasyTONFree_Bot?start=${userUID}`} readOnly />
+          <button style={{...styles.btn(), width: '100%'}} onClick={() => copyToClipboard(`https://t.me/EasyTONFree_Bot?start=${userUID}`)}>Copy Link</button>
         </div>
       )}
 
@@ -160,18 +184,14 @@ function App() {
       {activeNav === 'profile' && (
         <div style={styles.card}>
           <h3 style={{textAlign: 'center', fontWeight: '900'}}>My Profile</h3>
-          <div style={{backgroundColor: '#0f172a', padding: '15px', borderRadius: '12px', border: '1px solid #334155'}}>
-            <p style={{fontWeight: '900', margin: '8px 0'}}>UID: <span style={{color: '#fbbf24'}}>{userUID}</span></p>
-            <p style={{fontWeight: '900', margin: '8px 0'}}>Status: <span style={{color: '#10b981'}}>Active</span></p>
-          </div>
+          <p style={{fontWeight: '900'}}>UID: <span style={{color: '#fbbf24'}}>{userUID}</span></p>
           <div style={{marginTop: '20px', border: '1px solid #ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '15px', borderRadius: '15px'}}>
             <h4 style={{color: '#ef4444', marginTop: 0, fontWeight: '900'}}>⚠️ Policy</h4>
-            <p style={{fontSize: '12px', color: '#fca5a5', lineHeight: '1.5', fontWeight: '900'}}>Fake accounts and scripts are strictly prohibited. Permanent ban for fraud.</p>
+            <p style={{fontSize: '12px', color: '#fca5a5', fontWeight: '900'}}>Fake accounts are prohibited.</p>
           </div>
         </div>
       )}
 
-      {/* Footer Navigation */}
       <div style={styles.footer}>
         <div style={{textAlign: 'center', flex: 1, fontSize: '11px', color: activeNav === 'earn' ? '#fbbf24' : '#94a3b8', fontWeight: '900', cursor: 'pointer'}} onClick={() => {setActiveNav('earn'); setShowPayForm(false);}}>💰<br/>Earn</div>
         <div style={{textAlign: 'center', flex: 1, fontSize: '11px', color: activeNav === 'invite' ? '#fbbf24' : '#94a3b8', fontWeight: '900', cursor: 'pointer'}} onClick={() => setActiveNav('invite')}>👥<br/>Invite</div>
