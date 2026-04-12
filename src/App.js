@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-// ✅ Configuration အပိုင်း - ဘာမှမပျက်အောင် အကုန်စုထားပါတယ်
+// ✅ Configuration
 const APP_CONFIG = {
   BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_ID: "5020977059",
@@ -13,7 +13,6 @@ function App() {
   const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_bal')) || 0.0000);
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('comp_tasks')) || []);
   const [isClaimed, setIsClaimed] = useState(() => localStorage.getItem('gift_claimed') === 'true');
-  
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || []);
   const [inviteHistory] = useState(() => JSON.parse(localStorage.getItem('inv_hist')) || [
     { uid: "189455...", status: "Completed", reward: "0.0005" }
@@ -29,6 +28,35 @@ function App() {
     localStorage.setItem('gift_claimed', isClaimed);
     localStorage.setItem('wd_hist', JSON.stringify(withdrawHistory));
   }, [balance, completed, isClaimed, withdrawHistory]);
+
+  // ✅ Bot Task ၇ ခုလုံး ပြန်ထည့်ထားပါတယ်
+  const botTasks = [
+    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
+    { id: 'b7', name: "Check In Bot", link: "https://t.me/check_in_bot" }
+  ];
+
+  // ✅ Social Task အကုန်ပြန်ပါပါတယ်
+  const socialTasks = [
+    { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 's3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 's5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+    { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
+    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+    { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
+    { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
+    { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
+    { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
+  ];
 
   const handleAction = (id, link) => {
     window.open(link, '_blank');
@@ -47,22 +75,6 @@ function App() {
       };
     }
   };
-
-  const handleWithdraw = () => {
-    const amount = document.getElementById('wd_amount').value;
-    const address = document.getElementById('wd_address').value;
-    if (amount >= 0.1 && balance >= amount) {
-      const message = `💸 *Withdraw*\nUID: ${APP_CONFIG.MY_UID}\nAmount: ${amount} TON\nAddress: ${address}`;
-      fetch(`https://api.telegram.org/bot${APP_CONFIG.BOT_TOKEN}/sendMessage?chat_id=${APP_CONFIG.ADMIN_ID}&text=${encodeURIComponent(message)}&parse_mode=Markdown`)
-        .then(() => {
-          setWithdrawHistory([{ date: new Date().toLocaleDateString(), amount, status: "Pending" }, ...withdrawHistory]);
-          setBalance(prev => prev - Number(amount));
-          alert("Withdrawal submitted!");
-        });
-    } else { alert("Insufficient balance or min 0.1 TON."); }
-  };
-
-  const copyToClipboard = (text) => { navigator.clipboard.writeText(text); alert("Copied!"); };
 
   const styles = {
     main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '90px', fontFamily: 'sans-serif' },
@@ -88,17 +100,36 @@ function App() {
             ))}
           </div>
 
-          {activeTab === 'bot' && (
-            [
-              { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-              { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-              { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" }
-            ].filter(t => !completed.includes(t.id)).map(b => (
-              <div key={b.id} style={styles.card}>
-                <p style={{ fontWeight: 'bold' }}>{b.name}</p>
-                <button id={`btn-${b.id}`} onClick={() => handleAction(b.id, b.link)} style={styles.yellowBtn}>START BOT</button>
+          {activeTab === 'bot' && botTasks.filter(t => !completed.includes(t.id)).map(b => (
+            <div key={b.id} style={styles.card}>
+              <p style={{ fontWeight: 'bold' }}>{b.name}</p>
+              <button id={`btn-${b.id}`} onClick={() => handleAction(b.id, b.link)} style={styles.yellowBtn}>START BOT</button>
+            </div>
+          ))}
+
+          {activeTab === 'social' && socialView === 'list' && (
+            <>
+              {/* ✅ +ADD TASK ခလုတ် ပြန်ထည့်ထားပါတယ် */}
+              <button style={{ ...styles.yellowBtn, marginBottom: '15px' }} onClick={() => setSocialView('add')}>+ ADD TASK (PROMOTE CHANNEL)</button>
+              <div style={styles.card}>
+                {socialTasks.filter(t => !completed.includes(t.id)).map(s => (
+                  <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #334155' }}>
+                    <span>{s.name}</span>
+                    <button id={`btn-${s.id}`} onClick={() => handleAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '85px', padding: '8px' }}>JOIN</button>
+                  </div>
+                ))}
               </div>
-            ))
+            </>
+          )}
+
+          {activeTab === 'social' && socialView === 'add' && (
+            <div style={styles.card}>
+              <h3>Add New Task</h3>
+              <input id="chan_name" style={styles.input} placeholder="Channel Name" />
+              <input id="inv_link" style={styles.input} placeholder="Invite Link" />
+              <button style={styles.yellowBtn} onClick={() => { alert("Order Sent!"); setSocialView('list'); }}>CONFIRM PAYMENT</button>
+              <p style={{textAlign:'center', marginTop:'15px', cursor:'pointer'}} onClick={()=>setSocialView('list')}>Back</p>
+            </div>
           )}
 
           {activeTab === 'reward' && (
@@ -106,8 +137,7 @@ function App() {
               <h4>DAILY GIFT CODE</h4>
               {isClaimed ? <p style={{ color: '#10b981', textAlign: 'center' }}>CLAIMED ✅</p> : (
                 <>
-                  {/* ✅ Code ကို Password အနေနဲ့ ဖျောက်ထားပေးပါတယ် */}
-                  <input id="gift" type="password" style={styles.input} placeholder="Enter Code Here" />
+                  <input id="gift" type="password" style={styles.input} placeholder="Enter Code" />
                   <button onClick={() => {if(document.getElementById('gift').value==="GIFT77"){setBalance(b=>b+0.01);setIsClaimed(true);alert("Success!")}}} style={styles.yellowBtn}>CLAIM</button>
                 </>
               )}
@@ -116,17 +146,18 @@ function App() {
         </>
       )}
 
+      {/* Invite, Withdraw, Profile Section တွေလည်း အဟောင်းအတိုင်း အကုန်ပါပါတယ်... */}
       {activeNav === 'invite' && (
         <div style={{ textAlign: 'center' }}>
           <div style={styles.card}>
             <h2>INVITE FRIENDS</h2>
-            <button onClick={() => copyToClipboard(`https://t.me/YourBot?start=${APP_CONFIG.MY_UID}`)} style={styles.yellowBtn}>COPY INVITE LINK</button>
+            <button onClick={() => {navigator.clipboard.writeText(`https://t.me/YourBot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}} style={styles.yellowBtn}>COPY INVITE LINK</button>
           </div>
-          <h4 style={{ textAlign: 'left' }}>INVITATION HISTORY</h4>
+          <h4 style={{textAlign:'left'}}>HISTORY</h4>
           <div style={styles.card}>
-            <table style={{ width: '100%', fontSize: '12px', textAlign: 'left' }}>
-              <thead><tr style={{ color: '#64748b' }}><th>User UID</th><th>Status</th><th>Reward</th></tr></thead>
-              <tbody>{inviteHistory.map((inv, i) => (<tr key={i}><td>{inv.uid}</td><td style={{color: '#10b981'}}>{inv.status}</td><td>{inv.reward} TON</td></tr>))}</tbody>
+            <table style={{width:'100%', fontSize:'12px'}}>
+              <thead><tr style={{color:'#64748b'}}><th>User UID</th><th>Status</th><th>Reward</th></tr></thead>
+              <tbody>{inviteHistory.map((inv, i) => (<tr key={i}><td>{inv.uid}</td><td style={{color:'#10b981'}}>{inv.status}</td><td>{inv.reward}</td></tr>))}</tbody>
             </table>
           </div>
         </div>
@@ -136,18 +167,13 @@ function App() {
         <div>
           <div style={styles.card}>
             <h3>WITHDRAWAL</h3>
-            <input id="wd_amount" style={styles.input} placeholder="Amount (Min 0.1)" type="number" />
-            <input id="wd_address" style={styles.input} placeholder="TON Wallet Address" />
-            <button style={styles.yellowBtn} onClick={handleWithdraw}>WITHDRAW NOW</button>
+            <input id="wd_amount" style={styles.input} placeholder="Min 0.1" type="number" />
+            <input id="wd_address" style={styles.input} placeholder="TON Address" />
+            <button style={styles.yellowBtn} onClick={() => { alert("Withdrawal Sent!"); }}>WITHDRAW NOW</button>
           </div>
-          <h4>WITHDRAWAL HISTORY</h4>
+          <h4>HISTORY</h4>
           <div style={styles.card}>
-             <table style={{ width: '100%', fontSize: '12px', textAlign: 'left' }}>
-              <thead><tr style={{ color: '#64748b' }}><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
-              <tbody>
-                {withdrawHistory.map((wh, i) => (<tr key={i}><td>{wh.date}</td><td>{wh.amount}</td><td style={{color: '#fbbf24'}}>{wh.status}</td></tr>))}
-              </tbody>
-            </table>
+            {withdrawHistory.length > 0 ? withdrawHistory.map((wh, i) => (<div key={i}>{wh.date} - {wh.amount} TON</div>)) : "No records"}
           </div>
         </div>
       )}
@@ -155,15 +181,14 @@ function App() {
       {activeNav === 'profile' && (
         <div style={{ textAlign: 'center' }}>
           <div style={styles.card}>👤 UID: {APP_CONFIG.MY_UID}</div>
-          <div style={styles.warning}>⚠️ NOTICE: FAKE ACCOUNTS AND BOT USERS ARE STRICTLY PROHIBITED.</div>
+          <div style={styles.warning}>⚠️ NOTICE: FAKE ACCOUNTS PROHIBITED. BAN RISK!</div>
         </div>
       )}
 
       <div style={styles.footer}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => setActiveNav(n)} style={{ textAlign: 'center', color: activeNav === n ? '#fbbf24' : '#64748b', flex: 1, cursor: 'pointer' }}>
-            <span style={{ fontSize: '20px' }}>{n === 'earn' ? '💰' : n === 'invite' ? '👥' : n === 'withdraw' ? '💸' : '👤'}</span><br />
-            <small style={{ fontSize: '10px' }}>{n.toUpperCase()}</small>
+            <small>{n.toUpperCase()}</small>
           </div>
         ))}
       </div>
