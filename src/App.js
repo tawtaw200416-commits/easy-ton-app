@@ -49,23 +49,23 @@ function App() {
     window.open(link, '_blank');
     const btn = document.getElementById(`btn-${id}`);
     if (btn) {
-      btn.innerText = "VERIFYING...";
+      btn.innerText = "VERIFY TASK";
       btn.style.backgroundColor = "#10b981";
-      setTimeout(() => {
+      btn.onclick = () => {
         if (window.Adsgram) {
           window.Adsgram.init({ blockId: adsBlockId }).show().then(() => {
             setBalance(p => p + 0.0005);
             setCompleted(p => [...p, id]);
-            alert("Reward Added!");
+            alert("Reward 0.0005 TON Added!");
           });
         }
-      }, 1000);
+      };
     }
   };
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    alert("Copied to clipboard!");
+    alert("Copied!");
   };
 
   const styles = {
@@ -73,6 +73,7 @@ function App() {
     card: { backgroundColor: '#1e293b', padding: '15px', borderRadius: '15px', marginBottom: '8px', border: '1px solid #334155' },
     yellowBtn: { width: '100%', padding: '12px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
     input: { width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '10px', boxSizing: 'border-box' },
+    copyBox: { background: 'rgba(251,191,36,0.1)', padding: '12px', borderRadius: '10px', border: '1px solid #fbbf24', textAlign: 'center', cursor: 'pointer', marginBottom: '10px' },
     footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b', borderTop: '1px solid #334155' }
   };
 
@@ -104,47 +105,46 @@ function App() {
                 <div key={s.id} style={styles.card}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{s.name}</span>
-                    <button id={`btn-${s.id}`} onClick={() => handleAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '80px', padding: '8px' }}>JOIN</button>
+                    <button id={`btn-${s.id}`} onClick={() => handleAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '85px', padding: '8px' }}>JOIN</button>
                   </div>
                 </div>
               ))}
-              {/* ခလုတ်ကို list တွေနဲ့ ကပ်လျက်ဖြစ်အောင် ထည့်ထားပါတယ် */}
               <button style={{ ...styles.yellowBtn, marginTop: '2px' }} onClick={() => setSocialView('add')}>+ ADD TASK</button>
             </div>
           )}
 
           {activeTab === 'social' && socialView === 'add' && (
             <div style={styles.card}>
-              <h3 style={{ marginTop: 0, color: '#fbbf24' }}>Create New Task</h3>
+              <h3 style={{ marginTop: 0, color: '#fbbf24' }}>Add New Task</h3>
               <input style={styles.input} placeholder="Task Name" />
-              <input style={styles.input} placeholder="Link (https://t.me/...)" />
+              <input style={styles.input} placeholder="Telegram Link" />
               <select style={styles.input}>
                 <option>100 Views - 0.2 TON</option>
                 <option>200 Views - 0.4 TON</option>
                 <option>300 Views - 0.5 TON</option>
               </select>
-              <div style={{ background: '#0f172a', padding: '15px', borderRadius: '12px', fontSize: '12px', marginBottom: '15px', border: '1px dashed #fbbf24' }}>
-                <p style={{ margin: '0 0 8px 0', color: '#94a3b8' }}>Transfer TON to Address:</p>
-                <div onClick={() => copyToClipboard(adminWallet)} style={{ color: '#fbbf24', wordBreak: 'break-all', fontWeight: 'bold', cursor: 'pointer', background: 'rgba(251,191,36,0.1)', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
-                  {adminWallet} <br/> <small style={{color: '#94a3b8'}}>(Click to Copy Address)</small>
-                </div>
-                
-                <p style={{ margin: '15px 0 8px 0', color: '#94a3b8' }}>Required MEMO:</p>
-                <div onClick={() => copyToClipboard(userUID)} style={{ color: '#fbbf24', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', background: 'rgba(251,191,36,0.1)', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
-                  {userUID} <br/> <small style={{color: '#94a3b8', fontSize: '10px'}}>(Click to Copy MEMO)</small>
-                </div>
+              
+              <div style={styles.copyBox} onClick={() => copyToClipboard(adminWallet)}>
+                <small style={{color: '#94a3b8'}}>TON Address (Click to Copy)</small><br/>
+                <span style={{fontWeight: 'bold', fontSize: '13px'}}>{adminWallet.slice(0,20)}...</span>
               </div>
-              <button style={styles.yellowBtn} onClick={() => {alert("Task submitted to Admin!"); setSocialView('list')}}>CONFIRM PAYMENT</button>
-              <button style={{ ...styles.yellowBtn, background: 'none', color: 'white', marginTop: '5px' }} onClick={() => setSocialView('list')}>Back</button>
+
+              <div style={styles.copyBox} onClick={() => copyToClipboard(userUID)}>
+                <small style={{color: '#94a3b8'}}>MEMO / UID (Click to Copy)</small><br/>
+                <span style={{fontWeight: 'bold', fontSize: '20px', color: '#fbbf24'}}>{userUID}</span>
+              </div>
+
+              <button style={styles.yellowBtn} onClick={() => {alert("Submitted!"); setSocialView('list')}}>CONFIRM PAYMENT</button>
+              <p style={{textAlign:'center', marginTop:'10px', cursor:'pointer'}} onClick={()=>setSocialView('list')}>Back</p>
             </div>
           )}
 
           {activeTab === 'reward' && (
             <div style={styles.card}>
-              <h4 style={{ marginTop: 0 }}>GIFT CODE</h4>
-              {isClaimed ? <p style={{ color: '#10b981', textAlign: 'center' }}>ALREADY CLAIMED</p> : (
+              <h4>DAILY GIFT CODE</h4>
+              {isClaimed ? <p style={{ color: '#10b981', textAlign: 'center' }}>CLAIMED ✅</p> : (
                 <>
-                  <input id="gift" type="password" style={styles.input} placeholder="Enter secret code" />
+                  <input id="gift" type="password" style={styles.input} placeholder="Enter Code" />
                   <button onClick={() => {if(document.getElementById('gift').value==="GIFT77"){setBalance(b=>b+0.01);setIsClaimed(true);alert("Success!")}}} style={styles.yellowBtn}>CLAIM</button>
                 </>
               )}
@@ -157,15 +157,12 @@ function App() {
         <div style={{ textAlign: 'center' }}>
           <div style={styles.card}>
             <h2 style={{ color: '#fbbf24', marginBottom: '10px' }}>INVITE FRIENDS</h2>
-            <p>Earn <b style={{ color: '#fbbf24' }}>0.0005 TON</b> per user</p>
-            <p style={{ color: '#10b981', fontWeight: 'bold' }}>+ 10% LIFETIME COMMISSION</p>
-            <div onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={{ ...styles.input, color: '#fbbf24', fontSize: '12px', marginTop: '15px', wordBreak: 'break-all', cursor: 'pointer' }}>
+            <p>Reward: <b style={{ color: '#fbbf24' }}>0.0005 TON</b></p>
+            <p style={{ color: '#10b981', fontWeight: 'bold' }}>+ 10% COMMISSION</p>
+            <div onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={{ ...styles.input, color: '#fbbf24', fontSize: '12px', marginTop: '15px', cursor: 'pointer' }}>
                 https://t.me/YourBot?start={userUID}
             </div>
-            <button onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={{...styles.yellowBtn, marginTop: '10px'}}>COPY REFER LINK</button>
-          </div>
-          <div style={styles.card}>
-            <p>Total Invited: <b style={{ color: '#fbbf24' }}>0 Users</b></p>
+            <button onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={{...styles.yellowBtn, marginTop: '10px'}}>COPY LINK</button>
           </div>
         </div>
       )}
@@ -178,11 +175,11 @@ function App() {
             <input style={styles.input} placeholder="Wallet Address" />
             <button style={styles.yellowBtn} onClick={() => alert("Insufficient Balance")}>WITHDRAW NOW</button>
           </div>
-          <h4>HISTORY</h4>
           <div style={styles.card}>
+            <h4>HISTORY</h4>
             <table style={{ width: '100%', fontSize: '12px' }}>
               <thead><tr style={{ color: '#64748b', textAlign: 'left' }}><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
-              <tbody><tr><td colSpan="3" style={{ textAlign: 'center', padding: '20px' }}>No records found</td></tr></tbody>
+              <tbody><tr><td colSpan="3" style={{ textAlign: 'center', padding: '10px' }}>No records</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -192,12 +189,12 @@ function App() {
         <div style={{ textAlign: 'center' }}>
           <div style={styles.card}>
             <div style={{ fontSize: '50px' }}>👤</div>
-            <p><b>UID:</b> {userUID}</p>
-            <p><b>Status:</b> <span style={{ color: '#fbbf24' }}>Active</span></p>
+            <p>UID: {userUID}</p>
+            <p>Status: <span style={{ color: '#fbbf24' }}>Active</span></p>
           </div>
           <div style={{ ...styles.card, border: '1px solid #ef4444', background: 'rgba(239, 68, 68, 0.1)' }}>
             <p style={{ color: '#ef4444', fontSize: '12px', fontWeight: 'bold' }}>
-              ⚠️ WARNING: Fake accounts or multiple referrals are strictly banned. All VIP status and balance will be forfeited if caught.
+              ⚠️ WARNING: NO SCREENSHOT REQUIRED. Fake accounts or multiple registrations will be banned instantly.
             </p>
           </div>
         </div>
