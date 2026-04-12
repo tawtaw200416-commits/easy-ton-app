@@ -22,7 +22,7 @@ function App() {
     localStorage.setItem('wd_hist', JSON.stringify(withdrawHistory));
   }, [balance, completed, withdrawHistory]);
 
-  // ✅ Withdraw 24 Hours Success System
+  // ✅ Withdraw 24 Hours Auto-Success System
   useEffect(() => {
     const timer = setInterval(() => {
       const now = Date.now();
@@ -35,11 +35,10 @@ function App() {
       if (JSON.stringify(updatedHistory) !== JSON.stringify(withdrawHistory)) {
         setWithdrawHistory(updatedHistory);
       }
-    }, 60000);
+    }, 30000);
     return () => clearInterval(timer);
   }, [withdrawHistory]);
 
-  // ✅ All Bot Tasks (6)
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -49,11 +48,10 @@ function App() {
     { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
   ];
 
-  // ✅ All Social Tasks (14)
   const socialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-    { id: 's3', name: "@cryptogold_online", link: "https://t.me/cryptogold_online_official" },
+    { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" },
     { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
     { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
     { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
@@ -77,30 +75,20 @@ function App() {
     }
   };
 
-  const handleWithdraw = () => {
-    const amt = Number(withdrawAmount);
-    if (amt >= 0.1 && balance >= amt) {
-      const newWD = {
-        id: Math.random().toString(36).substr(2, 9),
-        timestamp: Date.now(),
-        date: new Date().toLocaleString(),
-        amount: amt.toFixed(4),
-        status: "Pending"
-      };
-      setBalance(prev => prev - amt);
-      setWithdrawHistory([newWD, ...withdrawHistory]);
-      setWithdrawAmount('');
-      alert("Withdraw Request Submitted!");
-    }
+  const handleCopy = (text, label) => {
+    navigator.clipboard.writeText(text).then(() => alert(`${label} Copied!`));
   };
 
   const styles = {
     main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     card: { backgroundColor: '#1e293b', padding: '18px', borderRadius: '20px', marginBottom: '12px', border: '1px solid #334155' },
     yellowBtn: { width: '100%', padding: '15px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', fontSize: '15px' },
-    input: { width: '100%', padding: '14px', borderRadius: '12px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '12px', boxSizing: 'border-box', fontWeight: '900' },
+    input: { width: '100%', padding: '14px', borderRadius: '12px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '12px', boxSizing: 'border-box', fontWeight: '900', fontSize: '15px' },
+    copyBox: { background: '#0f172a', padding: '12px', borderRadius: '12px', border: '1px dashed #fbbf24', marginBottom: '12px' },
+    copyLabel: { fontSize: '11px', fontWeight: '900', color: '#94a3b8', marginBottom: '5px', display: 'block' },
+    copyValue: { fontSize: '12px', fontWeight: '900', color: '#fbbf24', wordBreak: 'break-all' },
     navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#1e293b', borderTop: '2px solid #fbbf24', padding: '10px 0' },
-    navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#fbbf24' : '#94a3b8', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }),
+    navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#fbbf24' : '#94a3b8', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }),
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #334155' }
   };
 
@@ -157,11 +145,20 @@ function App() {
                   <option>200 Views - 0.4 TON</option>
                   <option>300 Views - 0.5 TON</option>
                 </select>
-                <div style={{background: '#0f172a', padding: '15px', borderRadius: '12px', border: '1px dashed #fbbf24', marginBottom: '15px'}}>
-                  <p style={{fontSize: '11px', fontWeight: '900'}}>TON ADDRESS:</p>
-                  <p style={{fontSize: '10px', wordBreak:'break-all'}}>{APP_CONFIG.ADMIN_WALLET}</p>
-                  <p style={{fontSize: '11px', fontWeight: '900', marginTop:'10px'}}>MEMO (UID): <b style={{color:'#fbbf24'}}>{APP_CONFIG.MY_UID}</b></p>
+
+                <div style={styles.copyBox}>
+                  <div style={{marginBottom:'15px'}}>
+                    <span style={styles.copyLabel}>SEND TON TO (ADDRESS):</span>
+                    <span style={styles.copyValue}>{APP_CONFIG.ADMIN_WALLET}</span>
+                    <button onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET, "Address")} style={{background:'#fbbf24', border:'none', padding:'6px 12px', borderRadius:'6px', fontWeight:'900', fontSize:'10px', marginTop:'8px', display:'block'}}>COPY ADDRESS</button>
+                  </div>
+                  <div>
+                    <span style={styles.copyLabel}>REQUIRED MEMO (UID):</span>
+                    <span style={styles.copyValue}>{APP_CONFIG.MY_UID}</span>
+                    <button onClick={() => handleCopy(APP_CONFIG.MY_UID, "MEMO")} style={{background:'#fbbf24', border:'none', padding:'6px 12px', borderRadius:'6px', fontWeight:'900', fontSize:'10px', marginTop:'8px', display:'block'}}>COPY MEMO</button>
+                  </div>
                 </div>
+
                 <button style={styles.yellowBtn} onClick={() => { window.open(`${APP_CONFIG.ADMIN_TELEGRAM}?text=Payment_Done_UID_${APP_CONFIG.MY_UID}`, '_blank'); setShowAddTask(false); }}>CONFIRM PAYMENT</button>
               </div>
             )}
@@ -173,7 +170,16 @@ function App() {
         <div style={styles.card}>
           <h2 style={{fontWeight:'900', color:'#fbbf24', marginTop:0}}>WITHDRAW</h2>
           <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
-          <button style={styles.yellowBtn} onClick={handleWithdraw}>WITHDRAW NOW</button>
+          <button style={styles.yellowBtn} onClick={() => {
+             const amt = Number(withdrawAmount);
+             if (amt >= 0.1 && balance >= amt) {
+               const newWD = { id: Math.random().toString(36).substr(2, 9), timestamp: Date.now(), date: new Date().toLocaleString(), amount: amt.toFixed(4), status: "Pending" };
+               setBalance(prev => prev - amt);
+               setWithdrawHistory([newWD, ...withdrawHistory]);
+               setWithdrawAmount('');
+               alert("Withdraw Request Submitted!");
+             } else { alert("Minimum 0.1 TON required!"); }
+          }}>WITHDRAW NOW</button>
           
           <h4 style={{marginTop:'30px', fontWeight:'900', borderTop:'1px solid #334155', paddingTop:'15px'}}>WITHDRAW HISTORY</h4>
           {withdrawHistory.map(w => (
@@ -192,7 +198,7 @@ function App() {
           <p style={{fontWeight:'900', color:'#94a3b8'}}>Invite link and earn 10% from friend's tasks!</p>
           <div style={{...styles.input, padding:'15px', fontSize:'12px'}}>{`https://t.me/YourBot?start=${APP_CONFIG.MY_UID}`}</div>
           <button style={styles.yellowBtn} onClick={() => alert("Link Copied!")}>COPY INVITE LINK</button>
-
+          
           <h4 style={{marginTop:'25px', fontWeight:'900', borderTop:'1px solid #334155', paddingTop:'15px'}}>INVITE HISTORY</h4>
           <div style={{...styles.row, fontWeight:'900', fontSize:'13px'}}>
             <span style={{color:'#94a3b8'}}>Friend Reward</span>
