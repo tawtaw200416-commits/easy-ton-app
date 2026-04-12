@@ -4,6 +4,7 @@ function App() {
   const [userUID] = useState("1793453606");
   const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_balance')) || 0.0000);
   const [completedTasks, setCompletedTasks] = useState(() => JSON.parse(localStorage.getItem('completed_tasks')) || []);
+  const [rewardClaimed, setRewardClaimed] = useState(() => localStorage.getItem('reward_claimed') === 'true');
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [showAddTaskMenu, setShowAddTaskMenu] = useState(false);
@@ -13,7 +14,8 @@ function App() {
   useEffect(() => {
     localStorage.setItem('ton_balance', balance.toString());
     localStorage.setItem('completed_tasks', JSON.stringify(completedTasks));
-  }, [balance, completedTasks]);
+    localStorage.setItem('reward_claimed', rewardClaimed);
+  }, [balance, completedTasks, rewardClaimed]);
 
   const handleShowAd = (taskId) => {
     if (window.Adsgram) {
@@ -31,7 +33,22 @@ function App() {
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    alert("Link Copied!");
+    alert("Copied to clipboard!");
+  };
+
+  const claimRewardCode = (code) => {
+    if (rewardClaimed) {
+      alert("You have already claimed this reward!");
+      return;
+    }
+    // ဒီမှာ မိတ်ဆွေ ပေးချင်တဲ့ Code ကို သတ်မှတ်ပါ (ဥပမာ: GIFT77)
+    if (code.toUpperCase() === "GIFT77") {
+      setBalance(prev => prev + 0.005); // Reward အနေနဲ့ 0.005 ပေးမယ်ဆိုပါစို့
+      setRewardClaimed(true);
+      alert("Congratulations! 0.005 TON rewarded.");
+    } else {
+      alert("Invalid Reward Code!");
+    }
   };
 
   const botTasks = [
@@ -42,13 +59,6 @@ function App() {
     { id: 'b5', name: "TON DRAGON BOT", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
     { id: 'b6', name: "POBUZZ BOT", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
   ];
-
-  const socialTasks = [
-    "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", "@M9460",
-    "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO",
-    "@kombo_crypta", "@easytonfree", "@WORLDBESTCRYTO1", "@MONEYHUB9_69",
-    "@zrbtua", "@perviu1million"
-  ].map((ch, i) => ({ id: `s${i}`, name: ch, link: `https://t.me/${ch.replace('@','')}` }));
 
   const styles = {
     container: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '100px', fontFamily: 'sans-serif' },
@@ -61,7 +71,7 @@ function App() {
 
   return (
     <div style={styles.container}>
-      {/* Balance Display */}
+      {/* Balance */}
       <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px' }}>
         <small style={{ color: '#94a3b8' }}>TOTAL BALANCE</small>
         <h1 style={{ color: '#fbbf24', fontSize: '36px', margin: '5px 0' }}>{balance.toFixed(4)} TON</h1>
@@ -70,129 +80,61 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
-            <button style={styles.tabBtn(activeTab === 'bot')} onClick={() => {setActiveTab('bot'); setShowAddTaskMenu(false)}}>START BOT</button>
-            <button style={styles.tabBtn(activeTab === 'reward')} onClick={() => {setActiveTab('reward'); setShowAddTaskMenu(false)}}>REWARD</button>
-            <button style={styles.tabBtn(activeTab === 'social')} onClick={() => {setActiveTab('social'); setShowAddTaskMenu(false)}}>SOCIAL</button>
+            <button style={styles.tabBtn(activeTab === 'bot')} onClick={() => setActiveTab('bot')}>START BOT</button>
+            <button style={styles.tabBtn(activeTab === 'reward')} onClick={() => setActiveTab('reward')}>REWARD</button>
+            <button style={styles.tabBtn(activeTab === 'social')} onClick={() => setActiveTab('social')}>SOCIAL</button>
           </div>
 
-          {/* Reward Tab with Input Code */}
-          {activeTab === 'reward' && (
-            <div style={styles.card}>
-              <h4 style={{ marginTop: 0 }}>ENTER REWARD CODE</h4>
-              <input style={styles.input} type="text" placeholder="Enter code here..." />
-              <button style={styles.btnYellow} onClick={() => alert("Invalid Code!")}>CLAIM NOW</button>
-            </div>
-          )}
-
-          {/* Start Bot Tab with Copy Feature */}
-          {activeTab === 'bot' && botTasks.filter(t => !completedTasks.includes(t.id)).map(t => (
+          {/* Start Bot with COPY Link */}
+          {activeTab === 'bot' && botTasks.map(t => (
             <div key={t.id} style={styles.card}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{t.name}</span>
-                <button onClick={() => copyToClipboard(t.link)} style={{ background: '#334155', color: '#fbbf24', border: 'none', padding: '4px 8px', borderRadius: '5px', fontSize: '10px' }}>COPY LINK</button>
+                <button onClick={() => copyToClipboard(t.link)} style={{ background: '#334155', color: '#fbbf24', border: 'none', padding: '5px 10px', borderRadius: '5px', fontSize: '10px' }}>COPY</button>
               </div>
-              {checking === t.id ? (
-                <button onClick={() => handleShowAd(t.id)} style={{ ...styles.btnYellow, backgroundColor: '#10b981', color: '#fff' }}>CHECK</button>
-              ) : (
-                <button onClick={() => { window.open(t.link, '_blank'); setChecking(t.id); }} style={styles.btnYellow}>START</button>
+              <button onClick={() => { window.open(t.link, '_blank'); setChecking(t.id); }} style={styles.btnYellow}>START BOT</button>
+              {checking === t.id && (
+                <button onClick={() => handleShowAd(t.id)} style={{ ...styles.btnYellow, backgroundColor: '#10b981', color: '#fff', marginTop: '10px' }}>CHECK TASK</button>
               )}
             </div>
           ))}
 
-          {/* Social Tab */}
-          {activeTab === 'social' && !showAddTaskMenu && (
-            <>
-              <button style={{ ...styles.btnYellow, marginBottom: '15px' }} onClick={() => setShowAddTaskMenu(true)}>+ ADD TASK</button>
-              {socialTasks.filter(t => !completedTasks.includes(t.id)).map(t => (
-                <div key={t.id} style={{ ...styles.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{t.name}</span>
-                  {checking === t.id ? (
-                    <button onClick={() => handleShowAd(t.id)} style={{ backgroundColor: '#10b981', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '8px', fontWeight: 'bold' }}>CHECK</button>
-                  ) : (
-                    <button onClick={() => { window.open(t.link, '_blank'); setChecking(t.id); }} style={{ backgroundColor: '#fbbf24', border: 'none', padding: '8px 12px', borderRadius: '8px', fontWeight: 'bold' }}>START</button>
-                  )}
-                </div>
-              ))}
-            </>
+          {/* Reward Tab (Single Use Code) */}
+          {activeTab === 'reward' && (
+            <div style={styles.card}>
+              <h4 style={{ marginTop: 0 }}>DAILY REWARD CODE</h4>
+              {rewardClaimed ? (
+                <p style={{ color: '#10b981', textAlign: 'center' }}>✅ Code already claimed!</p>
+              ) : (
+                <>
+                  <input id="rewardInput" style={styles.input} type="text" placeholder="Enter code (e.g. GIFT77)" />
+                  <button 
+                    style={styles.btnYellow} 
+                    onClick={() => claimRewardCode(document.getElementById('rewardInput').value)}
+                  >
+                    CLAIM REWARD
+                  </button>
+                </>
+              )}
+              <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '10px' }}>* You can claim a reward code only once.</p>
+            </div>
           )}
 
-          {/* Add Task Menus (Same as previous) */}
-          {activeTab === 'social' && showAddTaskMenu && (
-            <div style={styles.card}>
-              {!showForm ? (
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button style={styles.btnYellow} onClick={() => setShowForm('add')}>ADD TASK</button>
-                  <button style={{ ...styles.btnYellow, backgroundColor: '#334155', color: '#fff' }} onClick={() => setShowForm('my')}>MY TASK</button>
-                </div>
-              ) : showForm === 'add' ? (
-                <div>
-                  <h4 style={{ textAlign: 'center' }}>CREATE TASK</h4>
-                  <input style={styles.input} placeholder="Task Name" />
-                  <input style={styles.input} placeholder="Telegram Link" />
-                  <select style={styles.input}>
-                    <option>100 Views - 0.2 TON</option>
-                    <option>200 Views - 0.4 TON</option>
-                    <option>300 Views - 0.5 TON</option>
-                  </select>
-                  <p style={{ fontSize: '10px', color: '#fbbf24' }}>Send to: UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9</p>
-                  <p style={{ fontSize: '10px' }}>MEMO: {userUID}</p>
-                  <button style={styles.btnYellow} onClick={() => {alert("Submitted!"); setShowForm(null); setShowAddTaskMenu(false)}}>SUBMIT</button>
-                </div>
-              ) : (
-                <div>
-                  <h4>MY TASKS</h4>
-                  <p style={{ fontSize: '12px', color: '#94a3b8' }}>No tasks found.</p>
-                  <button style={styles.btnYellow} onClick={() => setShowForm(null)}>BACK</button>
-                </div>
-              )}
+          {/* Social Tab (Same logic) */}
+          {activeTab === 'social' && (
+            <div style={{ textAlign: 'center' }}>
+               <button style={styles.btnYellow} onClick={() => alert("Social tasks coming soon!")}>+ ADD TASK</button>
             </div>
           )}
         </>
       )}
 
-      {/* Other Navigation Panels (Invite, Withdraw, Profile) */}
-      {activeNav === 'invite' && (
-        <div style={{ padding: '10px' }}>
-          <div style={{ ...styles.card, textAlign: 'center' }}>
-            <h2>INVITE</h2>
-            <p>0.0005 TON per refer</p>
-            <div style={{ background: '#0f172a', padding: '10px', borderRadius: '10px', fontSize: '11px', color: '#fbbf24' }}>https://t.me/YourBot?start={userUID}</div>
-            <button style={{ ...styles.btnYellow, marginTop: '10px' }} onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)}>COPY LINK</button>
-          </div>
-          <h3>HISTORY</h3>
-          <div style={styles.card}>Total: 0 invited</div>
-        </div>
-      )}
-
-      {activeNav === 'history' && (
-        <div style={{ padding: '10px' }}>
-          <h3>WITHDRAW</h3>
-          <div style={styles.card}>
-            <input style={styles.input} placeholder="Amount" />
-            <input style={styles.input} placeholder="Address" />
-            <button style={styles.btnYellow}>WITHDRAW</button>
-          </div>
-          <h3>HISTORY</h3>
-          <p style={{ color: '#94a3b8' }}>No history.</p>
-        </div>
-      )}
-
-      {activeNav === 'profile' && (
-        <div style={{ textAlign: 'center', padding: '20px' }}>
-          <h3>UID: {userUID}</h3>
-          <div style={{ border: '1px solid #ef4444', padding: '15px', borderRadius: '15px', marginTop: '20px' }}>
-            <h4 style={{ color: '#ef4444' }}>WARNING</h4>
-            <p style={{ fontSize: '12px' }}>Fake accounts or scripts = PERMANENT BAN.</p>
-          </div>
-        </div>
-      )}
-
       {/* Footer Nav */}
       <div style={styles.footer}>
-        <div onClick={() => setActiveNav('earn')} style={{ textAlign: 'center', color: activeNav === 'earn' ? '#fbbf24' : '#64748b', cursor: 'pointer' }}>💰<br/><small>EARN</small></div>
-        <div onClick={() => setActiveNav('invite')} style={{ textAlign: 'center', color: activeNav === 'invite' ? '#fbbf24' : '#64748b', cursor: 'pointer' }}>👥<br/><small>INVITE</small></div>
-        <div onClick={() => setActiveNav('history')} style={{ textAlign: 'center', color: activeNav === 'history' ? '#fbbf24' : '#64748b', cursor: 'pointer' }}>💸<br/><small>WITHDRAW</small></div>
-        <div onClick={() => setActiveNav('profile')} style={{ textAlign: 'center', color: activeNav === 'profile' ? '#fbbf24' : '#64748b', cursor: 'pointer' }}>👤<br/><small>PROFILE</small></div>
+        <div onClick={() => setActiveNav('earn')} style={{ textAlign: 'center', color: activeNav === 'earn' ? '#fbbf24' : '#64748b' }}>💰<br/><small>EARN</small></div>
+        <div onClick={() => setActiveNav('invite')} style={{ textAlign: 'center', color: activeNav === 'invite' ? '#fbbf24' : '#64748b' }}>👥<br/><small>INVITE</small></div>
+        <div onClick={() => setActiveNav('history')} style={{ textAlign: 'center', color: activeNav === 'history' ? '#fbbf24' : '#64748b' }}>💸<br/><small>WITHDRAW</small></div>
+        <div onClick={() => setActiveNav('profile')} style={{ textAlign: 'center', color: activeNav === 'profile' ? '#fbbf24' : '#64748b' }}>👤<br/><small>PROFILE</small></div>
       </div>
     </div>
   );
