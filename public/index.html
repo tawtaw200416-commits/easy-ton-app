@@ -1,31 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <meta name="theme-color" content="#020617" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TON Reward App</title>
-    
     <script src="https://adsgram.ai/sdk-v1.js"></script>
-    
     <style>
-      body {
-        margin: 0;
-        padding: 0;
-        background-color: #020617;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      }
-      /* Prevent text selection to feel like a real App */
-      * {
-        -webkit-tap-highlight-color: transparent;
-        user-select: none;
-      }
+        :root { --primary: #fbbf24; --bg: #020617; --card: #1e293b; --text: #ffffff; --muted: #94a3b8; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; padding-bottom: 80px; }
+        .container { padding: 15px; }
+        .header { text-align: center; border: 1px solid var(--primary); padding: 20px; border-radius: 20px; margin-bottom: 20px; }
+        .balance { font-size: 36px; color: var(--primary); margin: 5px 0; }
+        
+        /* Tabs */
+        .tabs { display: flex; gap: 8px; margin-bottom: 15px; }
+        .tab-btn { flex: 1; padding: 12px; border-radius: 10px; border: none; background: var(--card); color: white; font-weight: bold; font-size: 11px; cursor: pointer; }
+        .tab-btn.active { background: var(--primary); color: black; }
+
+        /* Card & List */
+        .card { background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 10px; border: 1px solid #334155; }
+        .item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .btn-yellow { width: 100%; padding: 12px; border-radius: 10px; background: var(--primary); border: none; font-weight: bold; cursor: pointer; color: black; }
+        .btn-copy { background: #334155; color: var(--primary); border: none; padding: 4px 8px; border-radius: 5px; font-size: 10px; cursor: pointer; }
+        
+        /* Form Inputs */
+        input, select { width: 100%; padding: 12px; border-radius: 10px; background: #0f172a; color: white; border: 1px solid #334155; margin-bottom: 10px; box-sizing: border-box; }
+        
+        /* Footer Nav */
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; padding: 12px; background: var(--card); border-top: 1px solid #334155; }
+        .nav-item { text-align: center; color: var(--muted); font-size: 11px; cursor: pointer; }
+        .nav-item.active { color: var(--primary); }
+        
+        .hidden { display: none; }
+        .warning-card { border: 1px solid #ef4444; padding: 15px; border-radius: 15px; margin-top: 20px; text-align: center; }
     </style>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    
-    <div id="root"></div>
-    
-  </body>
-</html>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <small style="color: var(--muted);">TOTAL BALANCE</small>
+        <div class="balance" id="balanceDisplay">0.0000 TON</div>
+    </div>
+
+    <div id="earnPanel">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('bot')">START BOT</button>
+            <button class="tab-btn" onclick="switchTab('reward')">REWARD</button>
+            <button class="tab-btn" onclick="switchTab('social')">SOCIAL</button>
+        </div>
+
+        <div id
