@@ -7,7 +7,7 @@ function App() {
   const [isClaimed, setIsClaimed] = useState(() => localStorage.getItem('gift_claimed') === 'true');
   
   const [activeNav, setActiveNav] = useState('earn');
-  const [activeTab, setActiveTab] = useState('social'); // Social ကို default ပြထားပေးတယ်
+  const [activeTab, setActiveTab] = useState('social');
   const [socialView, setSocialView] = useState('list');
 
   const adminWallet = "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9";
@@ -18,6 +18,15 @@ function App() {
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
     localStorage.setItem('gift_claimed', isClaimed);
   }, [balance, completed, isClaimed]);
+
+  const botTasks = [
+    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
+  ];
 
   const socialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
@@ -60,18 +69,18 @@ function App() {
   };
 
   const styles = {
-    main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '100px', fontFamily: 'sans-serif' },
+    main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '100px', fontFamily: 'sans-serif', boxSizing: 'border-box' },
     card: { backgroundColor: '#1e293b', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '1px solid #334155' },
     socialRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #334155' },
     yellowBtn: { width: '100%', padding: '12px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
     input: { width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '10px', boxSizing: 'border-box' },
     copyBox: { background: 'rgba(251,191,36,0.1)', padding: '12px', borderRadius: '10px', border: '1px solid #fbbf24', textAlign: 'center', cursor: 'pointer', marginBottom: '10px' },
-    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b', borderTop: '1px solid #334155', zIndex: 1000 }
+    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b', borderTop: '1px solid #334155', zIndex: 1000 },
+    scrollArea: { maxHeight: '300px', overflowY: 'auto', marginBottom: '10px', paddingRight: '5px' } // Scroll area ထည့်ထားတယ်
   };
 
   return (
     <div style={styles.main}>
-      {/* TOTAL BALANCE DISPLAY */}
       <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px' }}>
         <small style={{ color: '#94a3b8' }}>TOTAL BALANCE</small>
         <h1 style={{ color: '#fbbf24', margin: '5px 0' }}>{balance.toFixed(4)} TON</h1>
@@ -79,37 +88,38 @@ function App() {
 
       {activeNav === 'earn' && (
         <>
-          {/* TAB NAVIGATION */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
             {['bot', 'social', 'reward'].map(t => (
               <button key={t} onClick={() => setActiveTab(t)} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', backgroundColor: activeTab === t ? '#fbbf24' : '#1e293b', color: activeTab === t ? '#000' : '#fff', fontWeight: 'bold' }}>{t.toUpperCase()}</button>
             ))}
           </div>
 
-          {/* SOCIAL VIEW SECTION */}
+          {activeTab === 'bot' && botTasks.filter(t => !completed.includes(t.id)).map(b => (
+            <div key={b.id} style={styles.card}>
+              <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>{b.name}</p>
+              <button id={`btn-${b.id}`} onClick={() => handleAction(b.id, b.link)} style={styles.yellowBtn}>START BOT</button>
+            </div>
+          ))}
+
           {activeTab === 'social' && socialView === 'list' && (
             <div style={styles.card}>
-              {/* Task list inside card */}
-              <div style={{ marginBottom: '15px' }}>
+              {/* Task list inside scrollable area */}
+              <div style={styles.scrollArea}>
                 {socialTasks.filter(t => !completed.includes(t.id)).map((s, index, array) => (
                   <div key={s.id} style={{ ...styles.socialRow, borderBottom: index === array.length - 1 ? 'none' : '1px solid #334155' }}>
                     <span style={{ fontSize: '14px' }}>{s.name}</span>
                     <button id={`btn-${s.id}`} onClick={() => handleAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '80px', padding: '8px', fontSize: '11px' }}>JOIN</button>
                   </div>
                 ))}
+                {socialTasks.filter(t => !completed.includes(t.id)).length === 0 && <p style={{textAlign:'center', color:'#94a3b8'}}>No tasks left</p>}
               </div>
 
-              {/* + ADD TASK - inside the same card boundary */}
-              <button 
-                style={styles.yellowBtn} 
-                onClick={() => setSocialView('add')}
-              >
+              <button style={styles.yellowBtn} onClick={() => setSocialView('add')}>
                 + ADD TASK
               </button>
             </div>
           )}
 
-          {/* ADD TASK FORM */}
           {activeTab === 'social' && socialView === 'add' && (
             <div style={styles.card}>
               <h3 style={{ marginTop: 0, color: '#fbbf24' }}>Add New Task</h3>
@@ -121,7 +131,7 @@ function App() {
                 <option>300 Views - 0.5 TON</option>
               </select>
               <div style={styles.copyBox} onClick={() => copyToClipboard(adminWallet)}>
-                <small style={{color: '#94a3b8'}}>TON Address (Click to Copy)</small><br/>
+                <small style={{color: '#94a3b8'}}>Address (Click to Copy)</small><br/>
                 <span style={{fontWeight: 'bold', fontSize: '12px'}}>{adminWallet.slice(0,25)}...</span>
               </div>
               <div style={styles.copyBox} onClick={() => copyToClipboard(userUID)}>
@@ -129,20 +139,55 @@ function App() {
                 <span style={{fontWeight: 'bold', fontSize: '20px', color: '#fbbf24'}}>{userUID}</span>
               </div>
               <button style={styles.yellowBtn} onClick={() => {alert("Submitted!"); setSocialView('list')}}>CONFIRM PAYMENT</button>
-              <p style={{textAlign:'center', marginTop:'15px', cursor:'pointer', color: '#94a3b8'}} onClick={()=>setSocialView('list')}>Back</p>
+              <p style={{textAlign:'center', marginTop:'15px', cursor:'pointer', color: '#94a3b8'}} onClick={()=>setSocialView('list')}>Back to list</p>
             </div>
           )}
 
-          {/* BOT TAB & REWARD TAB ... */}
-          {activeTab === 'bot' && (
-            <div>
-              {/* Other bot logic... */}
+          {activeTab === 'reward' && (
+            <div style={styles.card}>
+              <h4>DAILY GIFT CODE</h4>
+              {isClaimed ? <p style={{ color: '#10b981', textAlign: 'center' }}>CLAIMED ✅</p> : (
+                <>
+                  <input id="gift" type="password" style={styles.input} placeholder="Enter Code" />
+                  <button onClick={() => {if(document.getElementById('gift').value==="GIFT77"){setBalance(b=>b+0.01);setIsClaimed(true);alert("Success!")}}} style={styles.yellowBtn}>CLAIM</button>
+                </>
+              )}
             </div>
           )}
         </>
       )}
 
-      {/* FOOTER */}
+      {activeNav === 'invite' && (
+        <div style={{ textAlign: 'center' }}>
+          <div style={styles.card}>
+            <h2 style={{ color: '#fbbf24' }}>INVITE FRIENDS</h2>
+            <div onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={{ ...styles.input, color: '#fbbf24', fontSize: '12px', marginTop: '15px', cursor: 'pointer' }}>
+                https://t.me/YourBot?start={userUID}
+            </div>
+            <button onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={{...styles.yellowBtn, marginTop: '10px'}}>COPY LINK</button>
+          </div>
+        </div>
+      )}
+
+      {activeNav === 'withdraw' && (
+        <div>
+          <div style={styles.card}>
+            <h3>WITHDRAW</h3>
+            <input style={styles.input} placeholder="Wallet Address" />
+            <button style={styles.yellowBtn} onClick={() => alert("Insufficient Balance")}>WITHDRAW NOW</button>
+          </div>
+        </div>
+      )}
+
+      {activeNav === 'profile' && (
+        <div style={{ textAlign: 'center' }}>
+          <div style={styles.card}>
+            <p>UID: {userUID}</p>
+            <p>Status: <span style={{ color: '#fbbf24' }}>Active</span></p>
+          </div>
+        </div>
+      )}
+
       <div style={styles.footer}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => setActiveNav(n)} style={{ textAlign: 'center', color: activeNav === n ? '#fbbf24' : '#64748b', flex: 1, cursor: 'pointer' }}>
