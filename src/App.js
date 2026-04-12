@@ -63,6 +63,11 @@ function App() {
     }
   };
 
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    alert("Copied to clipboard!");
+  };
+
   const styles = {
     main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '90px', fontFamily: 'sans-serif' },
     card: { backgroundColor: '#1e293b', padding: '15px', borderRadius: '15px', marginBottom: '8px', border: '1px solid #334155' },
@@ -103,7 +108,8 @@ function App() {
                   </div>
                 </div>
               ))}
-              <button style={{ ...styles.yellowBtn, marginTop: '5px' }} onClick={() => setSocialView('add')}>+ ADD TASK</button>
+              {/* ခလုတ်ကို list တွေနဲ့ ကပ်လျက်ဖြစ်အောင် ထည့်ထားပါတယ် */}
+              <button style={{ ...styles.yellowBtn, marginTop: '2px' }} onClick={() => setSocialView('add')}>+ ADD TASK</button>
             </div>
           )}
 
@@ -117,10 +123,16 @@ function App() {
                 <option>200 Views - 0.4 TON</option>
                 <option>300 Views - 0.5 TON</option>
               </select>
-              <div style={{ background: '#0f172a', padding: '12px', borderRadius: '10px', fontSize: '11px', marginBottom: '10px', border: '1px dashed #fbbf24' }}>
-                <p style={{ margin: '0 0 5px 0' }}>Transfer TON to Address below:</p>
-                <p style={{ color: '#fbbf24', wordBreak: 'break-all', fontWeight: 'bold' }}>{adminWallet}</p>
-                <p style={{ margin: '10px 0 0 0' }}>MEMO (REQUIRED): <b style={{ color: '#fbbf24', fontSize: '14px' }}>{userUID}</b></p>
+              <div style={{ background: '#0f172a', padding: '15px', borderRadius: '12px', fontSize: '12px', marginBottom: '15px', border: '1px dashed #fbbf24' }}>
+                <p style={{ margin: '0 0 8px 0', color: '#94a3b8' }}>Transfer TON to Address:</p>
+                <div onClick={() => copyToClipboard(adminWallet)} style={{ color: '#fbbf24', wordBreak: 'break-all', fontWeight: 'bold', cursor: 'pointer', background: 'rgba(251,191,36,0.1)', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                  {adminWallet} <br/> <small style={{color: '#94a3b8'}}>(Click to Copy Address)</small>
+                </div>
+                
+                <p style={{ margin: '15px 0 8px 0', color: '#94a3b8' }}>Required MEMO:</p>
+                <div onClick={() => copyToClipboard(userUID)} style={{ color: '#fbbf24', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', background: 'rgba(251,191,36,0.1)', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                  {userUID} <br/> <small style={{color: '#94a3b8', fontSize: '10px'}}>(Click to Copy MEMO)</small>
+                </div>
               </div>
               <button style={styles.yellowBtn} onClick={() => {alert("Task submitted to Admin!"); setSocialView('list')}}>CONFIRM PAYMENT</button>
               <button style={{ ...styles.yellowBtn, background: 'none', color: 'white', marginTop: '5px' }} onClick={() => setSocialView('list')}>Back</button>
@@ -147,8 +159,10 @@ function App() {
             <h2 style={{ color: '#fbbf24', marginBottom: '10px' }}>INVITE FRIENDS</h2>
             <p>Earn <b style={{ color: '#fbbf24' }}>0.0005 TON</b> per user</p>
             <p style={{ color: '#10b981', fontWeight: 'bold' }}>+ 10% LIFETIME COMMISSION</p>
-            <div style={{ ...styles.input, color: '#fbbf24', fontSize: '12px', marginTop: '15px', wordBreak: 'break-all' }}>https://t.me/YourBot?start={userUID}</div>
-            <button onClick={() => {navigator.clipboard.writeText(`https://t.me/YourBot?start=${userUID}`); alert("Copied!")}} style={styles.yellowBtn}>COPY REFER LINK</button>
+            <div onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={{ ...styles.input, color: '#fbbf24', fontSize: '12px', marginTop: '15px', wordBreak: 'break-all', cursor: 'pointer' }}>
+                https://t.me/YourBot?start={userUID}
+            </div>
+            <button onClick={() => copyToClipboard(`https://t.me/YourBot?start=${userUID}`)} style={{...styles.yellowBtn, marginTop: '10px'}}>COPY REFER LINK</button>
           </div>
           <div style={styles.card}>
             <p>Total Invited: <b style={{ color: '#fbbf24' }}>0 Users</b></p>
