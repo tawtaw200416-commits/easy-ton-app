@@ -14,10 +14,7 @@ function App() {
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('comp_tasks')) || []);
   const [isClaimed, setIsClaimed] = useState(() => localStorage.getItem('gift_claimed') === 'true');
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || []);
-  const [inviteHistory] = useState(() => JSON.parse(localStorage.getItem('inv_hist')) || [
-    { uid: "189455...", status: "Completed", reward: "0.0005" }
-  ]);
-
+  
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [socialView, setSocialView] = useState('list');
@@ -29,7 +26,6 @@ function App() {
     localStorage.setItem('wd_hist', JSON.stringify(withdrawHistory));
   }, [balance, completed, isClaimed, withdrawHistory]);
 
-  // ✅ Bot Task ၇ ခုလုံး ပြန်ထည့်ထားပါတယ်
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -40,7 +36,6 @@ function App() {
     { id: 'b7', name: "Check In Bot", link: "https://t.me/check_in_bot" }
   ];
 
-  // ✅ Social Task အကုန်ပြန်ပါပါတယ်
   const socialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
@@ -70,26 +65,32 @@ function App() {
             setBalance(prev => prev + 0.0005);
             setCompleted(prev => [...prev, id]);
             alert("Reward 0.0005 TON Added!");
-          }).catch(() => alert("Please watch the full ad."));
+          });
         }
       };
     }
   };
 
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    alert("Copied!");
+  };
+
   const styles = {
-    main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '90px', fontFamily: 'sans-serif' },
-    card: { backgroundColor: '#1e293b', padding: '15px', borderRadius: '15px', marginBottom: '8px', border: '1px solid #334155' },
-    yellowBtn: { width: '100%', padding: '12px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
-    input: { width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '10px', boxSizing: 'border-box' },
-    footer: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '12px', backgroundColor: '#1e293b', borderTop: '1px solid #334155' },
-    warning: { color: '#ef4444', fontSize: '12px', fontWeight: 'bold', border: '1px solid #ef4444', padding: '10px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.1)', marginTop: '15px' }
+    main: { backgroundColor: '#020617', color: 'white', minHeight: '100vh', padding: '15px', paddingBottom: '100px', fontFamily: 'sans-serif' },
+    card: { backgroundColor: '#1e293b', padding: '20px', borderRadius: '15px', marginBottom: '15px', border: '1px solid #334155' },
+    yellowBtn: { width: '100%', padding: '14px', backgroundColor: '#fbbf24', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
+    input: { width: '100%', padding: '12px', borderRadius: '10px', backgroundColor: '#0f172a', color: 'white', border: '1px solid #334155', marginBottom: '12px', boxSizing: 'border-box' },
+    copyBox: { background: 'rgba(251,191,36,0.1)', padding: '12px', borderRadius: '10px', border: '1px solid #fbbf24', textAlign: 'center', cursor: 'pointer', marginBottom: '10px' },
+    navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '10px', backgroundColor: '#1e293b', borderTop: '2px solid #334155', height: '70px' },
+    navItem: (active) => ({ textAlign: 'center', flex: 1, padding: '5px', borderRadius: '10px', border: active ? '1px solid #fbbf24' : '1px solid transparent', color: active ? '#fbbf24' : '#94a3b8', cursor: 'pointer', transition: '0.3s' })
   };
 
   return (
     <div style={styles.main}>
-      <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '20px', borderRadius: '20px', marginBottom: '20px' }}>
+      <div style={{ textAlign: 'center', border: '1px solid #fbbf24', padding: '25px', borderRadius: '20px', marginBottom: '25px' }}>
         <small style={{ color: '#94a3b8' }}>TOTAL BALANCE</small>
-        <h1 style={{ color: '#fbbf24' }}>{balance.toFixed(4)} TON</h1>
+        <h1 style={{ color: '#fbbf24', fontSize: '32px', margin: '5px 0' }}>{balance.toFixed(4)} TON</h1>
       </div>
 
       {activeNav === 'earn' && (
@@ -102,20 +103,19 @@ function App() {
 
           {activeTab === 'bot' && botTasks.filter(t => !completed.includes(t.id)).map(b => (
             <div key={b.id} style={styles.card}>
-              <p style={{ fontWeight: 'bold' }}>{b.name}</p>
+              <p style={{ fontWeight: 'bold', fontSize: '18px' }}>{b.name}</p>
               <button id={`btn-${b.id}`} onClick={() => handleAction(b.id, b.link)} style={styles.yellowBtn}>START BOT</button>
             </div>
           ))}
 
           {activeTab === 'social' && socialView === 'list' && (
             <>
-              {/* ✅ +ADD TASK ခလုတ် ပြန်ထည့်ထားပါတယ် */}
               <button style={{ ...styles.yellowBtn, marginBottom: '15px' }} onClick={() => setSocialView('add')}>+ ADD TASK (PROMOTE CHANNEL)</button>
               <div style={styles.card}>
                 {socialTasks.filter(t => !completed.includes(t.id)).map(s => (
                   <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #334155' }}>
-                    <span>{s.name}</span>
-                    <button id={`btn-${s.id}`} onClick={() => handleAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '85px', padding: '8px' }}>JOIN</button>
+                    <span style={{ fontSize: '15px' }}>{s.name}</span>
+                    <button id={`btn-${s.id}`} onClick={() => handleAction(s.id, s.link)} style={{ ...styles.yellowBtn, width: '90px', padding: '8px' }}>JOIN</button>
                   </div>
                 ))}
               </div>
@@ -124,11 +124,29 @@ function App() {
 
           {activeTab === 'social' && socialView === 'add' && (
             <div style={styles.card}>
-              <h3>Add New Task</h3>
+              <h3 style={{ marginTop: 0, color: '#fbbf24', textAlign: 'center' }}>Add New Task</h3>
               <input id="chan_name" style={styles.input} placeholder="Channel Name" />
               <input id="inv_link" style={styles.input} placeholder="Invite Link" />
-              <button style={styles.yellowBtn} onClick={() => { alert("Order Sent!"); setSocialView('list'); }}>CONFIRM PAYMENT</button>
-              <p style={{textAlign:'center', marginTop:'15px', cursor:'pointer'}} onClick={()=>setSocialView('list')}>Back</p>
+              
+              <label style={{fontSize: '12px', color: '#94a3b8'}}>Select Plan:</label>
+              <select id="plan_select" style={styles.input}>
+                <option value="0.2">100 Views - 0.2 TON</option>
+                <option value="0.4">200 Views - 0.4 TON</option>
+                <option value="0.5">300 Views - 0.5 TON</option>
+              </select>
+
+              <div style={styles.copyBox} onClick={() => copyToClipboard(APP_CONFIG.ADMIN_WALLET)}>
+                <small style={{ color: '#94a3b8' }}>Pay to Wallet (Copy):</small><br/>
+                <b style={{fontSize: '11px'}}>{APP_CONFIG.ADMIN_WALLET}</b>
+              </div>
+
+              <div style={styles.copyBox} onClick={() => copyToClipboard(APP_CONFIG.MY_UID)}>
+                <small style={{ color: '#94a3b8' }}>Your Memo/UID (Copy):</small><br/>
+                <b style={{fontSize: '18px', color: '#fbbf24'}}>{APP_CONFIG.MY_UID}</b>
+              </div>
+
+              <button style={styles.yellowBtn} onClick={() => { alert("Order details sent! Wait for Admin confirmation."); setSocialView('list'); }}>CONFIRM PAYMENT</button>
+              <p style={{textAlign:'center', marginTop:'15px', color: '#94a3b8', cursor: 'pointer'}} onClick={()=>setSocialView('list')}>Back</p>
             </div>
           )}
 
@@ -146,51 +164,20 @@ function App() {
         </>
       )}
 
-      {/* Invite, Withdraw, Profile Section တွေလည်း အဟောင်းအတိုင်း အကုန်ပါပါတယ်... */}
-      {activeNav === 'invite' && (
-        <div style={{ textAlign: 'center' }}>
-          <div style={styles.card}>
-            <h2>INVITE FRIENDS</h2>
-            <button onClick={() => {navigator.clipboard.writeText(`https://t.me/YourBot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}} style={styles.yellowBtn}>COPY INVITE LINK</button>
-          </div>
-          <h4 style={{textAlign:'left'}}>HISTORY</h4>
-          <div style={styles.card}>
-            <table style={{width:'100%', fontSize:'12px'}}>
-              <thead><tr style={{color:'#64748b'}}><th>User UID</th><th>Status</th><th>Reward</th></tr></thead>
-              <tbody>{inviteHistory.map((inv, i) => (<tr key={i}><td>{inv.uid}</td><td style={{color:'#10b981'}}>{inv.status}</td><td>{inv.reward}</td></tr>))}</tbody>
-            </table>
-          </div>
+      {/* Navigation Footer */}
+      <div style={styles.navBar}>
+        <div onClick={() => setActiveNav('earn')} style={styles.navItem(activeNav === 'earn')}>
+          <span style={{ fontSize: '20px' }}>💰</span><br/><small>EARN</small>
         </div>
-      )}
-
-      {activeNav === 'withdraw' && (
-        <div>
-          <div style={styles.card}>
-            <h3>WITHDRAWAL</h3>
-            <input id="wd_amount" style={styles.input} placeholder="Min 0.1" type="number" />
-            <input id="wd_address" style={styles.input} placeholder="TON Address" />
-            <button style={styles.yellowBtn} onClick={() => { alert("Withdrawal Sent!"); }}>WITHDRAW NOW</button>
-          </div>
-          <h4>HISTORY</h4>
-          <div style={styles.card}>
-            {withdrawHistory.length > 0 ? withdrawHistory.map((wh, i) => (<div key={i}>{wh.date} - {wh.amount} TON</div>)) : "No records"}
-          </div>
+        <div onClick={() => setActiveNav('invite')} style={styles.navItem(activeNav === 'invite')}>
+          <span style={{ fontSize: '20px' }}>👥</span><br/><small>INVITE</small>
         </div>
-      )}
-
-      {activeNav === 'profile' && (
-        <div style={{ textAlign: 'center' }}>
-          <div style={styles.card}>👤 UID: {APP_CONFIG.MY_UID}</div>
-          <div style={styles.warning}>⚠️ NOTICE: FAKE ACCOUNTS PROHIBITED. BAN RISK!</div>
+        <div onClick={() => setActiveNav('withdraw')} style={styles.navItem(activeNav === 'withdraw')}>
+          <span style={{ fontSize: '20px' }}>💸</span><br/><small>WITHDRAW</small>
         </div>
-      )}
-
-      <div style={styles.footer}>
-        {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => setActiveNav(n)} style={{ textAlign: 'center', color: activeNav === n ? '#fbbf24' : '#64748b', flex: 1, cursor: 'pointer' }}>
-            <small>{n.toUpperCase()}</small>
-          </div>
-        ))}
+        <div onClick={() => setActiveNav('profile')} style={styles.navItem(activeNav === 'profile')}>
+          <span style={{ fontSize: '20px' }}>👤</span><br/><small>PROFILE</small>
+        </div>
       </div>
     </div>
   );
