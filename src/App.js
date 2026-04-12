@@ -15,14 +15,37 @@ function App() {
     localStorage.setItem('completed_tasks', JSON.stringify(completedTasks));
   }, [balance, completedTasks]);
 
-  // --- START BOT LINKS (အတိအကျ ၆ ခု) ---
+  // --- ADSGRAM INTEGRATION (Block ID: 27393) ---
+  const showAdAndVerify = (taskId) => {
+    if (!window.Adsgram) {
+      alert("Adsgram SDK is loading... Please wait.");
+      return;
+    }
+
+    const AdController = window.Adsgram.init({ blockId: "27393" });
+
+    AdController.show().then((result) => {
+      // User watched the ad successfully
+      if (!completedTasks.includes(taskId)) {
+        setBalance(prev => prev + 0.0005);
+        setCompletedTasks(prev => [...prev, taskId]);
+        setChecking(null);
+        alert("✅ Task Verified! +0.0005 TON added.");
+      }
+    }).catch((result) => {
+      // User closed the ad or error occurred
+      alert("⚠️ You must watch the full video to verify the task.");
+    });
+  };
+
+  // --- TASK LISTS ---
   const botTasks = [
-    { id: 'bot_1', name: "GROW TEA BOT", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-    { id: 'bot_2', name: "GOLDEN MINER BOT", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-    { id: 'bot_3', name: "WORKERS ON TON BOT", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-    { id: 'bot_4', name: "EASY BONUS BOT", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-    { id: 'bot_5', name: "TON DRAGON BOT", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
-    { id: 'bot_6', name: "POBUZZ BOT", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
+    { id: 'b1', name: "GROW TEA BOT", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'b2', name: "GOLDEN MINER BOT", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'b3', name: "WORKERS ON TON BOT", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'b4', name: "EASY BONUS BOT", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'b5', name: "TON DRAGON BOT", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b6', name: "POBUZZ BOT", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
   ];
 
   const socialTasks = [
@@ -30,20 +53,11 @@ function App() {
     "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO",
     "@kombo_crypta", "@easytonfree", "@WORLDBESTCRYTO1", "@MONEYHUB9_69",
     "@zrbtua", "@perviu1million"
-  ].map((name, i) => ({ id: `soc_${i}`, name: name.toUpperCase(), link: `https://t.me/${name.replace('@','')}` }));
+  ].map((name, i) => ({ id: `s${i}`, name: name.toUpperCase(), link: `https://t.me/${name.replace('@','')}` }));
 
   const startTask = (task) => {
     window.open(task.link, '_blank');
     setChecking(task.id); 
-  };
-
-  const verifyTask = (taskId) => {
-    if (!completedTasks.includes(taskId)) {
-      setBalance(prev => prev + 0.0005);
-      setCompletedTasks(prev => [...prev, taskId]);
-      setChecking(null);
-      alert("✅ Verified! 0.0005 TON added to your balance.");
-    }
   };
 
   const copyText = (t) => { navigator.clipboard.writeText(t); alert("✅ Copied!"); };
@@ -59,10 +73,84 @@ function App() {
 
   return (
     <div style={styles.container}>
-      {/* Balance Section */}
+      {/* Header Balance */}
       <div style={{...styles.card, textAlign: 'center', background: 'linear-gradient(135deg, #1e293b 0%, #020617 100%)', border: '1px solid #fbbf24'}}>
-        <p style={{color: '#94a3b8', fontSize: '11px', fontWeight: '900'}}>TOTAL BALANCE</p>
+        <p style={{color: '#94a3b8', fontSize: '11px', fontWeight: '900'}}>TOTAL TON BALANCE</p>
         <h1 style={{color: '#fbbf24', fontSize: '42px', margin: '10px 0', fontWeight: '950'}}>{balance.toFixed(4)} <span style={{fontSize: '18px'}}>TON</span></h1>
+      </div>
+
+      {activeNav === 'earn' && (
+        <>
+          <div style={{display: 'flex', backgroundColor: '#1e293b', borderRadius: '15px', padding: '5px', marginBottom: '20px'}}>
+            <button style={styles.tabBtn(activeTab === 'bot')} onClick={() => {setActiveTab('bot'); setShowPayForm(false)}}>START BOT</button>
+            <button style={styles.tabBtn(activeTab === 'reward')} onClick={() => {setActiveTab('reward'); setShowPayForm(false)}}>REWARD</button>
+            <button style={styles.tabBtn(activeTab === 'social')} onClick={() => {setActiveTab('social'); setShowPayForm(false)}}>SOCIAL</button>
+          </div>
+
+          {!showPayForm ? (
+            <div>
+              {/* START BOT LIST */}
+              {activeTab === 'bot' && botTasks.filter(t => !completedTasks.includes(t.id)).map(t => (
+                <div key={t.id} style={styles.card}>
+                  <div style={{display:'flex', justifyContent:'space-between', alignItems: 'center'}}>
+                    <b style={{fontSize: '14px'}}>{t.name}</b>
+                    {checking === t.id ? (
+                      <button style={{backgroundColor: '#10b981', color: '#fff', padding: '8px 15px', borderRadius: '10px', border: 'none', fontWeight: '900'}} onClick={() => showAdAndVerify(t.id)}>CHECK</button>
+                    ) : (
+                      <button style={{backgroundColor: '#fbbf24', color: '#000', padding: '8px 15px', borderRadius: '10px', border: 'none', fontWeight: '900'}} onClick={() => startTask(t)}>START</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* SOCIAL LIST */}
+              {activeTab === 'social' && (
+                <>
+                  <button style={{...styles.btn, marginBottom: '15px'}} onClick={() => setShowPayForm(true)}>+ ADD TASK</button>
+                  {socialTasks.filter(t => !completedTasks.includes(t.id)).map(t => (
+                    <div key={t.id} style={styles.card}>
+                      <div style={{display:'flex', justifyContent:'space-between', alignItems: 'center'}}>
+                        <b style={{fontSize: '12px'}}>{t.name}</b>
+                        {checking === t.id ? (
+                          <button style={{backgroundColor: '#10b981', color: '#fff', padding: '8px 15px', borderRadius: '10px', border: 'none', fontWeight: '900'}} onClick={() => showAdAndVerify(t.id)}>CHECK</button>
+                        ) : (
+                          <button style={{color:'#38bdf8', background:'none', border:'none', fontWeight:'900'}} onClick={() => startTask(t)}>JOIN</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          ) : (
+            /* ADD TASK UI */
+            <div style={styles.card}>
+              <div style={{display: 'flex', gap: '5px', marginBottom: '20px'}}>
+                <button style={styles.tabBtn(taskSubTab === 'add')} onClick={() => setTaskSubTab('add')}>ADD TASK</button>
+                <button style={styles.tabBtn(taskSubTab === 'my')} onClick={() => setTaskSubTab('my')}>MY TASK</button>
+              </div>
+              <input style={styles.input} placeholder="NAME" />
+              <input style={styles.input} placeholder="LINK" />
+              <button style={styles.btn} onClick={() => alert("✅ Order Sent!")}>CONFIRM & PAY</button>
+              <button style={{...styles.btn, background:'none', color:'#94a3b8', marginTop: '10px'}} onClick={() => setShowPayForm(false)}>BACK</button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* FOOTER NAVIGATION */}
+      <div style={styles.footer}>
+        <div style={{textAlign:'center', color: activeNav==='earn'?'#fbbf24':'#64748b', fontWeight: '900'}} onClick={()=>setActiveNav('earn')}>💰<br/><small>EARN</small></div>
+        <div style={{textAlign:'center', color: activeNav==='invite'?'#fbbf24':'#64748b', fontWeight: '900'}} onClick={()=>setActiveNav('invite')}>👥<br/><small>INVITE</small></div>
+        <div style={{textAlign:'center', color: activeNav==='withdraw'?'#fbbf24':'#64748b', fontWeight: '900'}} onClick={()=>setActiveNav('withdraw')}>💸<br/><small>HISTORY</small></div>
+        <div style={{textAlign:'center', color: activeNav==='profile'?'#fbbf24':'#64748b', fontWeight: '900'}} onClick={()=>setActiveNav('profile')}>👤<br/><small>PROFILE</small></div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
+
       </div>
 
       {activeNav === 'earn' && (
