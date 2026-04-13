@@ -6,17 +6,24 @@
     <meta name="theme-color" content="#facc15" />
     <title>Easy TON App</title>
     
-    <script src="https://adsgram.ai/sdk-v1.js"></script>
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 
     <style>
       body {
         margin: 0;
         padding: 0;
-        background-color: #facc15; /* Loading ဖြစ်နေချိန် screen အဝါရောင်ပြဖို့ */
+        background-color: #facc15; 
         overflow-x: hidden;
+        -webkit-tap-highlight-color: transparent; /* ဖုန်းမှာ ခလုတ်နှိပ်ရင် အပြာကွက် မပေါ်အောင် */
       }
       #root {
         min-height: 100vh;
+      }
+      
+      /* တကယ်လို့ App က Telegram ထဲမှာ ပွင့်လာရင် စာသားတွေ Select ပေးလို့မရအောင် လုပ်ထားတာပါ */
+      * {
+        user-select: none;
+        -webkit-user-select: none;
       }
     </style>
   </head>
