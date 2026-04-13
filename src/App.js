@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 
+// Telegram WebApp Object ကို ယူခြင်း
+const tg = window.Telegram?.WebApp;
+
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
-  MY_UID: "1793453606",
-  ADSGRAM_BLOCK_ID: "27633", // Bro ရဲ့ Ad Unit ID အသစ်သို့ ပြောင်းထားပါသည်
+  // User ရဲ့ ID အစစ်ကို ယူပါမယ်၊ မရခဲ့ရင် Demo ID တစ်ခု ထားပါမယ်
+  MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "Guest_ID",
+  ADSGRAM_BLOCK_ID: "27633", 
   ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_CHAT_ID: "5020977059"
 };
@@ -25,6 +29,14 @@ function App() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [selectedPlan, setSelectedPlan] = useState(null);
 
+  // App ပွင့်လာတာနဲ့ Telegram ကို အကြောင်းကြားရန်
+  useEffect(() => {
+    if (tg) {
+      tg.ready();
+      tg.expand(); // Screen အပြည့်ချဲ့ရန်
+    }
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
@@ -45,10 +57,8 @@ function App() {
     } else { alert("Insufficient Balance (Min 0.1)"); }
   };
 
-  // Adsgram Function ကို ပိုမိုကောင်းမွန်အောင် ပြင်ဆင်ထားပါသည်
   const handleTaskAction = (id, link) => {
     window.open(link, '_blank');
-    
     const completeTask = () => {
       setBalance(prev => Number((prev + 0.0005).toFixed(5)));
       setCompleted(prev => [...prev, id]);
@@ -57,18 +67,11 @@ function App() {
 
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-      AdController.show()
-        .then(() => {
-          // ကြော်ငြာကြည့်ပြီးမှ Reward ပေးရန်
-          completeTask();
-        })
-        .catch((result) => {
-          // Ad မတက်လာလျှင် သို့မဟုတ် Error ရှိလျှင် 5 စက္ကန့်အကြာမှ Reward ပေးရန်
-          console.error("Adsgram Error:", result);
-          setTimeout(completeTask, 5000);
-        });
+      AdController.show().then(completeTask).catch((err) => {
+        console.error(err);
+        setTimeout(completeTask, 5000);
+      });
     } else {
-      // Adsgram script မရှိလျှင် 5 စက္ကန့် စောင့်ခိုင်းရန်
       setTimeout(completeTask, 5000);
     }
   };
@@ -104,12 +107,12 @@ function App() {
 
           <div style={styles.card}>
             {activeTab === 'bot' && [
-              { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+              { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=" + APP_CONFIG.MY_UID },
               { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-              { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-              { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-              { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
-              { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
+              { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_" + APP_CONFIG.MY_UID },
+              { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=" + APP_CONFIG.MY_UID },
+              { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=" + APP_CONFIG.MY_UID },
+              { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=" + APP_CONFIG.MY_UID }
             ].filter(t => !completed.includes(t.id)).map(t => (
               <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '90px', padding: '10px'}}>START</button></div>
             ))}
