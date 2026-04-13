@@ -3,12 +3,13 @@ const { Telegraf, Markup } = require('telegraf');
 const bot = new Telegraf('8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk');
 
 bot.start((ctx) => {
-  const name = ctx.from.first_name || "User";
-  // စာသားကို English လို ပြောင်းထားပါတယ်
-  return ctx.reply(`Welcome ${name}! 🚀\nStart mining and earn TON rewards easily. Click the button below to begin!`, 
+  // အပေါ်ကစာသားကို Bro လိုချင်တဲ့အတိုင်း ပြောင်းထားပါတယ်
+  const message = `💸 You Can Find TON Of Them Easily ✅`;
+  
+  return ctx.reply(message, 
     Markup.inlineKeyboard([
-      // ခလုတ်စာသားကို Open Easy Play လို့ ပြောင်းထားပါတယ်
-      [Markup.button.webApp('🎮 Open Easy Play', 'https://easy-ton-app-iota.vercel.app/')]
+      // ခလုတ်စာသားကို Open-Easy-TON လို့ ပြောင်းထားပါတယ်
+      [Markup.button.webApp('🎮 Open-Easy-TON', 'https://easy-ton-app-iota.vercel.app/')]
     ])
   );
 });
@@ -23,6 +24,6 @@ module.exports = async (req, res) => {
       res.status(500).send('Error');
     }
   } else {
-    res.status(200).send('Bot logic is active.');
+    res.status(200).send('Bot is active and ready.');
   }
 };
