@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: "1793453606",
-  ADSGRAM_BLOCK_ID: "27611", 
+  ADSGRAM_BLOCK_ID: "27633", // Bro ရဲ့ Ad Unit ID အသစ်သို့ ပြောင်းထားပါသည်
   ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_CHAT_ID: "5020977059"
 };
@@ -45,16 +45,30 @@ function App() {
     } else { alert("Insufficient Balance (Min 0.1)"); }
   };
 
+  // Adsgram Function ကို ပိုမိုကောင်းမွန်အောင် ပြင်ဆင်ထားပါသည်
   const handleTaskAction = (id, link) => {
     window.open(link, '_blank');
+    
     const completeTask = () => {
       setBalance(prev => Number((prev + 0.0005).toFixed(5)));
       setCompleted(prev => [...prev, id]);
+      alert("Reward Received! +0.0005 TON");
     };
+
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-      AdController.show().then(completeTask).catch(() => setTimeout(completeTask, 5000));
+      AdController.show()
+        .then(() => {
+          // ကြော်ငြာကြည့်ပြီးမှ Reward ပေးရန်
+          completeTask();
+        })
+        .catch((result) => {
+          // Ad မတက်လာလျှင် သို့မဟုတ် Error ရှိလျှင် 5 စက္ကန့်အကြာမှ Reward ပေးရန်
+          console.error("Adsgram Error:", result);
+          setTimeout(completeTask, 5000);
+        });
     } else {
+      // Adsgram script မရှိလျှင် 5 စက္ကန့် စောင့်ခိုင်းရန်
       setTimeout(completeTask, 5000);
     }
   };
