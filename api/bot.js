@@ -4,10 +4,10 @@ const bot = new Telegraf('8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk');
 
 bot.start((ctx) => {
   const name = ctx.from.first_name || "User";
-  // စာသားကို အင်္ဂလိပ်လို ပြောင်းထားပါတယ်
-  return ctx.reply(`Welcome ${name}! 🚀\nClick the button below to start mining and earning TON.`, 
+  // စာသားကို English လို ပြောင်းထားပါတယ်
+  return ctx.reply(`Welcome ${name}! 🚀\nStart mining and earn TON rewards easily. Click the button below to begin!`, 
     Markup.inlineKeyboard([
-      // ခလုတ်စာသားကို "Open Easy Play" လို့ ပြင်ထားပါတယ်
+      // ခလုတ်စာသားကို Open Easy Play လို့ ပြောင်းထားပါတယ်
       [Markup.button.webApp('🎮 Open Easy Play', 'https://easy-ton-app-iota.vercel.app/')]
     ])
   );
@@ -23,6 +23,6 @@ module.exports = async (req, res) => {
       res.status(500).send('Error');
     }
   } else {
-    res.status(200).send('Bot is running...');
+    res.status(200).send('Bot logic is active.');
   }
 };
