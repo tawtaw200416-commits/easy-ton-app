@@ -13,7 +13,7 @@ function App() {
   const [balance, setBalance] = useState(0);
   const [completed, setCompleted] = useState([]);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
-  const [referrals, setReferrals] = useState([]); // Invite History အတွက်
+  const [referrals, setReferrals] = useState([]);
   const [loading, setLoading] = useState(true);
   const isDataLoaded = useRef(false);
 
@@ -24,6 +24,9 @@ function App() {
   const [showAddPromo, setShowAddPromo] = useState(false);
   const [rewardInput, setRewardInput] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
+
+  // --- Promote Task State ---
+  const [promoForm, setPromoForm] = useState({ name: '', link: '', plan: '100 Views - 0.2 TON' });
 
   const syncToFirebase = (path, data) => {
     if (!isDataLoaded.current) return; 
@@ -49,6 +52,12 @@ function App() {
           setCompleted(userData.completed || []);
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferrals(userData.referrals || []);
+        } else {
+          // New User Setup
+          await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+            method: 'PUT',
+            body: JSON.stringify({ balance: 0, completed: [], referrals: [], withdrawHistory: [] })
+          });
         }
         if (tasksData) setCustomTasks(Object.values(tasksData));
         
@@ -74,6 +83,13 @@ function App() {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show().then(completeTask).catch(() => setTimeout(completeTask, 5000));
     } else { setTimeout(completeTask, 5000); }
+  };
+
+  const handleSendToAdmin = () => {
+    if(!promoForm.name || !promoForm.link) return alert("Please fill all details!");
+    const message = `🚀 NEW PROMOTE REQUEST:\n\nUID: ${APP_CONFIG.MY_UID}\nName: ${promoForm.name}\nLink: ${promoForm.link}\nPlan: ${promoForm.plan}`;
+    const encodedMsg = encodeURIComponent(message);
+    window.open(`https://t.me/GrowTeaNews?text=${encodedMsg}`, '_blank');
   };
 
   const styles = {
@@ -144,20 +160,20 @@ function App() {
                 ) : (
                   <div>
                     <h3 style={{marginTop:0}}>PROMOTE YOUR CHANNEL</h3>
-                    <input style={styles.input} placeholder="Task Name (e.g. My Channel)" />
-                    <input style={styles.input} placeholder="Link (https://t.me/...)" />
-                    <select style={styles.input}>
-                        <option>100 Views - 0.2 TON</option>
-                        <option>200 Views - 0.4 TON</option>
-                        <option>300 Views - 0.5 TON</option>
+                    <input style={styles.input} placeholder="Channel Name" value={promoForm.name} onChange={e => setPromoForm({...promoForm, name: e.target.value})} />
+                    <input style={styles.input} placeholder="Link (https://t.me/...)" value={promoForm.link} onChange={e => setPromoForm({...promoForm, link: e.target.value})} />
+                    <select style={styles.input} value={promoForm.plan} onChange={e => setPromoForm({...promoForm, plan: e.target.value})}>
+                        <option value="100 Views - 0.2 TON">100 Views - 0.2 TON</option>
+                        <option value="200 Views - 0.4 TON">200 Views - 0.4 TON</option>
+                        <option value="300 Views - 0.5 TON">300 Views - 0.5 TON</option>
                     </select>
                     <div style={styles.promoBox}>
-                       <small><b>PAY TON TO:</b></small>
-                       <p style={{fontSize:9, wordBreak:'break-all', fontWeight:'bold'}}>{APP_CONFIG.ADMIN_WALLET}</p>
+                       <small><b>PAY TON TO (Wallet):</b></small>
+                       <p style={{fontSize:9, wordBreak:'break-all', fontWeight:'bold', margin:'5px 0'}}>{APP_CONFIG.ADMIN_WALLET}</p>
                        <small><b>REQUIRED MEMO (UID):</b></small>
-                       <p style={{fontSize:22, fontWeight:'bold', color:'#e11d48'}}>{APP_CONFIG.MY_UID}</p>
+                       <p style={{fontSize:22, fontWeight:'bold', color:'#e11d48', margin:0}}>{APP_CONFIG.MY_UID}</p>
                     </div>
-                    <button style={styles.btn} onClick={() => window.open(`https://t.me/GrowTeaNews`)}>I PAID (SEND PROOF)</button>
+                    <button style={styles.btn} onClick={handleSendToAdmin}>I PAID (SEND PROOF TO ADMIN)</button>
                     <button style={{...styles.btn, background:'none', color:'#000', marginTop:10}} onClick={() => setShowAddPromo(false)}>BACK</button>
                   </div>
                 )}
