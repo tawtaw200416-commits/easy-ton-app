@@ -195,17 +195,44 @@ function App() {
             
             {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
               <div>
-                <h3 style={{marginTop:0}}>ADD GLOBAL TASK</h3>
-                <input style={styles.input} placeholder="Task Name" value={newTask.name} onChange={e => setNewTask({...newTask, name: e.target.value})} />
-                <input style={styles.input} placeholder="Link (https://...)" value={newTask.link} onChange={e => setNewTask({...newTask, link: e.target.value})} />
-                <select style={styles.input} onChange={e => setNewTask({...newTask, type: e.target.value})}>
+                <h3 style={{marginTop:0, textAlign: 'center'}}>ADD NEW TASK</h3>
+                <input 
+                  style={styles.input} 
+                  placeholder="Task Name" 
+                  value={newTask.name} 
+                  onChange={e => setNewTask({...newTask, name: e.target.value})} 
+                />
+                <input 
+                  style={styles.input} 
+                  placeholder="Link (https://...)" 
+                  value={newTask.link} 
+                  onChange={e => setNewTask({...newTask, link: e.target.value})} 
+                />
+                <select 
+                  style={{...styles.input, appearance: 'none', background: '#fff'}} 
+                  value={newTask.type}
+                  onChange={e => setNewTask({...newTask, type: e.target.value})}
+                >
                   <option value="bot">BOT TASK</option>
                   <option value="social">SOCIAL TASK</option>
                 </select>
-                <button style={styles.yellowBtn} onClick={() => {
-                  const id = 'task_' + Date.now();
-                  fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({...newTask, id}) }).then(() => { alert("Saved!"); window.location.reload(); });
-                }}>SAVE TO DATABASE</button>
+                <button 
+                  style={styles.yellowBtn} 
+                  onClick={() => {
+                    if (!newTask.name || !newTask.link) return alert("Fill all fields");
+                    const id = 'task_' + Date.now();
+                    fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { 
+                      method: 'PUT', 
+                      body: JSON.stringify({...newTask, id}) 
+                    }).then(() => { 
+                      alert("Saved to Database!"); 
+                      setNewTask({ name: '', link: '', type: 'bot' });
+                      window.location.reload(); 
+                    });
+                  }}
+                >
+                  SAVE TO DATABASE
+                </button>
               </div>
             )}
           </div>
