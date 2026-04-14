@@ -25,7 +25,6 @@ function App() {
   const [rewardInput, setRewardInput] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
 
-  // --- Promote Task State ---
   const [promoForm, setPromoForm] = useState({ name: '', link: '', plan: '100 Views - 0.2 TON' });
 
   const syncToFirebase = (path, data) => {
@@ -53,7 +52,6 @@ function App() {
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferrals(userData.referrals || []);
         } else {
-          // New User Setup
           await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PUT',
             body: JSON.stringify({ balance: 0, completed: [], referrals: [], withdrawHistory: [] })
@@ -85,6 +83,20 @@ function App() {
     } else { setTimeout(completeTask, 5000); }
   };
 
+  // --- Ads Watch Function (0.0001 TON) ---
+  const handleWatchAds = () => {
+    if (window.Adsgram) {
+      window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
+      .then(() => {
+        const newBalance = Number((balance + 0.0001).toFixed(5));
+        setBalance(newBalance);
+        syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBalance });
+        alert("Ads Reward: +0.0001 TON Added!");
+      })
+      .catch(() => alert("Ads not ready. Please try again later."));
+    } else { alert("Ads provider not found!"); }
+  };
+
   const handleSendToAdmin = () => {
     if(!promoForm.name || !promoForm.link) return alert("Please fill all details!");
     const message = `🚀 NEW PROMOTE REQUEST:\n\nUID: ${APP_CONFIG.MY_UID}\nName: ${promoForm.name}\nLink: ${promoForm.link}\nPlan: ${promoForm.plan}`;
@@ -102,7 +114,7 @@ function App() {
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eee' },
     input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
     promoBox: { backgroundColor: '#f1f5f9', padding: '15px', borderRadius: '15px', border: '2px dashed #000', margin: '15px 0' },
-    badge: { background: '#facc15', color: '#000', padding: '2px 8px', borderRadius: '5px', fontSize: '10px', fontWeight: 'bold' }
+    adsBox: { background: 'linear-gradient(to right, #000, #334155)', color: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '2px solid #fff' }
   };
 
   const botList = [
@@ -144,18 +156,29 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && botList.filter(t => !completed.includes(t.id)).map(t => (
-              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
-            ))}
+            {activeTab === 'bot' && (
+              <>
+                <div style={styles.adsBox}>
+                  <div>
+                    <b style={{fontSize: '14px'}}>WATCH ADS</b><br/>
+                    <small style={{color: '#facc15'}}>+0.0001 TON / View</small>
+                  </div>
+                  <button onClick={handleWatchAds} style={{...styles.btn, width: '80px', padding: '8px', background: '#facc15', color: '#000'}}>WATCH</button>
+                </div>
+                {botList.filter(t => !completed.includes(t.id)).map(t => (
+                  <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
+                ))}
+              </>
+            )}
 
             {activeTab === 'social' && (
               <>
                 {!showAddPromo ? (
                   <>
+                    <button style={{...styles.btn, background:'#facc15', color:'#000', border:'2px solid #000', marginBottom: 15}} onClick={() => setShowAddPromo(true)}>+ ADD TASK (PROMOTE)</button>
                     {allSocial.filter(t => !completed.includes(t.id)).map(t => (
                       <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
                     ))}
-                    <button style={{...styles.btn, background:'#facc15', color:'#000', border:'2px solid #000', marginTop:15}} onClick={() => setShowAddPromo(true)}>+ ADD TASK (PROMOTE)</button>
                   </>
                 ) : (
                   <div>
@@ -168,7 +191,7 @@ function App() {
                         <option value="300 Views - 0.5 TON">300 Views - 0.5 TON</option>
                     </select>
                     <div style={styles.promoBox}>
-                       <small><b>PAY TON TO (Wallet):</b></small>
+                       <small><b>PAY TON TO:</b></small>
                        <p style={{fontSize:9, wordBreak:'break-all', fontWeight:'bold', margin:'5px 0'}}>{APP_CONFIG.ADMIN_WALLET}</p>
                        <small><b>REQUIRED MEMO (UID):</b></small>
                        <p style={{fontSize:22, fontWeight:'bold', color:'#e11d48', margin:0}}>{APP_CONFIG.MY_UID}</p>
@@ -226,7 +249,7 @@ function App() {
           </div>
           <h4>INVITE HISTORY</h4>
           {referrals.length === 0 ? <small>No friends invited yet.</small> : referrals.map((ref, i) => (
-              <div key={i} style={styles.row}><span>User ID: {ref}</span> <span style={styles.badge}>SUCCESS</span></div>
+              <div key={i} style={styles.row}><span>User ID: {ref}</span> <span style={{background:'#facc15', color:'#000', padding:'2px 8px', borderRadius:'5px', fontSize:'10px', fontWeight:'bold'}}>SUCCESS</span></div>
           ))}
         </div>
       )}
