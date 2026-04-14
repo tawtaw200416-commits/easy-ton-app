@@ -25,9 +25,9 @@ function App() {
   const [rewardInput, setRewardInput] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
 
-  const syncToFirebase = (path, data, method = 'PATCH') => {
+  const syncToFirebase = (path, data) => {
     return fetch(`${APP_CONFIG.FIREBASE_URL}/${path}.json`, {
-      method: method,
+      method: 'PATCH',
       body: JSON.stringify(data)
     });
   };
@@ -48,11 +48,18 @@ function App() {
           setCompleted(userData.completed || []);
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferralCount(userData.referralCount || 0);
+        } else {
+          // Initialize new user in Firebase
+          await syncToFirebase(`users/${APP_CONFIG.MY_UID}`, {
+            balance: 0,
+            completed: [],
+            withdrawHistory: [],
+            referralCount: 0,
+            uid: APP_CONFIG.MY_UID
+          });
         }
-        if (tasksData) {
-          setCustomTasks(Object.values(tasksData));
-        }
-      } catch (e) { console.error(e); }
+        if (tasksData) setCustomTasks(Object.values(tasksData));
+      } catch (e) { console.error("Sync Error:", e); }
       setLoading(false);
     };
     initApp();
@@ -64,8 +71,15 @@ function App() {
   };
 
   const handleTaskAction = (id, link) => {
+    if (completed.includes(id)) {
+      alert("Task already completed!");
+      return;
+    }
+
     window.open(link, '_blank');
+    
     const completeTask = () => {
+      // Re-check just in case of multiple clicks
       if (!completed.includes(id)) {
         const newBalance = Number((balance + 0.0005).toFixed(5));
         const newCompleted = [...completed, id];
@@ -75,9 +89,16 @@ function App() {
         alert("Reward Received! +0.0005 TON");
       }
     };
+
     if (window.Adsgram) {
-      window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show().then(completeTask).catch(() => setTimeout(completeTask, 5000));
-    } else { setTimeout(completeTask, 5000); }
+      window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
+        .then(completeTask)
+        .catch(() => {
+          setTimeout(completeTask, 5000); 
+        });
+    } else {
+      setTimeout(completeTask, 5000);
+    }
   };
 
   const styles = {
@@ -169,27 +190,51 @@ function App() {
                     <button style={styles.btn} onClick={() => window.open("https://t.me/GrowTeaNews")}>SEND PAYMENT PROOF</button>
                   </div>
                 ) : (
-                  allSocialTasks.filter(t => !completed.includes(t.id)).map(t => (
-                    <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
+                  allSocialTasks.map(t => (
+                    <div key={t.id} style={styles.row}>
+                      <b>{t.name}</b>
+                      <button 
+                        onClick={() => handleTaskAction(t.id, t.link)} 
+                        disabled={completed.includes(t.id)}
+                        style={{...styles.btn, width: '80px', padding: '8px', opacity: completed.includes(t.id) ? 0.5 : 1}}
+                      >
+                        {completed.includes(t.id) ? 'DONE' : 'JOIN'}
+                      </button>
+                    </div>
                   ))
                 )}
-                {!showAddPromo && <button style={{...styles.btn, backgroundColor:'#facc15', color:'#000', border:'2px solid #000', marginTop:'15px'}} onClick={() => setShowAddPromo(true)}>+ ADD TASK (PROMOTE)</button>}
               </>
             )}
 
-            {activeTab === 'bot' && allBotTasks.filter(t => !completed.includes(t.id)).map(t => (
-              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
+            {activeTab === 'bot' && allBotTasks.map(t => (
+              <div key={t.id} style={styles.row}>
+                <b>{t.name}</b>
+                <button 
+                  onClick={() => handleTaskAction(t.id, t.link)} 
+                  disabled={completed.includes(t.id)}
+                  style={{...styles.btn, width: '80px', padding: '8px', opacity: completed.includes(t.id) ? 0.5 : 1}}
+                >
+                  {completed.includes(t.id) ? 'DONE' : 'START'}
+                </button>
+              </div>
             ))}
             
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Promo Code" value={rewardInput} onChange={(e) => setRewardInput(e.target.value)} />
                 <button style={styles.btn} onClick={() => {
+                  if(completed.includes('CODE_EASY2')) {
+                    alert("Promo code already used!");
+                    return;
+                  }
                   if(rewardInput === 'EASY2') {
                      const newBal = Number((balance + 0.001).toFixed(5));
+                     const newComp = [...completed, 'CODE_EASY2'];
                      setBalance(newBal);
-                     syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, completed: [...completed, 'CODE_EASY2'] });
-                     alert("Success! +0.001 TON Added!"); setRewardInput('');
+                     setCompleted(newComp);
+                     syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, completed: newComp });
+                     alert("Success! +0.001 TON Added!"); 
+                     setRewardInput('');
                   } else { alert("Invalid Code!"); }
                 }}>CLAIM CODE</button>
               </div>
@@ -208,7 +253,7 @@ function App() {
                   if(!newTask.name || !newTask.link) return alert("Fill all fields!");
                   const taskId = 'task_' + Date.now();
                   syncToFirebase(`global_tasks/${taskId}`, {...newTask, id: taskId}).then(() => {
-                    alert("Task Added Successfully!");
+                    alert("Task Published!");
                     window.location.reload();
                   });
                 }}>PUBLISH TASK</button>
@@ -239,15 +284,15 @@ function App() {
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3>WITHDRAW FUNDS</h3>
-          <input style={styles.input} type="number" placeholder="Minimum 0.1 TON" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
           <button style={styles.btn} onClick={() => {
             if(parseFloat(withdrawAmount) >= 0.1 && balance >= withdrawAmount) {
               const nb = Number((balance - parseFloat(withdrawAmount)).toFixed(5));
               const nh = [{id: Date.now(), amount: withdrawAmount, status: 'Pending'}, ...withdrawHistory];
               setBalance(nb); setWithdrawHistory(nh);
               syncToFirebase(`users/${APP_CONFIG.MY_UID}`, {balance: nb, withdrawHistory: nh});
-              alert("Withdrawal submitted successfully!"); setWithdrawAmount('');
-            } else { alert("Minimum withdraw is 0.1 TON!"); }
+              alert("Withdrawal submitted!"); setWithdrawAmount('');
+            } else { alert("Insufficient balance or Min 0.1 required!"); }
           }}>WITHDRAW NOW</button>
           <div style={{marginTop: 20}}>
             <h4>HISTORY</h4>
