@@ -37,7 +37,12 @@ function App() {
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    tg?.showAlert("Copied to clipboard!");
+    if (tg) {
+        tg.HapticFeedback.notificationOccurred('success');
+        tg.showAlert("Copied to clipboard!");
+    } else {
+        alert("Copied!");
+    }
   };
 
   useEffect(() => {
@@ -45,7 +50,7 @@ function App() {
     const initApp = async () => {
       try {
         const urlParams = new URLSearchParams(window.location.search);
-        const refId = urlParams.get('tgWebAppStartParam'); // ?start=UID
+        const refId = urlParams.get('tgWebAppStartParam');
 
         const [userRes, tasksRes] = await Promise.all([
           fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
@@ -60,14 +65,12 @@ function App() {
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferrals(userData.referrals || []);
         } else {
-          // --- Handle New User & Referral Logic ---
           userData = { balance: 0, completed: [], referrals: [], withdrawHistory: [] };
           await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PUT',
             body: JSON.stringify(userData)
           });
 
-          // If invited by someone
           if (refId && refId !== APP_CONFIG.MY_UID) {
             const referrerRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${refId}.json`);
             const referrerData = await referrerRes.json();
@@ -138,7 +141,8 @@ function App() {
     input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
     promoBox: { backgroundColor: '#f1f5f9', padding: '15px', borderRadius: '15px', border: '2px dashed #000', margin: '15px 0' },
     adsBox: { background: 'linear-gradient(to right, #000, #334155)', color: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '2px solid #fff' },
-    copyText: { fontSize:9, wordBreak:'break-all', fontWeight:'bold', background:'#e2e8f0', padding:8, borderRadius:8, cursor:'pointer' }
+    copyItem: { display: 'flex', gap: '8px', alignItems: 'center', background: '#e2e8f0', padding: '10px', borderRadius: '10px', marginTop: '5px', marginBottom: '10px' },
+    smallCopyBtn: { background: '#000', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }
   };
 
   const botList = [
@@ -215,10 +219,17 @@ function App() {
                         <option value="300 Views - 0.5 TON">300 Views - 0.5 TON</option>
                     </select>
                     <div style={styles.promoBox}>
-                       <small><b>PAY TON TO (Tap to copy):</b></small>
-                       <p onClick={() => copyToClipboard(APP_CONFIG.ADMIN_WALLET)} style={styles.copyText}>{APP_CONFIG.ADMIN_WALLET}</p>
-                       <small><b>REQUIRED MEMO (Tap to copy):</b></small>
-                       <p onClick={() => copyToClipboard(APP_CONFIG.MY_UID)} style={{...styles.copyText, fontSize:22, color:'#e11d48'}}>{APP_CONFIG.MY_UID}</p>
+                       <small><b>PAY TON TO:</b></small>
+                       <div style={styles.copyItem}>
+                          <span style={{fontSize:9, flex:1, fontWeight:'bold', wordBreak:'break-all'}}>{APP_CONFIG.ADMIN_WALLET}</span>
+                          <button onClick={() => copyToClipboard(APP_CONFIG.ADMIN_WALLET)} style={styles.smallCopyBtn}>COPY</button>
+                       </div>
+                       
+                       <small><b>REQUIRED MEMO (UID):</b></small>
+                       <div style={styles.copyItem}>
+                          <span style={{fontSize:20, flex:1, fontWeight:'bold', color:'#e11d48'}}>{APP_CONFIG.MY_UID}</span>
+                          <button onClick={() => copyToClipboard(APP_CONFIG.MY_UID)} style={styles.smallCopyBtn}>COPY</button>
+                       </div>
                     </div>
                     <button style={styles.btn} onClick={handleSendToAdmin}>I PAID (SEND PROOF TO ADMIN)</button>
                     <button style={{...styles.btn, background:'none', color:'#000', marginTop:10}} onClick={() => setShowAddPromo(false)}>BACK</button>
@@ -268,8 +279,10 @@ function App() {
           <p style={{textAlign:'center', fontSize:13}}>Earn <b>0.0005 TON</b> for every friend you invite!</p>
           <div style={styles.promoBox}>
             <small>YOUR INVITE LINK:</small>
-            <p style={{fontSize:11, fontWeight:'bold', wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
-            <button onClick={() => copyToClipboard(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`)} style={styles.btn}>COPY LINK</button>
+            <div style={{...styles.copyItem, background: '#fff', border: '1px solid #000'}}>
+                <span style={{fontSize:11, fontWeight:'bold', flex:1, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</span>
+                <button onClick={() => copyToClipboard(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`)} style={styles.smallCopyBtn}>COPY</button>
+            </div>
           </div>
           <h4>INVITE HISTORY</h4>
           {referrals.length === 0 ? <small>No friends invited yet.</small> : referrals.map((ref, i) => (
