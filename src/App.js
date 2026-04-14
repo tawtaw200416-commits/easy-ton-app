@@ -14,17 +14,14 @@ function App() {
   const [completed, setCompleted] = useState([]);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
   const [referralCount, setReferralCount] = useState(0);
-  const [referralList, setReferralList] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  const [customTasks, setCustomTasks] = useState([]); 
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [showAddPromo, setShowAddPromo] = useState(false);
   const [rewardInput, setRewardInput] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
 
-  // Firebase Sync
   const syncToFirebase = (path, data) => {
     return fetch(`${APP_CONFIG.FIREBASE_URL}/${path}.json`, {
       method: 'PATCH',
@@ -36,25 +33,24 @@ function App() {
     if (tg) { tg.ready(); tg.expand(); }
     const initApp = async () => {
       try {
-        const [userRes, tasksRes] = await Promise.all([
-          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
-          fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`)
-        ]);
-        const userData = await userRes.json();
-        const tasksData = await tasksRes.json();
+        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
+        const userData = await res.json();
         if (userData) {
           setBalance(Number(userData.balance) || 0);
           setCompleted(userData.completed || []);
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferralCount(userData.referralCount || 0);
-          setReferralList(userData.referralList || []);
         }
-        if (tasksData) setCustomTasks(Object.values(tasksData));
       } catch (e) { console.error(e); }
       setLoading(false);
     };
     initApp();
   }, []);
+
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text);
+    alert("Copied to clipboard!");
+  };
 
   const handleTaskAction = (id, link) => {
     window.open(link, '_blank');
@@ -65,7 +61,7 @@ function App() {
         setBalance(newBalance);
         setCompleted(newCompleted);
         syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBalance, completed: newCompleted });
-        alert("Success! +0.0005 TON");
+        alert("Reward Received! +0.0005 TON");
       }
     };
     if (window.Adsgram) {
@@ -78,12 +74,12 @@ function App() {
     header: { textAlign: 'center', background: 'linear-gradient(135deg, #000, #1e293b)', padding: '25px', borderRadius: '25px', marginBottom: '20px', border: '4px solid #fff' },
     card: { backgroundColor: '#fff', padding: '18px', borderRadius: '20px', marginBottom: '12px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' },
-    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0' },
+    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0', zIndex: 100 },
     navItem: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '11px', fontWeight: 'bold' }),
-    row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #eee' },
+    row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eee' },
     input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
-    addBtn: { backgroundColor: '#facc15', color: '#000', border: '2px solid #000', marginBottom: '15px', padding: '10px', borderRadius: '10px', fontWeight: '900', width: '100%' },
-    memoBox: { backgroundColor: '#f1f5f9', padding: '10px', borderRadius: '10px', border: '1px dashed #000', margin: '10px 0' }
+    promoBox: { backgroundColor: '#f1f5f9', padding: '12px', borderRadius: '12px', border: '1px dashed #000', margin: '10px 0' },
+    copyBtnSmall: { backgroundColor: '#facc15', border: '1px solid #000', borderRadius: '5px', padding: '2px 8px', fontSize: '10px', fontWeight: 'bold', marginLeft: '5px' }
   };
 
   const socialTasks = [
@@ -103,14 +99,14 @@ function App() {
     { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
   ];
 
-  if (loading) return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', background:'#facc15'}}><b>SYNCING...</b></div>;
+  if (loading) return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', background:'#facc15'}}><b>SYNCING DATA...</b></div>;
 
   return (
     <div style={styles.main}>
       <div style={styles.header}>
-        <small style={{ color: '#facc15' }}>AVAILABLE BALANCE</small>
+        <small style={{ color: '#facc15' }}>CURRENT BALANCE</small>
         <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:16, color:'#facc15'}}>TON</span></h1>
-        <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● VERIFIED USER</div>
+        <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● VERIFIED ACCOUNT</div>
       </div>
 
       {activeNav === 'earn' && (
@@ -124,30 +120,36 @@ function App() {
           <div style={styles.card}>
             {activeTab === 'social' && (
               <>
-                <button style={styles.addBtn} onClick={() => setShowAddPromo(!showAddPromo)}>+ ADD TASK (PROMOTE)</button>
+                <button style={{...styles.btn, backgroundColor:'#facc15', color:'#000', border:'2px solid #000', marginBottom:'15px'}} onClick={() => setShowAddPromo(!showAddPromo)}>+ ADD TASK (PROMOTE)</button>
                 {showAddPromo ? (
-                  <div style={{paddingBottom: '20px'}}>
+                  <div>
                     <input style={styles.input} placeholder="Channel Name" />
                     <input style={styles.input} placeholder="Channel Link (https://...)" />
                     <div style={{display:'flex', gap:'5px', marginBottom:'15px'}}>
-                      {['100-0.2', '200-0.4', '300-0.5'].map(p => (
-                        <button key={p} style={{...styles.btn, fontSize:'10px', padding:'8px'}}>{p.split('-')[0]} Views<br/>{p.split('-')[1]} TON</button>
+                      {['100 Views - 0.2T', '200 Views - 0.4T', '300 Views - 0.5T'].map(p => (
+                        <button key={p} style={{...styles.btn, fontSize:'9px', padding:'8px'}}>{p}</button>
                       ))}
                     </div>
-                    <div style={styles.memoBox}>
-                      <small><b>TON ADDRESS (Admin):</b></small>
-                      <p style={{fontSize:'10px', wordBreak:'break-all', fontWeight:'bold'}}>{APP_CONFIG.ADMIN_WALLET}</p>
-                      <small><b>REQUIRED MEMO (Your UID):</b></small>
-                      <p style={{fontSize:'16px', fontWeight:'900', color:'#e11d48'}}>{APP_CONFIG.MY_UID}</p>
+                    <div style={styles.promoBox}>
+                      <small><b>TON ADDRESS:</b></small>
+                      <div style={{display:'flex', alignItems:'center'}}>
+                        <p style={{fontSize:'9px', wordBreak:'break-all', margin:'5px 0'}}>{APP_CONFIG.ADMIN_WALLET}</p>
+                        <button onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET)} style={styles.copyBtnSmall}>COPY</button>
+                      </div>
+                      <small><b>MEMO (UID):</b></small>
+                      <div style={{display:'flex', alignItems:'center'}}>
+                        <p style={{fontSize:'18px', fontWeight:'900', color:'#e11d48', margin:0}}>{APP_CONFIG.MY_UID}</p>
+                        <button onClick={() => handleCopy(APP_CONFIG.MY_UID)} style={styles.copyBtnSmall}>COPY</button>
+                      </div>
                     </div>
-                    <button style={styles.btn} onClick={() => window.open("https://t.me/GrowTeaNews")}>SEND PROOF TO ADMIN</button>
+                    <button style={styles.btn} onClick={() => window.open("https://t.me/GrowTeaNews")}>SEND PAYMENT PROOF</button>
                   </div>
                 ) : (
                   socialTasks.filter(t => !completed.includes(t.id)).map(t => (
                     <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
                   ))
                 )}
-                {!showAddPromo && <button style={{...styles.addBtn, marginTop: '15px'}} onClick={() => setShowAddPromo(true)}>+ ADD TASK (PROMOTE)</button>}
+                {!showAddPromo && <button style={{...styles.btn, backgroundColor:'#facc15', color:'#000', border:'2px solid #000', marginTop:'15px'}} onClick={() => setShowAddPromo(true)}>+ ADD TASK (PROMOTE)</button>}
               </>
             )}
 
@@ -164,15 +166,15 @@ function App() {
             
             {activeTab === 'reward' && (
               <div>
-                <input style={styles.input} placeholder="Enter Promo Code" value={rewardInput} onChange={(e) => setRewardInput(e.target.value)} />
+                <input style={styles.input} placeholder="Promo Code" value={rewardInput} onChange={(e) => setRewardInput(e.target.value)} />
                 <button style={styles.btn} onClick={() => {
                   if(rewardInput === 'EASY2') {
                      const newBal = Number((balance + 0.001).toFixed(5));
                      setBalance(newBal);
                      syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, completed: [...completed, 'CODE_EASY2'] });
-                     alert("Bonus +0.001 TON Added!"); setRewardInput('');
-                  } else { alert("Invalid Code"); }
-                }}>CLAIM REWARD</button>
+                     alert("Success! +0.001 TON Added!"); setRewardInput('');
+                  } else { alert("Invalid Code!"); }
+                }}>CLAIM CODE</button>
               </div>
             )}
           </div>
@@ -181,32 +183,39 @@ function App() {
 
       {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h2 style={{textAlign:'center', marginTop:0}}>INVITE FRIENDS</h2>
-          <div style={{background:'#f8fafc', padding:15, borderRadius:15, border:'1px dashed #000'}}>
-            <small>SHARE LINK:</small>
-            <p style={{fontSize:11, fontWeight:'bold', wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
-            <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}} style={styles.btn}>COPY LINK</button>
+          <h2 style={{textAlign:'center', marginTop:0}}>REFERRAL PROGRAM</h2>
+          <div style={{textAlign:'center', marginBottom:20}}>
+            <div style={{fontSize:20, fontWeight:'900', color:'#000'}}>1 REFER = 0.0005 TON</div>
+            <div style={{fontSize:14, fontWeight:'bold', color:'#10b981'}}>+ 10% LIFETIME COMMISSION</div>
           </div>
-          <h4 style={{marginTop:20}}>Referral Stats: {referralCount} Users</h4>
+          <div style={styles.promoBox}>
+            <small>YOUR INVITE LINK:</small>
+            <p style={{fontSize:11, fontWeight:'bold', wordBreak:'break-all', margin:'10px 0'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
+            <button onClick={() => handleCopy(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`)} style={styles.btn}>COPY LINK</button>
+          </div>
+          <div style={{display:'flex', justifyContent:'space-between', padding:'10px'}}>
+             <span>Total Referrals:</span><strong>{referralCount} Users</strong>
+          </div>
         </div>
       )}
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h3>WITHDRAW</h3>
-          <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+          <h3>WITHDRAW FUNDS</h3>
+          <input style={styles.input} type="number" placeholder="Minimum 0.1 TON" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
           <button style={styles.btn} onClick={() => {
             if(parseFloat(withdrawAmount) >= 0.1 && balance >= withdrawAmount) {
               const nb = Number((balance - parseFloat(withdrawAmount)).toFixed(5));
               const nh = [{id: Date.now(), amount: withdrawAmount, status: 'Pending'}, ...withdrawHistory];
               setBalance(nb); setWithdrawHistory(nh);
               syncToFirebase(`users/${APP_CONFIG.MY_UID}`, {balance: nb, withdrawHistory: nh});
-              alert("Withdrawal Requested!"); setWithdrawAmount('');
-            } else { alert("Minimum 0.1 TON required!"); }
+              alert("Withdrawal submitted successfully!"); setWithdrawAmount('');
+            } else { alert("Minimum withdraw is 0.1 TON!"); }
           }}>WITHDRAW NOW</button>
-          <div style={{marginTop: 15}}>
+          <div style={{marginTop: 20}}>
+            <h4>HISTORY</h4>
             {withdrawHistory.map((h, i) => (
-              <div key={i} style={styles.row}><span>{h.amount} TON</span><span style={{color:'orange'}}>{h.status}</span></div>
+              <div key={i} style={styles.row}><span>{h.amount} TON</span><span style={{color:'orange', fontWeight:'bold'}}>{h.status}</span></div>
             ))}
           </div>
         </div>
@@ -214,12 +223,14 @@ function App() {
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h2 style={{textAlign:'center', marginTop:0}}>MY PROFILE</h2>
-          <div style={styles.row}><span>UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
-          <div style={styles.row}><span>Balance:</span><strong>{balance.toFixed(5)} TON</strong></div>
-          <div style={{background:'#fff1f2', color:'#e11d48', padding:15, borderRadius:12, marginTop:20, fontSize:12, border: '1px solid #fda4af'}}>
-            ⚠️ <b>သတိပေးချက်:</b><br/>
-            Fake Account (သို့မဟုတ်) Bot များအသုံးပြုခြင်းကို လုံးဝလက်မခံပါ။ စစ်ဆေးတွေ့ရှိပါက Account အား အပြီးပိုင် ပိတ်သိမ်း (Ban) သွားမည်ဖြစ်ပါသည်။
+          <h2 style={{textAlign:'center', marginTop:0}}>USER PROFILE</h2>
+          <div style={{textAlign:'center', marginBottom:20}}><span style={{background:'#10b981', color:'#fff', padding:'5px 15px', borderRadius:20, fontSize:12, fontWeight:'bold'}}>● ACTIVE STATUS</span></div>
+          <div style={styles.row}><span>User UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
+          <div style={styles.row}><span>Account Level:</span><strong style={{color:'#facc15'}}>PREMIUM</strong></div>
+          <div style={styles.row}><span>Wallet Balance:</span><strong>{balance.toFixed(5)} TON</strong></div>
+          <div style={{background:'#fff1f2', color:'#e11d48', padding:15, borderRadius:12, marginTop:20, fontSize:12, border: '1px solid #fda4af', lineHeight:'1.5'}}>
+            ⚠️ <b>IMPORTANT WARNING:</b><br/>
+            Using multiple accounts, fake referrals, or automation bots is strictly prohibited. If detected, your account and all pending funds will be <b>PERMANENTLY BANNED</b> without notice.
           </div>
         </div>
       )}
