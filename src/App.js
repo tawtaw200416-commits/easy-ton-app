@@ -30,25 +30,50 @@ function App() {
     });
   };
 
-  // --- Data Loading & Migration ---
+  // --- Referral Tracking Logic ---
+  const trackReferral = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const referrerId = urlParams.get('start');
+
+    // ကိုယ့်ကို invite လုပ်တဲ့သူရှိရင် သူ့ရဲ့ count ကို တိုးပေးမယ်
+    if (referrerId && referrerId !== APP_CONFIG.MY_UID) {
+      const storageKey = `ref_tracked_${referrerId}`;
+      if (!localStorage.getItem(storageKey)) {
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${referrerId}.json`)
+          .then(res => res.json())
+          .then(data => {
+            const currentCount = data?.referralCount || 0;
+            fetch(`${APP_CONFIG.FIREBASE_URL}/users/${referrerId}.json`, {
+              method: 'PATCH',
+              body: JSON.stringify({ referralCount: currentCount + 1 })
+            });
+            localStorage.setItem(storageKey, 'true');
+          });
+      }
+    }
+  };
+
+  // --- Data Loading & Syncing ---
   useEffect(() => {
     if (tg) {
       tg.ready();
       tg.expand();
     }
 
-    // ၁။ Firebase ကနေ အရင်စစ်မယ်
+    trackReferral();
+
+    // Firebase ကနေ အရင်စစ်မယ်
     fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`)
       .then(res => res.json())
       .then(data => {
         if (data) {
-          // Firebase မှာ စာရင်းရှိရင် အဲ့ဒါကို သုံးမယ်
+          // Firebase မှာ ဒေတာရှိရင် အဲ့ဒါကို သုံးမယ်
           setBalance(data.balance || 0);
           setCompleted(data.completed || []);
           setWithdrawHistory(data.withdrawHistory || []);
           setReferralCount(data.referralCount || 0);
         } else {
-          // ၂။ Firebase မှာ မရှိသေးရင် LocalStorage (စနစ်ဟောင်း) ကနေ ရှာမယ်
+          // Firebase မှာ မရှိသေးရင် LocalStorage ကနေ အဟောင်းရှိမရှိ ကြည့်မယ်
           const localBal = Number(localStorage.getItem('ton_bal')) || 0;
           const localComp = JSON.parse(localStorage.getItem('comp_tasks')) || [];
           const localRef = Number(localStorage.getItem('ref_count')) || 0;
@@ -59,7 +84,7 @@ function App() {
           setReferralCount(localRef);
           setWithdrawHistory(localHist);
 
-          // ဒေတာဟောင်းတွေကို Firebase ထဲ သိမ်းလိုက်မယ်
+          // ဒေတာအဟောင်းတွေကို Firebase ထဲ တစ်ခါတည်း တင်ပေးလိုက်မယ်
           updateFirebase({
             balance: localBal,
             completed: localComp,
@@ -218,6 +243,10 @@ function App() {
           <h2 style={{textAlign:'center', marginTop:0, marginBottom:20}}>PROFILE</h2>
           <div style={styles.row}><span>UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
           <div style={styles.row}><span>Balance:</span><strong>{balance.toFixed(5)} TON</strong></div>
+          <div style={{...styles.row, marginTop: 15, borderTop: '1px solid #eee', paddingTop: 15}}>
+            <span>Active Referrals:</span>
+            <strong style={{color: '#16a34a'}}>{referralCount} Users</strong>
+          </div>
           <div style={styles.warning}>⚠️ Fraud check active. Fake referrals will be banned.</div>
         </div>
       )}
