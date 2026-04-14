@@ -7,7 +7,6 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "Guest_ID",
   ADSGRAM_BLOCK_ID: "27633", 
-  // Bro ရဲ့ Firebase URL ကို ဒီနေရာမှာ ထည့်ပေးရပါမယ်
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com" 
 };
 
@@ -20,10 +19,8 @@ function App() {
   
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
-  const [showAddTask, setShowAddTask] = useState(false);
   const [rewardInput, setRewardInput] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState(null);
 
   // --- Firebase Data Fetching ---
   useEffect(() => {
@@ -32,7 +29,6 @@ function App() {
       tg.expand();
     }
 
-    // Firebase ကနေ User Data ကို ဆွဲယူခြင်း
     fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`)
       .then(res => res.json())
       .then(data => {
@@ -141,7 +137,16 @@ function App() {
               { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
               { id: 's3', name: "@cryptogold_online", link: "https://t.me/cryptogold_online_official" },
               { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
-              { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
+              { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
+              { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+              { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+              { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+              { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
+              { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+              { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
+              { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
+              { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
+              { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
             ].filter(t => !completed.includes(t.id)).map(t => (
               <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '90px', padding: '10px'}}>JOIN</button></div>
             ))}
