@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const tg = window.Telegram?.WebApp;
 
@@ -10,7 +10,7 @@ const APP_CONFIG = {
 };
 
 function App() {
-  const [balance, setBalance] = useState(0.0000);
+  const [balance, setBalance] = useState(0);
   const [completed, setCompleted] = useState([]);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
   const [referralCount, setReferralCount] = useState(0);
@@ -25,68 +25,99 @@ function App() {
   const [rewardInput, setRewardInput] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
 
-  const syncToFirebase = (path, data) => {
-    return fetch(`${APP_CONFIG.FIREBASE_URL}/${path}.json`, {
-      method: 'PATCH',
-      body: JSON.stringify(data)
-    });
-  };
+  // Function to save data safely
+  const syncToFirebase = useCallback(async (path, data) => {
+    try {
+      await fetch(`${APP_CONFIG.FIREBASE_URL}/${path}.json`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+      });
+    } catch (e) {
+      console.error("Firebase Sync Error:", e);
+    }
+  }, []);
 
   useEffect(() => {
-    if (tg) { tg.ready(); tg.expand(); }
-    const initApp = async () => {
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
+
+    const loadData = async () => {
+      setLoading(true);
       try {
         const [userRes, tasksRes] = await Promise.all([
           fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
           fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`)
         ]);
+
         const userData = await userRes.json();
         const tasksData = await tasksRes.json();
 
+        // အဟောင်း data ရှိရင် အဟောင်းကိုပဲယူမယ်၊ မရှိမှအသစ်စမယ်
         if (userData) {
-          setBalance(Number(userData.balance) || 0);
+          setBalance(userData.balance || 0);
           setCompleted(userData.completed || []);
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferralCount(userData.referralCount || 0);
         } else {
-          // New User Initialization
-          await syncToFirebase(`users/${APP_CONFIG.MY_UID}`, {
-            balance: 0, completed: [], withdrawHistory: [], referralCount: 0, uid: APP_CONFIG.MY_UID
-          });
+          const newUser = {
+            balance: 0,
+            completed: [],
+            withdrawHistory: [],
+            referralCount: 0,
+            uid: APP_CONFIG.MY_UID
+          };
+          await syncToFirebase(`users/${APP_CONFIG.MY_UID}`, newUser);
         }
-        if (tasksData) setCustomTasks(Object.values(tasksData));
-      } catch (e) { console.error("Sync Error:", e); }
-      setLoading(false);
-    };
-    initApp();
-  }, []);
 
-  const handleCopy = (text) => {
-    navigator.clipboard.writeText(text);
-    alert("Copied to clipboard!");
-  };
+        if (tasksData) {
+          setCustomTasks(Object.values(tasksData));
+        }
+      } catch (error) {
+        console.error("Initialization Error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [syncToFirebase]);
 
   const handleTaskAction = (id, link) => {
-    if (completed.includes(id)) return alert("Already completed!");
+    if (completed.includes(id)) return alert("ဒီ Task ကို လုပ်ပြီးသားပါ!");
     window.open(link, '_blank');
     
     const completeTask = () => {
-      if (!completed.includes(id)) {
-        const newBalance = Number((balance + 0.0005).toFixed(5));
-        const newCompleted = [...completed, id];
-        setBalance(newBalance);
-        setCompleted(newCompleted);
-        syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBalance, completed: newCompleted });
-        alert("Reward Received! +0.0005 TON");
-      }
+      // Latest state ကို သုံးပြီး update လုပ်တာ ပိုစိတ်ချရတယ်
+      setBalance(prevBalance => {
+        const newBalance = Number((prevBalance + 0.0005).toFixed(5));
+        setCompleted(prevCompleted => {
+          const newCompleted = [...prevCompleted, id];
+          // Firebase ကို သိမ်းမယ်
+          syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { 
+            balance: newBalance, 
+            completed: newCompleted 
+          });
+          return newCompleted;
+        });
+        return newBalance;
+      });
+      alert("Reward ရရှိပါပြီ! +0.0005 TON");
     };
 
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
-        .then(completeTask).catch(() => setTimeout(completeTask, 5000));
+        .then(completeTask)
+        .catch(() => setTimeout(completeTask, 5000));
     } else {
       setTimeout(completeTask, 5000);
     }
+  };
+
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text);
+    alert("Copied!");
   };
 
   const styles = {
@@ -102,7 +133,6 @@ function App() {
     copyBtnSmall: { backgroundColor: '#facc15', border: '1px solid #000', borderRadius: '5px', padding: '2px 8px', fontSize: '10px', fontWeight: 'bold', marginLeft: '5px' }
   };
 
-  // 14 Social Tasks
   const staticSocialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
@@ -120,7 +150,6 @@ function App() {
     { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
   ];
 
-  // 6 Bot Tasks
   const staticBotTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=" + APP_CONFIG.MY_UID },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -130,13 +159,11 @@ function App() {
     { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=" + APP_CONFIG.MY_UID }
   ];
 
-  const allSocialTasks = [...staticSocialTasks, ...customTasks.filter(t => t.type === 'social')];
-  const allBotTasks = [...staticBotTasks, ...customTasks.filter(t => t.type === 'bot')];
-
-  if (loading) return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', background:'#facc15'}}><b>SYNCING DATA...</b></div>;
+  if (loading) return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', background:'#facc15'}}><b>DATA ရယူနေသည်...</b></div>;
 
   return (
     <div style={styles.main}>
+      {/* Header Section */}
       <div style={styles.header}>
         <small style={{ color: '#facc15' }}>CURRENT BALANCE</small>
         <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:16, color:'#facc15'}}>TON</span></h1>
@@ -145,6 +172,7 @@ function App() {
 
       {activeNav === 'earn' && (
         <>
+          {/* Tab Selection */}
           <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
               (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && (
@@ -167,25 +195,24 @@ function App() {
                       ))}
                     </div>
                     <div style={styles.promoBox}>
-                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                        <small><b>TON ADDRESS:</b></small>
+                      <small><b>TON ADDRESS:</b></small>
+                      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                        <p style={{fontSize:'9px', wordBreak:'break-all', margin:'5px 0'}}>{APP_CONFIG.ADMIN_WALLET}</p>
                         <button onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET)} style={styles.copyBtnSmall}>COPY</button>
                       </div>
-                      <p style={{fontSize:'9px', wordBreak:'break-all', margin:'5px 0'}}>{APP_CONFIG.ADMIN_WALLET}</p>
-                      
-                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginTop: '10px'}}>
-                        <small><b>MEMO (UID):</b></small>
+                      <small><b>MEMO (UID):</b></small>
+                      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                        <p style={{fontSize:'18px', fontWeight:'900', color:'#e11d48', margin:0}}>{APP_CONFIG.MY_UID}</p>
                         <button onClick={() => handleCopy(APP_CONFIG.MY_UID)} style={styles.copyBtnSmall}>COPY</button>
                       </div>
-                      <p style={{fontSize:'18px', fontWeight:'900', color:'#e11d48', margin:0}}>{APP_CONFIG.MY_UID}</p>
                     </div>
                     <button style={styles.btn} onClick={() => window.open("https://t.me/GrowTeaNews")}>SEND PAYMENT PROOF</button>
                   </div>
                 ) : (
-                  allSocialTasks.map(t => (
+                  [...staticSocialTasks, ...customTasks.filter(t => t.type === 'social')].map(t => (
                     <div key={t.id} style={styles.row}>
-                      <b>{t.name}</b>
-                      <button onClick={() => handleTaskAction(t.id, t.link)} disabled={completed.includes(t.id)} style={{...styles.btn, width: '80px', padding: '8px', opacity: completed.includes(t.id) ? 0.5 : 1}}>
+                      <b style={{fontSize: '13px'}}>{t.name}</b>
+                      <button onClick={() => handleTaskAction(t.id, t.link)} disabled={completed.includes(t.id)} style={{...styles.btn, width: '80px', padding: '8px', opacity: completed.includes(t.id) ? 0.4 : 1}}>
                         {completed.includes(t.id) ? 'DONE' : 'JOIN'}
                       </button>
                     </div>
@@ -194,10 +221,10 @@ function App() {
               </>
             )}
 
-            {activeTab === 'bot' && allBotTasks.map(t => (
+            {activeTab === 'bot' && [...staticBotTasks, ...customTasks.filter(t => t.type === 'bot')].map(t => (
               <div key={t.id} style={styles.row}>
-                <b>{t.name}</b>
-                <button onClick={() => handleTaskAction(t.id, t.link)} disabled={completed.includes(t.id)} style={{...styles.btn, width: '80px', padding: '8px', opacity: completed.includes(t.id) ? 0.5 : 1}}>
+                <b style={{fontSize: '13px'}}>{t.name}</b>
+                <button onClick={() => handleTaskAction(t.id, t.link)} disabled={completed.includes(t.id)} style={{...styles.btn, width: '80px', padding: '8px', opacity: completed.includes(t.id) ? 0.4 : 1}}>
                   {completed.includes(t.id) ? 'DONE' : 'START'}
                 </button>
               </div>
@@ -210,9 +237,12 @@ function App() {
                   if(completed.includes('CODE_EASY2')) return alert("Already used!");
                   if(rewardInput === 'EASY2') {
                      const newBal = Number((balance + 0.001).toFixed(5));
-                     const newComp = [...completed, 'CODE_EASY2'];
-                     setBalance(newBal); setCompleted(newComp);
-                     syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, completed: newComp });
+                     setBalance(newBal);
+                     setCompleted(prev => {
+                       const newC = [...prev, 'CODE_EASY2'];
+                       syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, completed: newC });
+                       return newC;
+                     });
                      alert("Success! +0.001 TON"); setRewardInput('');
                   } else { alert("Invalid Code!"); }
                 }}>CLAIM CODE</button>
@@ -242,52 +272,7 @@ function App() {
         </>
       )}
 
-      {activeNav === 'invite' && (
-        <div style={styles.card}>
-          <h2 style={{textAlign:'center', marginTop:0}}>REFERRAL PROGRAM</h2>
-          <div style={styles.promoBox}>
-            <small>YOUR INVITE LINK:</small>
-            <p style={{fontSize:11, fontWeight:'bold', wordBreak:'break-all', margin:'10px 0'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
-            <button onClick={() => handleCopy(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`)} style={styles.btn}>COPY LINK</button>
-          </div>
-          <div style={{display:'flex', justifyContent:'space-between', padding:'10px'}}>
-             <span>Total Referrals:</span><strong>{referralCount} Users</strong>
-          </div>
-        </div>
-      )}
-
-      {activeNav === 'withdraw' && (
-        <div style={styles.card}>
-          <h3>WITHDRAW FUNDS</h3>
-          <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
-          <button style={styles.btn} onClick={() => {
-            if(parseFloat(withdrawAmount) >= 0.1 && balance >= withdrawAmount) {
-              const nb = Number((balance - parseFloat(withdrawAmount)).toFixed(5));
-              const nh = [{id: Date.now(), amount: withdrawAmount, status: 'Pending'}, ...withdrawHistory];
-              setBalance(nb); setWithdrawHistory(nh);
-              syncToFirebase(`users/${APP_CONFIG.MY_UID}`, {balance: nb, withdrawHistory: nh});
-              alert("Withdrawal submitted!"); setWithdrawAmount('');
-            } else { alert("Insufficient or Min 0.1 required!"); }
-          }}>WITHDRAW NOW</button>
-          <div style={{marginTop: 20}}>
-            {withdrawHistory.map((h, i) => (
-              <div key={i} style={styles.row}><span>{h.amount} TON</span><span style={{color:'orange', fontWeight:'bold'}}>{h.status}</span></div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {activeNav === 'profile' && (
-        <div style={styles.card}>
-          <h2 style={{textAlign:'center', marginTop:0}}>USER PROFILE</h2>
-          <div style={{textAlign:'center', marginBottom:20}}><span style={{background:'#10b981', color:'#fff', padding:'5px 15px', borderRadius:20, fontSize:12, fontWeight:'bold'}}>● ACTIVE STATUS</span></div>
-          <div style={styles.row}><span>User UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
-          <div style={styles.row}><span>Account Level:</span><strong style={{color:'#facc15'}}>PREMIUM</strong></div>
-          <div style={styles.row}><span>Wallet Balance:</span><strong>{balance.toFixed(5)} TON</strong></div>
-          <p style={{fontSize:11, color:'red', marginTop:15}}>⚠️ Warning: Automation or multiple accounts will result in a permanent ban.</p>
-        </div>
-      )}
-
+      {/* Navigation Footer */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => setActiveNav(n)} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
