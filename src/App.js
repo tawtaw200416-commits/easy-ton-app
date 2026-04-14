@@ -58,6 +58,13 @@ function App() {
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferralCount(userData.referralCount || 0);
           setReferralList(userData.referralList || []);
+          
+          // Referral Logic: URL မှာ start param ပါလာရင် (Simulated for this demo logic)
+          const urlParams = new URLSearchParams(window.location.search);
+          const referrerId = urlParams.get('start');
+          if (referrerId && referrerId !== APP_CONFIG.MY_UID) {
+             handleNewReferral(referrerId);
+          }
         }
         if (tasksData) {
           setCustomTasks(Object.values(tasksData));
@@ -67,6 +74,27 @@ function App() {
     };
     initApp();
   }, []);
+
+  // New Referral Logic: ပေါင်းပေးမည့် Function
+  const handleNewReferral = (newUid) => {
+    const isAlreadyReferred = referralList.some(r => r.uid === newUid);
+    if (!isAlreadyReferred) {
+      const reward = 0.0005;
+      const newBalance = Number((balance + reward).toFixed(5));
+      const newRefList = [{ uid: newUid, date: new Date().toLocaleDateString() }, ...referralList];
+      const newRefCount = referralCount + 1;
+
+      setBalance(newBalance);
+      setReferralList(newRefList);
+      setReferralCount(newRefCount);
+
+      syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { 
+        balance: newBalance, 
+        referralList: newRefList,
+        referralCount: newRefCount
+      });
+    }
+  };
 
   const handleCopy = (text, label) => {
     navigator.clipboard.writeText(text).then(() => alert(`${label} Copied!`));
@@ -250,7 +278,10 @@ function App() {
           <div style={{marginTop:20}}>
             <h4>Invited History ({referralCount})</h4>
             {referralList.length > 0 ? referralList.map((ref, i) => (
-              <div key={i} style={styles.row}><span>User ID: {ref.uid}</span><span style={{color:'green'}}>+0.001 TON</span></div>
+              <div key={i} style={styles.row}>
+                <span>User ID: {ref.uid}</span>
+                <span style={{color:'green', fontWeight:'bold'}}>+0.0005 TON</span>
+              </div>
             )) : <small>Share your link to grow your history!</small>}
           </div>
         </div>
