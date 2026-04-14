@@ -139,7 +139,7 @@ function App() {
 
             {activeTab === 'social' && !showAddTask && (
               <>
-                <button onClick={() => setShowAddTask(true)} style={{...styles.yellowBtn, backgroundColor: '#facc15', color: '#000', marginBottom: '20px', border: '2px solid #000'}}>+ PROMOTE CHANNEL</button>
+                <button onClick={() => setShowAddTask(true)} style={{...styles.yellowBtn, backgroundColor: '#facc15', color: '#000', marginBottom: '20px', border: '2px solid #000'}}>+ ADD TASK (PROMOTE)</button>
                 {[
                   { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
                   { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
@@ -190,6 +190,22 @@ function App() {
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardInput} onChange={(e) => setRewardInput(e.target.value)} />
                 <button style={styles.yellowBtn} onClick={() => { if(rewardInput==='EASY1'){ const nb = Number((balance + 0.005).toFixed(5)); setBalance(nb); syncToFirebase(`users/${APP_CONFIG.MY_UID}`, {balance: nb}); alert("Bonus Claimed!"); setRewardInput(''); } else { alert("Invalid Code"); } }}>CLAIM BONUS</button>
+              </div>
+            )}
+            
+            {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
+              <div>
+                <h3 style={{marginTop:0}}>ADD GLOBAL TASK</h3>
+                <input style={styles.input} placeholder="Task Name" value={newTask.name} onChange={e => setNewTask({...newTask, name: e.target.value})} />
+                <input style={styles.input} placeholder="Link (https://...)" value={newTask.link} onChange={e => setNewTask({...newTask, link: e.target.value})} />
+                <select style={styles.input} onChange={e => setNewTask({...newTask, type: e.target.value})}>
+                  <option value="bot">BOT TASK</option>
+                  <option value="social">SOCIAL TASK</option>
+                </select>
+                <button style={styles.yellowBtn} onClick={() => {
+                  const id = 'task_' + Date.now();
+                  fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({...newTask, id}) }).then(() => { alert("Saved!"); window.location.reload(); });
+                }}>SAVE TO DATABASE</button>
               </div>
             )}
           </div>
