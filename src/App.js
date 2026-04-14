@@ -13,11 +13,16 @@ const APP_CONFIG = {
 };
 
 function App() {
-  // --- LocalStorage & Firebase ပေါင်းစပ်ပြီး Initial State သတ်မှတ်ခြင်း ---
-  const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_bal')) || 0.0000);
+  // --- LocalStorage ကနေ အရင်ရှိပြီးသား Data ကို ဆွဲထုတ်မယ် (Reload လုပ်ရင် 0 မဖြစ်အောင်) ---
+  const [balance, setBalance] = useState(() => {
+    const savedBal = localStorage.getItem('ton_bal');
+    return savedBal !== null ? Number(savedBal) : 0.0000;
+  });
+  
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('comp_tasks')) || []);
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || []);
   const [referralList, setReferralList] = useState([]);
+  const [customTasks, setCustomTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const isDataLoaded = useRef(false);
 
@@ -26,16 +31,15 @@ function App() {
   const [showAddPromo, setShowAddPromo] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('100');
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [customTasks, setCustomTasks] = useState([]);
 
-  // --- Data ကို LocalStorage မှာ အမြဲ Backup လုပ်ထားခြင်း ---
+  // --- Data ပြောင်းတိုင်း LocalStorage မှာ သိမ်းမယ် ---
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
     localStorage.setItem('wd_hist', JSON.stringify(withdrawHistory));
   }, [balance, completed, withdrawHistory]);
 
-  // --- Firebase ကနေ Data ဆွဲတင်ခြင်း ---
+  // --- Firebase နဲ့ Data ချိတ်ဆက်ခြင်း ---
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
 
@@ -49,21 +53,23 @@ function App() {
         const tasksData = await tasksRes.json();
 
         if (userData) {
-          // Firebase က ဒေတာရှိရင် LocalStorage ထက် ပိုဦးစားပေးမယ်
-          setBalance(Number(userData.balance) || balance);
-          setCompleted(userData.completed || completed);
-          setWithdrawHistory(userData.withdrawHistory || withdrawHistory);
+          // Firebase မှာ data ရှိနေရင် အဲ့ဒါကို ယူသုံးမယ်
+          setBalance(Number(userData.balance));
+          setCompleted(userData.completed || []);
+          setWithdrawHistory(userData.withdrawHistory || []);
           setReferralList(userData.referralList || []);
         } else {
-          // New User ဆိုရင် Firebase မှာ နေရာဆောက်မယ်
+          // User အသစ်ဆိုမှ Firebase မှာ စာရင်းအသစ်ဖွင့်မယ် (Balance ကို 0 ပြန်မချပါ)
           await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PUT',
-            body: JSON.stringify({ balance, completed, withdrawHistory, referralList: [] })
+            body: JSON.stringify({ balance: balance, completed: completed, withdrawHistory: [], referralList: [] })
           });
         }
+
         if (tasksData) {
           setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], id: key })));
         }
+        
         isDataLoaded.current = true;
         setLoading(false);
       } catch (e) { setLoading(false); }
@@ -91,7 +97,6 @@ function App() {
         alert(`Success! +${reward} TON Added.`);
       }
     };
-    // Adsgram ရှိရင် ကြော်ငြာပြမယ်၊ မရှိရင် 5 စက္ကန့် စောင့်ခိုင်းမယ်
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
         .then(completeTask).catch(() => setTimeout(completeTask, 5000));
@@ -120,28 +125,22 @@ function App() {
     navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '11px', fontWeight: '900' }),
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #eee' },
     input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
-    copyBox: { background: '#f1f5f9', padding: '10px', borderRadius: '12px', border: '1px dashed #000', marginBottom: '10px', fontSize: '11px' },
+    copyBox: { background: '#f1f5f9', padding: '12px', borderRadius: '12px', border: '1px dashed #000', marginBottom: '10px', fontSize: '11px' },
     planBtn: (active) => ({ flex: 1, padding: '10px', border: '2px solid #000', borderRadius: '10px', backgroundColor: active ? '#000' : '#fff', color: active ? '#fff' : '#000', fontSize: '10px', fontWeight: 'bold' }),
     warning: { background: '#fee2e2', color: '#b91c1c', padding: '15px', borderRadius: '15px', fontSize: '11px', marginTop: '10px', border: '1px solid #f87171' }
   };
 
   const botTasks = [
-    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'b1', name: "Grow Tea Bot", link: `https://t.me/GrowTeaBot/app?startapp=${APP_CONFIG.MY_UID}` },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-    { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
-    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
+    { id: 'b3', name: "Workers On TON", link: `https://t.me/WorkersOnTonBot/app?startapp=r_${APP_CONFIG.MY_UID}` },
+    { id: 'b4', name: "Easy Bonus Bot", link: `https://t.me/easybonuscode_bot?start=${APP_CONFIG.MY_UID}` },
+    { id: 'b5', name: "Ton Dragon Bot", link: `https://t.me/TonDragonBot/myapp?startapp=${APP_CONFIG.MY_UID}` },
+    { id: 'b6', name: "Pobuzz Bot", link: `https://t.me/Pobuzzbot/app?startapp=${APP_CONFIG.MY_UID}` },
     ...customTasks.filter(t => t.type === 'bot')
   ];
 
-  const socialTasks = [
-    { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-    ...customTasks.filter(t => t.type === 'social')
-  ];
-
-  if (loading) return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', background:'#facc15'}}><b>SYNCING...</b></div>;
+  if (loading) return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', background:'#facc15'}}><b>SYNCING DATA...</b></div>;
 
   return (
     <div style={styles.main}>
@@ -166,7 +165,12 @@ function App() {
             {activeTab === 'social' && !showAddPromo && (
               <>
                 <button onClick={() => setShowAddPromo(true)} style={{...styles.btn, backgroundColor: '#facc15', color: '#000', marginBottom: '20px', border: '2px solid #000'}}>+ ADD TASK (PROMOTE)</button>
-                {socialTasks.filter(t => !completed.includes(t.id)).map(t => (
+                {[
+                  { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+                  { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+                  { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+                  ...customTasks.filter(t => t.type === 'social')
+                ].filter(t => !completed.includes(t.id)).map(t => (
                   <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.btn, width: '90px', padding: '10px'}}>JOIN</button></div>
                 ))}
               </>
@@ -182,12 +186,8 @@ function App() {
                     <button key={v} onClick={() => setSelectedPlan(v)} style={styles.planBtn(selectedPlan === v)}>{v} Views<br/>{v==='100'?'0.2':v==='200'?'0.4':'0.5'} TON</button>
                   ))}
                 </div>
-                <div style={styles.copyBox}>
-                  <b>PAY TO WALLET:</b><br/>{APP_CONFIG.ADMIN_WALLET}
-                </div>
-                <div style={styles.copyBox}>
-                  <b>MEMO (YOUR UID):</b><br/>{APP_CONFIG.MY_UID}
-                </div>
+                <div style={styles.copyBox}><b>PAY TO WALLET:</b><br/>{APP_CONFIG.ADMIN_WALLET}</div>
+                <div style={styles.copyBox}><b>MEMO (YOUR UID):</b><br/>{APP_CONFIG.MY_UID}</div>
                 <button style={styles.btn} onClick={() => window.open("https://t.me/GrowTeaNews")}>SEND PROOF TO ADMIN</button>
                 <button onClick={() => setShowAddPromo(false)} style={{...styles.btn, background:'none', color:'#000', marginTop:10}}>CANCEL</button>
               </div>
@@ -228,7 +228,7 @@ function App() {
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h2 style={{textAlign:'center', marginTop:0, marginBottom:20}}>MY ACCOUNT</h2>
+          <h2 style={{textAlign:'center', marginTop:0, marginBottom:20}}>USER PROFILE</h2>
           <div style={styles.row}><span>UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
           <div style={styles.row}><span>Status:</span><b style={{color:'#10b981'}}>VERIFIED</b></div>
           <div style={styles.row}><span>Balance:</span><strong>{balance.toFixed(5)} TON</strong></div>
