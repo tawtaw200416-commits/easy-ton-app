@@ -19,17 +19,17 @@ function App() {
   const isDataLoaded = useRef(false);
 
   const [customTasks, setCustomTasks] = useState([]); 
-  const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [showAddPromo, setShowAddPromo] = useState(false);
   const [rewardInput, setRewardInput] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
-
+  const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
   const [promoForm, setPromoForm] = useState({ name: '', link: '', plan: '100 Views - 0.2 TON' });
 
+  // Firebase ကို data ပို့တဲ့အခါ လက်ရှိ data အဟောင်းတွေပါ ပေါင်းပို့ဖို့ Function
   const syncToFirebase = (path, data) => {
-    if (!isDataLoaded.current) return; 
+    if (!isDataLoaded.current) return;
     return fetch(`${APP_CONFIG.FIREBASE_URL}/${path}.json`, {
       method: 'PATCH',
       body: JSON.stringify(data)
@@ -47,7 +47,14 @@ function App() {
   };
 
   useEffect(() => {
+    // Adsgram Script ကို Dynamic ထည့်ခြင်း
+    const script = document.createElement('script');
+    script.src = "https://adsgram.ai/js/adsgram.js";
+    script.async = true;
+    document.body.appendChild(script);
+
     if (tg) { tg.ready(); tg.expand(); }
+
     const initApp = async () => {
       try {
         const urlParams = new URLSearchParams(window.location.search);
@@ -57,22 +64,25 @@ function App() {
           fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
           fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`)
         ]);
+
         let userData = await userRes.json();
         const tasksData = await tasksRes.json();
 
+        // **ဒီနေရာမှာ Reload လုပ်ရင် 0 ဖြစ်မသွားအောင် အဓိက စစ်ပေးထားပါတယ်**
         if (userData) {
-          // ID တူရင် အရင်လုပ်ထားသမျှ Data တွေ ပြန်ပေါ်အောင် ပေးထားပါတယ်
           setBalance(Number(userData.balance) || 0);
           setCompleted(userData.completed || []);
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferrals(userData.referrals || []);
         } else {
-          userData = { balance: 0, completed: [], referrals: [], withdrawHistory: [] };
+          // User အသစ်ဆိုရင်မှ 0 ကနေစမယ်
+          const newUser = { balance: 0, completed: [], referrals: [], withdrawHistory: [] };
           await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PUT',
-            body: JSON.stringify(userData)
+            body: JSON.stringify(newUser)
           });
 
+          // Referral စနစ်
           if (refId && refId !== APP_CONFIG.MY_UID) {
             const referrerRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${refId}.json`);
             const referrerData = await referrerRes.json();
@@ -90,7 +100,10 @@ function App() {
         if (tasksData) setCustomTasks(Object.values(tasksData));
         isDataLoaded.current = true;
         setLoading(false);
-      } catch (e) { setLoading(false); }
+      } catch (e) { 
+        console.error(e);
+        setLoading(false); 
+      }
     };
     initApp();
   }, []);
@@ -107,9 +120,15 @@ function App() {
         alert(`Success! +${reward} TON Added.`);
       }
     };
+
+    // Ads တက်လာအောင် စောင့်ကြည့်စနစ်
     if (window.Adsgram) {
-      window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show().then(completeTask).catch(() => setTimeout(completeTask, 5000));
-    } else { setTimeout(completeTask, 5000); }
+      window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
+        .then(completeTask)
+        .catch(() => setTimeout(completeTask, 5000));
+    } else { 
+      setTimeout(completeTask, 5000); 
+    }
   };
 
   const handleWatchAds = () => {
@@ -121,8 +140,10 @@ function App() {
         syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBalance });
         alert("Ads Reward: +0.0001 TON Added!");
       })
-      .catch(() => alert("Ads not ready. Please try again later."));
-    } else { alert("Ads provider not found!"); }
+      .catch(() => alert("Ads not ready. Please check internet."));
+    } else { 
+      alert("Ads provider is still loading..."); 
+    }
   };
 
   const styles = {
@@ -158,7 +179,7 @@ function App() {
 
   const allSocial = [...socialList, ...customTasks.filter(t => t.type === 'social')];
 
-  if (loading) return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', background:'#facc15'}}><b>SYNCING...</b></div>;
+  if (loading) return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', background:'#facc15'}}><b>SYNCING DATA...</b></div>;
 
   return (
     <div style={styles.main}>
@@ -188,6 +209,7 @@ function App() {
                   </div>
                   <button onClick={handleWatchAds} style={{...styles.btn, width: '80px', padding: '8px', background: '#facc15', color: '#000'}}>WATCH</button>
                 </div>
+                {/* Claim ပြီးသား bot တွေ List မှာ ထပ်မပေါ်အောင် filter စစ်ထားပါတယ် */}
                 {botList.filter(t => !completed.includes(t.id)).map(t => (
                   <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
                 ))}
@@ -199,6 +221,7 @@ function App() {
                 {!showAddPromo ? (
                   <>
                     <button style={{...styles.btn, background:'#facc15', color:'#000', border:'2px solid #000', marginBottom: 15}} onClick={() => setShowAddPromo(true)}>+ ADD TASK (PROMOTE)</button>
+                    {/* Claim ပြီးသား social တွေ filter စစ်ထားပါတယ် */}
                     {allSocial.filter(t => !completed.includes(t.id)).map(t => (
                       <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
                     ))}
@@ -226,7 +249,6 @@ function App() {
                           <button onClick={() => copyToClipboard(APP_CONFIG.MY_UID)} style={styles.smallCopyBtn}>COPY</button>
                        </div>
                     </div>
-                    {/* ပုံထဲကအတိုင်း CONTACT SUPPORT ကို Link အသစ်နဲ့ ပြင်ပေးထားပါတယ် */}
                     <button style={{...styles.btn, background: '#10b981'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT, '_blank')}>CONTACT SUPPORT (SEND PROOF)</button>
                     <button style={{...styles.btn, background:'none', color:'#000', marginTop:10}} onClick={() => setShowAddPromo(false)}>BACK</button>
                   </div>
@@ -307,7 +329,6 @@ function App() {
             <div style={styles.row}><span>Balance:</span><strong>{balance.toFixed(5)} TON</strong></div>
           </div>
 
-          {/* Profile မှာ Support Link အသစ် ထည့်ပေးထားပါတယ် */}
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
              <h4 style={{margin: '0 0 10px 0', color: '#facc15'}}>NEED HELP?</h4>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT, '_blank')}>CONTACT SUPPORT</button>
@@ -315,7 +336,7 @@ function App() {
 
           <div style={{backgroundColor:'#fee2e2', color:'#b91c1c', padding:'15px', borderRadius:'15px', fontSize:'12px', border:'1px solid #f87171', marginTop: 10}}>
             <b>⚠️ SECURITY NOTICE:</b><br/>
-            Fake referrals or bot automation are strictly prohibited. If detected, your account will be <b>PERMANENTLY BANNED</b>.
+            Fake referrals or bot automation are strictly prohibited. Account will be <b>BANNED</b> if detected.
           </div>
         </div>
       )}
