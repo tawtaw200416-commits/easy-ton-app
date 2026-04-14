@@ -5,7 +5,6 @@ const tg = window.Telegram?.WebApp;
 
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
-  // User ရဲ့ UID ကို Telegram ကနေ တိုက်ရိုက်ယူမယ်၊ မရရင် Static သုံးမယ်
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606",
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com" 
@@ -18,6 +17,10 @@ function App() {
   const [referralCount, setReferralCount] = useState(0);
   const [loading, setLoading] = useState(true);
   
+  // --- Task Management States ---
+  const [customTasks, setCustomTasks] = useState([]); // Database မှ Task အသစ်များသိမ်းရန်
+  const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
+
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [showAddTask, setShowAddTask] = useState(false);
@@ -25,11 +28,27 @@ function App() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [selectedPlan, setSelectedPlan] = useState(null);
 
-  // --- Firebase Data Sync Logic ---
+  // --- Firebase Update Function ---
   const syncToFirebase = (data) => {
     fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
       method: 'PATCH',
       body: JSON.stringify(data)
+    });
+  };
+
+  // --- Admin: Add Task to Database ---
+  const handleAdminAddTask = () => {
+    if (!newTask.name || !newTask.link) return alert("အချက်အလက်ဖြည့်ပါ");
+    const taskId = 'task_' + Date.now();
+    
+    fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${taskId}.json`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...newTask, id: taskId })
+    }).then(() => {
+      alert("Task အသစ်ထည့်ပြီးပါပြီ!");
+      setNewTask({ name: '', link: '', type: 'bot' });
+      // Task အသစ်ကို ချက်ချင်း List ထဲပေါင်းထည့်ရန်
+      window.location.reload(); 
     });
   };
 
@@ -39,19 +58,22 @@ function App() {
       tg.expand();
     }
 
-    // Firebase မှ Data ကို ဆွဲယူခြင်း
-    fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`)
-      .then(res => res.json())
-      .then(data => {
-        if (data) {
-          setBalance(data.balance || 0);
-          setCompleted(data.completed || []);
-          setWithdrawHistory(data.withdrawHistory || []);
-          setReferralCount(data.referralCount || 0);
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    // Firebase မှ User Data နှင့် Global Tasks များကို ဆွဲယူခြင်း
+    Promise.all([
+      fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`).then(res => res.json()),
+      fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`).then(res => res.json())
+    ]).then(([userData, tasksData]) => {
+      if (userData) {
+        setBalance(userData.balance || 0);
+        setCompleted(userData.completed || []);
+        setWithdrawHistory(userData.withdrawHistory || []);
+        setReferralCount(userData.referralCount || 0);
+      }
+      if (tasksData) {
+        setCustomTasks(Object.values(tasksData));
+      }
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
 
   const handleCopy = (text, label) => {
@@ -63,7 +85,6 @@ function App() {
     if (amount >= 0.1 && amount <= balance) {
       const newBalance = Number((balance - amount).toFixed(5));
       const newHistory = [{ id: Date.now(), amount, status: 'Pending' }, ...withdrawHistory];
-      
       setBalance(newBalance);
       setWithdrawHistory(newHistory);
       syncToFirebase({ balance: newBalance, withdrawHistory: newHistory });
@@ -78,7 +99,6 @@ function App() {
       if (!completed.includes(id)) {
         const newBalance = Number((balance + 0.0005).toFixed(5));
         const newCompleted = [...completed, id];
-        
         setBalance(newBalance);
         setCompleted(newCompleted);
         syncToFirebase({ balance: newBalance, completed: newCompleted });
@@ -120,12 +140,15 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-            {['bot', 'social', 'reward'].map(t => (
-              <button key={t} onClick={() => {setActiveTab(t); setShowAddTask(false);}} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '2px solid #000', backgroundColor: activeTab === t ? '#000' : '#fff', color: activeTab === t ? '#fff' : '#000', fontWeight: '900' }}>{t.toUpperCase()}</button>
+            {['bot', 'social', 'reward', 'admin'].map(t => (
+              (t !== 'admin' || APP_CONFIG.MY_UID === "1793453606") && (
+                <button key={t} onClick={() => {setActiveTab(t); setShowAddTask(false);}} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '2px solid #000', backgroundColor: activeTab === t ? '#000' : '#fff', color: activeTab === t ? '#fff' : '#000', fontWeight: '900', fontSize: '10px' }}>{t.toUpperCase()}</button>
+              )
             ))}
           </div>
 
           <div style={styles.card}>
+            {/* --- Static BOTS --- */}
             {activeTab === 'bot' && [
               { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=" + APP_CONFIG.MY_UID },
               { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -133,10 +156,12 @@ function App() {
               { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=" + APP_CONFIG.MY_UID },
               { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=" + APP_CONFIG.MY_UID },
               { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=" + APP_CONFIG.MY_UID }
-            ].filter(t => !completed.includes(t.id)).map(t => (
+            ].concat(customTasks.filter(t => t.type === 'bot'))
+             .filter(t => !completed.includes(t.id)).map(t => (
               <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '90px', padding: '10px'}}>START</button></div>
             ))}
 
+            {/* --- Social Tasks --- */}
             {activeTab === 'social' && !showAddTask && (
               <>
                 <button onClick={() => setShowAddTask(true)} style={{...styles.yellowBtn, backgroundColor: '#facc15', color: '#000', marginBottom: '20px', border: '2px solid #000'}}>+ ADD TASK (PROMOTE)</button>
@@ -151,7 +176,8 @@ function App() {
                   { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
                   { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
                   { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
-                ].filter(t => !completed.includes(t.id)).map(t => (
+                ].concat(customTasks.filter(t => t.type === 'social'))
+                 .filter(t => !completed.includes(t.id)).map(t => (
                   <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '90px', padding: '10px'}}>JOIN</button></div>
                 ))}
               </>
@@ -180,6 +206,21 @@ function App() {
                 <button style={styles.yellowBtn} onClick={() => window.open("https://t.me/GrowTeaNews")}>CONFIRM & SEND PROOF</button>
               </div>
             )}
+
+            {/* --- Admin Tab (Only for You) --- */}
+            {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
+              <div>
+                <h3 style={{marginTop:0}}>ADD NEW TASK</h3>
+                <input style={styles.input} placeholder="Task Name" value={newTask.name} onChange={e => setNewTask({...newTask, name: e.target.value})} />
+                <input style={styles.input} placeholder="Link (https://...)" value={newTask.link} onChange={e => setNewTask({...newTask, link: e.target.value})} />
+                <select style={styles.input} value={newTask.type} onChange={e => setNewTask({...newTask, type: e.target.value})}>
+                  <option value="bot">BOT TASK</option>
+                  <option value="social">SOCIAL TASK</option>
+                </select>
+                <button style={styles.yellowBtn} onClick={handleAdminAddTask}>SAVE TO DATABASE</button>
+              </div>
+            )}
+
             {activeTab === 'reward' && (<div><input style={styles.input} placeholder="Enter Code" value={rewardInput} onChange={(e) => setRewardInput(e.target.value)} /><button style={styles.yellowBtn} onClick={() => { if(rewardInput==='EASY1'){ const newBal = balance + 0.0005; setBalance(newBal); syncToFirebase({balance: newBal}); alert("Reward Claimed!"); setRewardInput(''); } else { alert("Invalid Code!"); } }}>CLAIM</button></div>)}
           </div>
         </>
