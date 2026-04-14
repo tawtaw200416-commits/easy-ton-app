@@ -14,30 +14,32 @@ function App() {
   const [completed, setCompleted] = useState([]);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
   const [referralCount, setReferralCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Safety Lock
   
   const [customTasks, setCustomTasks] = useState([]); 
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
+  const [showAddPromo, setShowAddPromo] = useState(false);
+  const [rewardInput, setRewardInput] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
 
-  // Data သိမ်းတဲ့ function ကို ပိုစိတ်ချရအောင် PATCH သုံးထားတယ် (ရှိပြီးသားကို မဖျက်ဘူး)
+  // Data သိမ်းတဲ့ function (PATCH သုံးထားလို့ ရှိပြီးသား data ကို မဖျက်ပါဘူး)
   const syncToFirebase = useCallback(async (path, data) => {
     try {
       await fetch(`${APP_CONFIG.FIREBASE_URL}/${path}.json`, {
         method: 'PATCH',
         body: JSON.stringify(data)
       });
-    } catch (e) { console.error("Firebase Sync Error:", e); }
+    } catch (e) { console.error("Sync Error:", e); }
   }, []);
 
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
 
     const initApp = async () => {
-      setLoading(true); // Data မရမချင်း App ကို loading ပြထားမယ်
       try {
+        // Firebase ကနေ Data အရင်ယူမယ်
         const [userRes, tasksRes] = await Promise.all([
           fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
           fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`)
@@ -47,31 +49,29 @@ function App() {
         const tasksData = await tasksRes.json();
 
         if (userData) {
-          // Firebase မှာ အဟောင်းရှိရင် အဟောင်းအတိုင်း အတိအကျ ပြန်ယူမယ်
+          // Firebase မှာ အဟောင်းရှိရင် အဟောင်းအတိုင်း အတိအကျ ပြန်ထည့်မယ်
           setBalance(Number(userData.balance) || 0);
           setCompleted(userData.completed || []);
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferralCount(userData.referralCount || 0);
         } else {
-          // လုံးဝမရှိသေးတဲ့ User အသစ်မှသာ Initial data တည်ဆောက်မယ်
-          const initialData = { balance: 0, completed: [], withdrawHistory: [], referralCount: 0, uid: APP_CONFIG.MY_UID };
-          await syncToFirebase(`users/${APP_CONFIG.MY_UID}`, initialData);
+          // လုံးဝမရှိသေးတဲ့ User အသစ်မှသာ 0 နဲ့ စတင်တည်ဆောက်မယ်
+          await syncToFirebase(`users/${APP_CONFIG.MY_UID}`, {
+            balance: 0, completed: [], withdrawHistory: [], referralCount: 0, uid: APP_CONFIG.MY_UID
+          });
         }
-
         if (tasksData) setCustomTasks(Object.values(tasksData));
-      } catch (e) { 
-        console.error("Init Error:", e);
-        alert("Network Error! Please restart the app.");
-      } finally {
-        setLoading(false); // Data အကုန်ရပြီဆိုမှ ပေးပွင့်မယ်
-      }
+      } catch (e) { console.error("Load Error:", e); }
+      
+      // Data အကုန်ရပြီဆိုမှ App ကို ပေးပွင့်မယ် (ဒါမှ overwrite မဖြစ်မှာပါ)
+      setLoading(false);
     };
 
     initApp();
   }, [syncToFirebase]);
 
   const handleTaskAction = (id, link) => {
-    if (completed.includes(id)) return alert("Already done!");
+    if (completed.includes(id)) return alert("Already completed!");
     window.open(link, '_blank');
     
     const finalizeTask = () => {
@@ -79,7 +79,7 @@ function App() {
         const newBal = Number((prev + 0.0005).toFixed(5));
         setCompleted(prevComp => {
           const newComp = [...prevComp, id];
-          // Firebase ကို အမြန်သိမ်းမယ်
+          // အဟောင်းတွေမပျက်အောင် ချက်ချင်း Update လုပ်မယ်
           syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, completed: newComp });
           return newComp;
         });
@@ -94,18 +94,9 @@ function App() {
     } else { setTimeout(finalizeTask, 5000); }
   };
 
-  const handleWithdraw = () => {
-    const amount = parseFloat(withdrawAmount);
-    if (amount >= 0.1 && balance >= amount) {
-      const newBal = Number((balance - amount).toFixed(5));
-      const newHist = [{ id: Date.now(), amount, status: 'Pending', date: new Date().toLocaleString() }, ...withdrawHistory];
-      
-      setBalance(newBal);
-      setWithdrawHistory(newHist);
-      syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, withdrawHistory: newHist });
-      setWithdrawAmount('');
-      alert("Withdrawal Request Submitted!");
-    } else { alert("Min 0.1 TON or Insufficient Balance!"); }
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text);
+    alert("Copied!");
   };
 
   const styles = {
@@ -128,7 +119,7 @@ function App() {
     { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=" + APP_CONFIG.MY_UID }
   ];
 
-  if (loading) return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', background:'#facc15', fontSize:'18px', fontWeight:'bold'}}>SYNCING DATA...</div>;
+  if (loading) return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', background:'#facc15', fontSize:'20px', fontWeight:'bold'}}>SYNCING DATA...</div>;
 
   return (
     <div style={styles.main}>
@@ -139,41 +130,74 @@ function App() {
       </div>
 
       {activeNav === 'earn' && (
-        <div style={styles.card}>
-          <div style={{display:'flex', gap:'5px', marginBottom:'15px'}}>
-            {['BOT', 'SOCIAL', 'ADMIN'].map(t => (
-               (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && (
-                <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{flex:1, padding:'10px', borderRadius:'10px', backgroundColor: activeTab === t.toLowerCase() ? '#000' : '#eee', color: activeTab === t.toLowerCase() ? '#fff' : '#000', border:'none', fontWeight:'bold'}}>{t}</button>
-               )
+        <>
+          <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
+            {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
+              (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && (
+                <button key={t} onClick={() => {setActiveTab(t.toLowerCase()); setShowAddPromo(false);}} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '2px solid #000', backgroundColor: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight: 'bold', fontSize: '10px' }}>{t}</button>
+              )
             ))}
           </div>
-          {activeTab === 'bot' && staticBotTasks.map(t => (
-            <div key={t.id} style={styles.row}>
-              <b>{t.name}</b>
-              <button onClick={() => handleTaskAction(t.id, t.link)} disabled={completed.includes(t.id)} style={{backgroundColor:'#000', color:'#fff', padding:'8px 15px', borderRadius:'10px', border:'none', opacity: completed.includes(t.id) ? 0.4 : 1}}>
-                {completed.includes(t.id) ? 'DONE' : 'START'}
-              </button>
-            </div>
-          ))}
-          {/* Custom tasks as well */}
-          {activeTab === 'social' && customTasks.filter(ct => ct.type === 'social').map(t => (
-            <div key={t.id} style={styles.row}>
-              <b>{t.name}</b>
-              <button onClick={() => handleTaskAction(t.id, t.link)} disabled={completed.includes(t.id)} style={{backgroundColor:'#000', color:'#fff', padding:'8px 15px', borderRadius:'10px', border:'none'}}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
-            </div>
-          ))}
-        </div>
+
+          <div style={styles.card}>
+            {(activeTab === 'bot') && staticBotTasks.map(t => (
+              <div key={t.id} style={styles.row}>
+                <b>{t.name}</b>
+                <button onClick={() => handleTaskAction(t.id, t.link)} disabled={completed.includes(t.id)} style={{...styles.btn, width: '80px', padding: '8px', opacity: completed.includes(t.id) ? 0.4 : 1}}>
+                  {completed.includes(t.id) ? 'DONE' : 'START'}
+                </button>
+              </div>
+            ))}
+
+            {activeTab === 'reward' && (
+              <div>
+                <input style={styles.input} placeholder="Promo Code" value={rewardInput} onChange={e => setRewardInput(e.target.value)} />
+                <button style={styles.btn} onClick={() => {
+                  if(rewardInput === 'EASY2') {
+                    if(completed.includes('REWARD_EASY2')) return alert("Already used!");
+                    const nb = Number((balance + 0.001).toFixed(5));
+                    setBalance(nb);
+                    setCompleted(prev => {
+                      const nc = [...prev, 'REWARD_EASY2'];
+                      syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: nb, completed: nc });
+                      return nc;
+                    });
+                    alert("Success +0.001!"); setRewardInput('');
+                  } else { alert("Invalid!"); }
+                }}>CLAIM CODE</button>
+              </div>
+            )}
+
+            {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
+              <div>
+                <input style={styles.input} placeholder="Task Name" value={newTask.name} onChange={e => setNewTask({...newTask, name: e.target.value})} />
+                <input style={styles.input} placeholder="Link" value={newTask.link} onChange={e => setNewTask({...newTask, link: e.target.value})} />
+                <button style={styles.btn} onClick={() => {
+                   const tid = 'task_' + Date.now();
+                   syncToFirebase(`global_tasks/${tid}`, {...newTask, id: tid}).then(() => window.location.reload());
+                }}>ADD NEW TASK</button>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3>WITHDRAW FUNDS</h3>
           <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-          <button style={styles.btn} onClick={handleWithdraw}>WITHDRAW NOW</button>
-          <div style={{marginTop:20}}>
-            <h4>HISTORY</h4>
-            {withdrawHistory.map(h => (
-              <div key={h.id} style={styles.row}><span>{h.amount} TON</span><span style={{color:'orange'}}>{h.status}</span></div>
+          <button style={styles.btn} onClick={() => {
+            if(parseFloat(withdrawAmount) >= 0.1 && balance >= withdrawAmount) {
+              const nb = Number((balance - parseFloat(withdrawAmount)).toFixed(5));
+              const nh = [{id: Date.now(), amount: withdrawAmount, status: 'Pending'}, ...withdrawHistory];
+              setBalance(nb); setWithdrawHistory(nh);
+              syncToFirebase(`users/${APP_CONFIG.MY_UID}`, {balance: nb, withdrawHistory: nh});
+              alert("Withdrawal submitted!"); setWithdrawAmount('');
+            } else { alert("Insufficient or Min 0.1 required!"); }
+          }}>WITHDRAW NOW</button>
+          <div style={{marginTop: 20}}>
+            {withdrawHistory.map((h, i) => (
+              <div key={i} style={styles.row}><span>{h.amount} TON</span><span style={{color:'orange', fontWeight:'bold'}}>{h.status}</span></div>
             ))}
           </div>
         </div>
@@ -182,10 +206,9 @@ function App() {
       {activeNav === 'profile' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center'}}>USER PROFILE</h2>
-          <div style={styles.row}><span>UID:</span><b>{APP_CONFIG.MY_UID}</b></div>
-          <div style={styles.row}><span>Account:</span><b style={{color:'#10b981'}}>PREMIUM</b></div>
-          <div style={styles.row}><span>Balance:</span><b>{balance.toFixed(5)} TON</b></div>
-          <div style={styles.row}><span>Referrals:</span><b>{referralCount}</b></div>
+          <div style={styles.row}><span>User UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
+          <div style={styles.row}><span>Wallet Balance:</span><strong>{balance.toFixed(5)} TON</strong></div>
+          <div style={styles.row}><span>Tasks Done:</span><strong>{completed.length}</strong></div>
         </div>
       )}
 
