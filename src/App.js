@@ -24,7 +24,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('bot');
   const [rewardCode, setRewardCode] = useState('');
   const [showAddPromo, setShowAddPromo] = useState(false);
-  const [promoForm, setPromoForm] = useState({ name: '', link: '', package: '' });
+  const [promoForm, setPromoForm] = useState({ name: '', link: '', package: '100 Views - 0.2 TON' });
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
@@ -51,18 +51,13 @@ function App() {
     });
   };
 
-  // ကြော်ငြာပြပြီးမှ Reward ပေးမည့် Logic
   const runTaskWithAd = (callback) => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
-        .then(() => {
-          callback();
-        })
-        .catch(() => {
-          alert("Ad failed! Please try again to complete task.");
-        });
+        .then(() => callback())
+        .catch(() => alert("Ad failed! Please try again."));
     } else {
-      alert("Adsgram not connected. Check VPN/Internet.");
+      alert("Adsgram not connected.");
     }
   };
 
@@ -103,19 +98,6 @@ function App() {
     });
   };
 
-  const handleClaimRewardCode = () => {
-    const codeId = `code_${rewardCode.toLowerCase()}`;
-    if (completed.includes(codeId)) return alert("Already Claimed!");
-    
-    // Default Code or Admin defined codes
-    if (rewardCode.toLowerCase() === 'gift2026') {
-      handleTaskReward(codeId, 0.00100);
-      setRewardCode('');
-    } else {
-      alert("Invalid Reward Code!");
-    }
-  };
-
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: 'linear-gradient(135deg, #000, #1e293b)', padding: '25px', borderRadius: '25px', marginBottom: '20px', border: '4px solid #fff' },
@@ -124,7 +106,9 @@ function App() {
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0', zIndex: 100 },
     navItem: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '11px', fontWeight: 'bold' }),
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eee' },
-    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' }
+    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
+    promoBox: { backgroundColor: '#f1f5f9', padding: '10px', borderRadius: '12px', border: '1px dashed #000', margin: '10px 0' },
+    badge: { background: '#facc15', border: '1px solid #000', borderRadius: '5px', padding: '2px 5px', fontSize: '10px', cursor:'pointer' }
   };
 
   const defaultBots = [
@@ -173,16 +157,44 @@ function App() {
               <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.0005, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
             ))}
 
-            {activeTab === 'social' && allSocialTasks.filter(t => !completed.includes(t.id)).map(t => (
-              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.0005, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
-            ))}
+            {activeTab === 'social' && (
+              <>
+                <button style={{...styles.btn, backgroundColor:'#facc15', color:'#000', border:'2px solid #000', marginBottom:'15px'}} onClick={() => setShowAddPromo(!showAddPromo)}>+ ADD TASK (PROMOTE)</button>
+                {showAddPromo ? (
+                  <div style={{marginBottom:'20px'}}>
+                    <input style={styles.input} placeholder="Channel Name" onChange={e => setPromoForm({...promoForm, name: e.target.value})} />
+                    <input style={styles.input} placeholder="Channel Link (https://...)" onChange={e => setPromoForm({...promoForm, link: e.target.value})} />
+                    <select style={styles.input} onChange={e => setPromoForm({...promoForm, package: e.target.value})}>
+                      <option value="100 Views - 0.2 TON">100 Views - 0.2 TON</option>
+                      <option value="200 Views - 0.4 TON">200 Views - 0.4 TON</option>
+                      <option value="300 Views - 0.5 TON">300 Views - 0.5 TON</option>
+                    </select>
+                    <div style={styles.promoBox}>
+                      <div style={styles.row}><small>Admin Wallet:</small><b style={styles.badge} onClick={()=>{navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Copied!");}}>COPY WALLET</b></div>
+                      <div style={styles.row}><small>Your UID:</small><b style={styles.badge} onClick={()=>{navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Copied!");}}>COPY UID</b></div>
+                    </div>
+                    <button style={{...styles.btn, backgroundColor:'#3b82f6'}} onClick={() => {
+                      sendAdminNotify(`📢 PROMO REQUEST\nUID: ${APP_CONFIG.MY_UID}\nName: ${promoForm.name}\nPackage: ${promoForm.package}`);
+                      window.open(APP_CONFIG.HELP_BOT);
+                    }}>SEND ADMIN (PAYMENT PROOF)</button>
+                  </div>
+                ) : null}
+                {allSocialTasks.filter(t => !completed.includes(t.id)).map(t => (
+                  <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.0005, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
+                ))}
+              </>
+            )}
 
             {activeTab === 'reward' && (
               <div style={{textAlign:'center'}}>
                 <h4>🎁 REDEEM REWARD CODE</h4>
                 <input style={styles.input} placeholder="Enter Code Here" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
-                <button style={styles.btn} onClick={handleClaimRewardCode}>CLAIM 0.001 TON</button>
-                <p style={{fontSize:10, marginTop:10}}>Follow our channel to get secret codes!</p>
+                <button style={styles.btn} onClick={() => {
+                  if(rewardCode.toLowerCase() === 'gift2026' && !completed.includes('code_gift2026')){
+                    handleTaskReward('code_gift2026', 0.001, null);
+                    setRewardCode('');
+                  } else alert("Invalid or already claimed!");
+                }}>CLAIM 0.001 TON</button>
               </div>
             )}
 
@@ -208,7 +220,6 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center', marginTop:0}}>REFERRAL</h2>
-          <p style={{textAlign:'center', fontSize:12}}>1 Refer = 0.0005 TON</p>
           <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}} style={styles.btn}>COPY INVITE LINK</button>
           <h4 style={{marginTop:20}}>History</h4>
           {referrals.map((r, i) => <div key={i} style={styles.row}><span>User ID: {r.id}</span><b style={{color:'#10b981'}}>+0.0005</b></div>)}
@@ -218,18 +229,37 @@ function App() {
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3>WITHDRAW</h3>
-          <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" onChange={e => setWithdrawAmount(e.target.value)} />
-          <input style={styles.input} placeholder="TON Wallet Address" onChange={e => setWithdrawAddress(e.target.value)} />
+          <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} placeholder="TON Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
           <button style={styles.btn} onClick={() => {
             const amt = parseFloat(withdrawAmount);
-            if(amt >= 0.1 && balance >= amt) {
-              const nb = Number((balance - amt).toFixed(5));
-              setBalance(nb);
-              syncToFirebase(`users/${APP_CONFIG.MY_UID}`, {balance: nb});
+            if(amt >= 0.1 && balance >= amt && withdrawAddress.length > 5) {
+              const newBal = Number((balance - amt).toFixed(5));
+              const newEntry = { id: Date.now(), amount: amt, status: 'Pending', date: Date.now() };
+              const newHist = [newEntry, ...withdrawHistory];
+              
+              setBalance(newBal);
+              setWithdrawHistory(newHist);
+              setWithdrawAmount(''); setWithdrawAddress('');
+              
+              syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, withdrawHistory: newHist });
               sendAdminNotify(`💰 WITHDRAWAL\nUID: ${APP_CONFIG.MY_UID}\nAmount: ${amt}\nWallet: ${withdrawAddress}`);
-              alert("Submitted! 24h processing.");
-            } else alert("Invalid amount/balance!");
+              alert("Submitted! Processing within 24h.");
+            } else alert("Invalid amount, address or insufficient balance!");
           }}>WITHDRAW NOW</button>
+
+          <h4 style={{marginTop:'25px', marginBottom:'10px'}}>Withdraw History</h4>
+          {withdrawHistory.length === 0 ? <p style={{fontSize:12, color:'#666'}}>No history yet.</p> : 
+            withdrawHistory.map((h, i) => {
+              const isSuccess = Date.now() - h.date > 86400000; // 24 hours
+              return (
+                <div key={i} style={styles.row}>
+                  <div style={{fontSize:12}}><b>{h.amount} TON</b><br/><small>{new Date(h.date).toLocaleDateString()}</small></div>
+                  <b style={{color: isSuccess ? '#10b981' : '#f59e0b', fontSize:12}}>{isSuccess ? 'SUCCESS' : 'PENDING'}</b>
+                </div>
+              );
+            })
+          }
         </div>
       )}
 
