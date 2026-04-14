@@ -51,13 +51,14 @@ function App() {
     });
   };
 
+  // ခလုတ်တိုင်းအတွက် Adsgram ကြော်ငြာခေါ်ယူခြင်း
   const runTaskWithAd = (callback) => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
         .then(() => callback())
-        .catch(() => alert("Ad failed! Please try again."));
+        .catch(() => alert("Ad failed! Please check your connection or VPN."));
     } else {
-      alert("Adsgram not connected.");
+      alert("Adsgram not connected. Please reload.");
     }
   };
 
@@ -190,10 +191,15 @@ function App() {
                 <h4>🎁 REDEEM REWARD CODE</h4>
                 <input style={styles.input} placeholder="Enter Code Here" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
                 <button style={styles.btn} onClick={() => {
-                  if(rewardCode.toLowerCase() === 'gift2026' && !completed.includes('code_gift2026')){
-                    handleTaskReward('code_gift2026', 0.001, null);
-                    setRewardCode('');
-                  } else alert("Invalid or already claimed!");
+                   if(!rewardCode) return alert("Please enter a code!");
+                   runTaskWithAd(() => {
+                     if(rewardCode.toLowerCase() === 'gift2026' && !completed.includes('code_gift2026')){
+                       handleTaskReward('code_gift2026', 0.001, null);
+                       setRewardCode('');
+                     } else {
+                       alert("Invalid or already claimed code!");
+                     }
+                   });
                 }}>CLAIM 0.001 TON</button>
               </div>
             )}
@@ -219,10 +225,37 @@ function App() {
 
       {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h2 style={{textAlign:'center', marginTop:0}}>REFERRAL</h2>
-          <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}} style={styles.btn}>COPY INVITE LINK</button>
-          <h4 style={{marginTop:20}}>History</h4>
-          {referrals.map((r, i) => <div key={i} style={styles.row}><span>User ID: {r.id}</span><b style={{color:'#10b981'}}>+0.0005</b></div>)}
+          <h2 style={{textAlign:'center', marginTop:0}}>REFERRAL PROGRAM</h2>
+          <div style={{textAlign:'center', marginBottom:'20px'}}>
+             <p style={{fontSize:14, fontWeight:'bold', color:'#ef4444'}}>Get 0.0005 TON for every friend!</p>
+             <p style={{fontSize:11, color:'#666'}}>Your friends must complete at least 1 task.</p>
+          </div>
+
+          <div style={styles.promoBox}>
+             <small style={{fontWeight:'bold'}}>YOUR INVITE LINK:</small>
+             <p style={{fontSize:10, wordBreak:'break-all', margin:'10px 0'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
+             <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!");}} style={{...styles.btn, padding:'10px'}}>COPY LINK</button>
+          </div>
+
+          <div style={{marginTop:'25px'}}>
+             <h4 style={{marginBottom:'10px'}}>INVITE HISTORY</h4>
+             <div style={styles.row}>
+                <span>Total Invited:</span>
+                <b style={{color:'#000'}}>{referrals.length} Users</b>
+             </div>
+             <div style={{maxHeight:'200px', overflowY:'auto'}}>
+                {referrals.length === 0 ? (
+                   <p style={{fontSize:11, textAlign:'center', color:'#999', marginTop:'15px'}}>No referrals yet. Start inviting!</p>
+                ) : (
+                   referrals.map((r, i) => (
+                      <div key={i} style={styles.row}>
+                         <span style={{fontSize:12}}>User ID: {r.id}</span>
+                         <b style={{color:'#10b981', fontSize:11}}>+0.0005 TON</b>
+                      </div>
+                   ))
+                )}
+             </div>
+          </div>
         </div>
       )}
 
