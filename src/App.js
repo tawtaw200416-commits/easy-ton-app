@@ -27,7 +27,7 @@ function App() {
   const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
   const [promoForm, setPromoForm] = useState({ name: '', link: '', plan: '100 Views - 0.2 TON' });
 
-  // Firebase Sync Function
+  // Firebase ကို data sync လုပ်ရန်
   const syncToFirebase = (path, data) => {
     if (!isDataLoaded.current) return;
     return fetch(`${APP_CONFIG.FIREBASE_URL}/${path}.json`, {
@@ -47,7 +47,7 @@ function App() {
   };
 
   useEffect(() => {
-    // Adsgram Script ကို Dynamic ခေါ်ခြင်း
+    // Adsgram Script ကို dynamic ထည့်ခြင်း
     const script = document.createElement('script');
     script.src = "https://adsgram.ai/js/adsgram.js";
     script.async = true;
@@ -68,21 +68,21 @@ function App() {
         const userData = await userRes.json();
         const tasksData = await tasksRes.json();
 
-        // အဓိက ပြင်ဆင်ချက်- null မဟုတ်ရင် data အဟောင်းကိုပဲ သုံးမယ်
+        // **အရေးကြီးဆုံးအပိုင်း- Reload လုပ်ရင် Balance 0 မဖြစ်အောင် စစ်ဆေးခြင်း**
         if (userData !== null) {
           setBalance(Number(userData.balance) || 0);
           setCompleted(userData.completed || []);
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferrals(userData.referrals || []);
         } else {
-          // User အသစ်ဆိုရင်မှ Database မှာ သွားဆောက်မယ်
+          // User အသစ်လုံးဝဖြစ်မှသာ balance 0 နဲ့ အသစ်ဆောက်ပါမယ်
           const newUser = { balance: 0, completed: [], referrals: [], withdrawHistory: [] };
           await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PUT',
             body: JSON.stringify(newUser)
           });
 
-          // Referral စနစ်
+          // Referral logic
           if (refId && refId !== APP_CONFIG.MY_UID) {
             const referrerRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${refId}.json`);
             const referrerData = await referrerRes.json();
@@ -121,7 +121,6 @@ function App() {
       }
     };
 
-    // ကြော်ငြာတက်အောင် စောင့်ခြင်း
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
         .then(completeTask)
@@ -140,10 +139,8 @@ function App() {
         syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBalance });
         alert("Ads Reward: +0.0001 TON Added!");
       })
-      .catch(() => alert("Ads not ready. Please check internet."));
-    } else { 
-      alert("Ads provider is still loading..."); 
-    }
+      .catch(() => alert("Ads not ready. Please wait..."));
+    } else { alert("Ads provider loading..."); }
   };
 
   const styles = {
@@ -206,7 +203,7 @@ function App() {
                   <div><b>WATCH ADS</b><br/><small style={{color: '#facc15'}}>+0.0001 TON</small></div>
                   <button onClick={handleWatchAds} style={{...styles.btn, width: '80px', padding: '8px', background: '#facc15', color: '#000'}}>WATCH</button>
                 </div>
-                {/* လုပ်ပြီးသား ID ကို filter နဲ့ ဖြုတ်ပေးထားပါတယ် */}
+                {/* ID တူရင် list ထဲက အလိုအလျောက် ပျောက်သွားစေရန် filter စစ်ထားပါသည် */}
                 {botList.filter(t => !completed.includes(t.id)).map(t => (
                   <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
                 ))}
@@ -224,7 +221,7 @@ function App() {
                   </>
                 ) : (
                   <div>
-                    <h3 style={{marginTop:0}}>PROMOTE YOUR CHANNEL</h3>
+                    <h3 style={{marginTop:0}}>PROMOTE CHANNEL</h3>
                     <input style={styles.input} placeholder="Channel Name" value={promoForm.name} onChange={e => setPromoForm({...promoForm, name: e.target.value})} />
                     <input style={styles.input} placeholder="Link" value={promoForm.link} onChange={e => setPromoForm({...promoForm, link: e.target.value})} />
                     <button style={{...styles.btn, background: '#10b981'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
@@ -245,8 +242,8 @@ function App() {
                      setCompleted(newCompleted);
                      syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, completed: newCompleted });
                      alert("Success!"); setRewardInput('');
-                  } else { alert("Invalid or Used!"); }
-                }}>CLAIM</button>
+                  } else { alert("Invalid!"); }
+                }}>CLAIM CODE</button>
               </div>
             )}
           </div>
@@ -255,15 +252,15 @@ function App() {
 
       {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h2 style={{textAlign:'center', marginTop:0}}>INVITE</h2>
+          <h2 style={{textAlign:'center', marginTop:0}}>INVITE FRIENDS</h2>
           <div style={styles.promoBox}>
-            <small>LINK:</small>
+            <small>YOUR INVITE LINK:</small>
             <div style={styles.copyItem}>
                 <span style={{fontSize:10, flex:1, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</span>
                 <button onClick={() => copyToClipboard(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`)} style={styles.smallCopyBtn}>COPY</button>
             </div>
           </div>
-          <p>Total Invited: {referrals.length}</p>
+          <p>Invitations: {referrals.length}</p>
         </div>
       )}
 
@@ -271,16 +268,16 @@ function App() {
         <div style={styles.card}>
           <h3>WITHDRAWAL</h3>
           <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
-          <button style={styles.btn} onClick={() => alert("Insufficient balance.")}>WITHDRAW NOW</button>
+          <button style={styles.btn} onClick={() => alert("Insufficient balance.")}>WITHDRAW</button>
         </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h2 style={{textAlign:'center', marginTop:0}}>PROFILE</h2>
+          <h2 style={{textAlign:'center', marginTop:0}}>MY ACCOUNT</h2>
           <div style={styles.row}><span>UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
           <div style={styles.row}><span>Balance:</span><strong>{balance.toFixed(5)} TON</strong></div>
-          <button style={{...styles.btn, background: '#facc15', color: '#000', marginTop: 20}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
+          <button style={{...styles.btn, background: '#facc15', color: '#000', marginTop: 20}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
         </div>
       )}
 
