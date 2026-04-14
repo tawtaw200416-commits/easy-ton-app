@@ -17,7 +17,7 @@ function App() {
   const [balance, setBalance] = useState(0.0000);
   const [completed, setCompleted] = useState([]);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
-  const [referrals, setReferrals] = useState([]); // Invite History အတွက်
+  const [referralList, setReferralList] = useState([]); 
   const [loading, setLoading] = useState(true);
   
   const [customTasks, setCustomTasks] = useState([]); 
@@ -38,7 +38,6 @@ function App() {
     });
   };
 
-  // --- Admin Notification ---
   const notifyAdmin = (msg) => {
     fetch(`https://api.telegram.org/bot${APP_CONFIG.ADMIN_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
@@ -49,10 +48,7 @@ function App() {
 
   // --- Initial Data Load ---
   useEffect(() => {
-    if (tg) {
-      tg.ready();
-      tg.expand();
-    }
+    if (tg) { tg.ready(); tg.expand(); }
 
     const loadData = async () => {
       try {
@@ -68,21 +64,17 @@ function App() {
           setBalance(userData.balance || 0);
           setCompleted(userData.completed || []);
           setWithdrawHistory(userData.withdrawHistory || []);
-          setReferrals(userData.referrals || []); // Invite list load လုပ်မယ်
+          setReferralList(userData.referralList || []);
         } else {
           await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PUT',
-            body: JSON.stringify({ balance: 0, completed: [], withdrawHistory: [], referrals: [] })
+            body: JSON.stringify({ balance: 0, completed: [], withdrawHistory: [], referralList: [] })
           });
         }
 
-        if (tasksData) {
-          setCustomTasks(Object.values(tasksData));
-        }
+        if (tasksData) setCustomTasks(Object.values(tasksData));
         setLoading(false);
-      } catch (e) {
-        setLoading(false);
-      }
+      } catch (e) { setLoading(false); }
     };
 
     loadData();
@@ -93,31 +85,31 @@ function App() {
     if (amount >= 0.1 && amount <= balance) {
       const newBalance = Number((balance - amount).toFixed(5));
       const requestTime = Date.now();
-      const newHistory = [{ id: requestTime, amount, status: 'Pending', timestamp: requestTime }, ...withdrawHistory];
+      const newHistory = [{ id: requestTime, amount, status: 'Pending', time: requestTime }, ...withdrawHistory];
       
       setBalance(newBalance);
       setWithdrawHistory(newHistory);
       syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBalance, withdrawHistory: newHistory });
       
-      notifyAdmin(`🚀 Withdrawal Request!\nUID: ${APP_CONFIG.MY_UID}\nAmount: ${amount} TON`);
-      alert("Withdraw success! Your balance has been deducted. Pending for 24h.");
+      notifyAdmin(`🚨 New Withdrawal!\nUID: ${APP_CONFIG.MY_UID}\nAmount: ${amount} TON`);
+      alert("Withdraw success! Balance deducted. Success after 24h.");
       setWithdrawAmount('');
     } else { alert("Insufficient Balance (Min 0.1)"); }
   };
 
-  const handleWatchAds = () => {
-    const completeAd = () => {
-      const newBalance = Number((balance + 0.0001).toFixed(5));
-      setBalance(newBalance);
-      syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBalance });
+  const handleAdsReward = () => {
+    const complete = () => {
+      const newBal = Number((balance + 0.0001).toFixed(5));
+      setBalance(newBal);
+      syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal });
       alert("Ad Reward Received! +0.0001 TON");
     };
 
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
-        .then(completeAd).catch(() => setTimeout(completeAd, 5000));
+        .then(complete).catch(() => setTimeout(complete, 3000));
     } else {
-      setTimeout(completeAd, 5000);
+      setTimeout(complete, 3000);
     }
   };
 
@@ -130,7 +122,7 @@ function App() {
         setBalance(newBalance);
         setCompleted(newCompleted);
         syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBalance, completed: newCompleted });
-        alert("Task Reward Received! +0.0005 TON");
+        alert("Reward Received! +0.0005 TON");
       }
     };
     setTimeout(completeTask, 5000);
@@ -146,7 +138,7 @@ function App() {
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #eee' },
     input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
     copyBox: { background: '#f1f5f9', padding: '12px', borderRadius: '12px', border: '1px dashed #000', marginBottom: '10px' },
-    adsBanner: { background: '#000', color: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '2px solid #fff' }
+    adCard: { background: '#000', color: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '2px solid #fff' }
   };
 
   if (loading) return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', background:'#facc15'}}><b>SYNCING DATA...</b></div>;
@@ -171,9 +163,9 @@ function App() {
           <div style={styles.card}>
             {activeTab === 'bot' && (
               <>
-                <div style={styles.adsBanner}>
-                  <div><b>Watch Ads & Earn</b><br/><small style={{color:'#facc15'}}>+0.0001 TON per ad</small></div>
-                  <button onClick={handleWatchAds} style={{...styles.yellowBtn, width:'80px', padding:'10px', background:'#facc15', color:'#000'}}>WATCH</button>
+                <div style={styles.adCard}>
+                  <div><b>Watch Video Ads</b><br/><small style={{color: '#facc15'}}>Reward: 0.0001 TON</small></div>
+                  <button onClick={handleAdsReward} style={{...styles.yellowBtn, width: '100px', background: '#facc15', color: '#000', padding: '10px'}}>WATCH</button>
                 </div>
                 {[
                   { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=" + APP_CONFIG.MY_UID },
@@ -189,7 +181,7 @@ function App() {
               </>
             )}
 
-            {/* Social, Reward, Admin Tabs (အဟောင်းအတိုင်း) */}
+            {/* Social Tab */}
             {activeTab === 'social' && !showAddTask && (
               <>
                 <button onClick={() => setShowAddTask(true)} style={{...styles.yellowBtn, backgroundColor: '#facc15', color: '#000', marginBottom: '20px', border: '2px solid #000'}}>+ ADD TASK (PROMOTE)</button>
@@ -202,6 +194,7 @@ function App() {
                 ))}
               </>
             )}
+            {/* ... Admin & Reward Tabs remain same as your code ... */}
           </div>
         </>
       )}
@@ -209,23 +202,20 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center', marginTop:0}}>INVITE & EARN</h2>
-          <p style={{fontSize:'13px', textAlign:'center', margin:'10px 0'}}>
-            Share your link to friends and earn <b>0.0005 TON</b> per referral!<br/>
-            You also get <b>10% commission</b> from their earnings.
+          <p style={{textAlign:'center', fontSize:'13px', margin:'10px 0'}}>
+            Invite your friends and earn <b>0.0005 TON</b> per refer!<br/>
+            Get <b>10%</b> bonus from your referral earnings.
           </p>
           <div style={styles.copyBox}>
             <small>REFERRAL LINK:</small>
             <p style={{fontSize:12, fontWeight:'bold'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
-            <button onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!"); }} style={styles.yellowBtn}>COPY LINK</button>
+            <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!");}} style={styles.yellowBtn}>COPY LINK</button>
           </div>
-          
-          <div style={{marginTop: 20}}>
-            <h4 style={{borderBottom:'2px solid #000', paddingBottom:'5px'}}>INVITE HISTORY</h4>
-            <div style={{display:'flex', justifyContent:'space-between', marginBottom:10}}>
-              <span>Total Invites:</span><strong>{referrals.length} Users</strong>
-            </div>
-            {referrals.length === 0 ? <small>No referrals yet.</small> : referrals.map((uid, i) => (
-              <div key={i} style={styles.row}><span>User UID: <b>{uid}</b></span><span style={{color:'#10b981'}}>+0.0005 TON</span></div>
+          <div style={{marginTop:20}}>
+            <h4 style={{borderBottom: '2px solid #eee', paddingBottom: '5px'}}>INVITE HISTORY</h4>
+            <div style={{display:'flex', justifyContent:'space-between', marginBottom: 10}}><span>Total Invited:</span><strong>{referralList.length} Users</strong></div>
+            {referralList.length === 0 ? <small>No one invited yet.</small> : referralList.map((uid, index) => (
+              <div key={index} style={styles.row}><span>User UID: {uid}</span><span style={{color: '#10b981'}}>+0.0005 TON</span></div>
             ))}
           </div>
         </div>
@@ -236,9 +226,9 @@ function App() {
           <h3>WITHDRAW</h3>
           <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
           <button style={styles.yellowBtn} onClick={handleWithdraw}>WITHDRAW NOW</button>
-          <h4 style={{marginTop:20, borderBottom:'2px solid #000'}}>HISTORY</h4>
+          <h4 style={{marginTop:20}}>HISTORY</h4>
           {withdrawHistory.length === 0 ? <small>No history yet.</small> : withdrawHistory.map((h, i) => {
-            const isAutoSuccess = (Date.now() - h.timestamp) > 86400000;
+            const isAutoSuccess = (Date.now() - h.time) > 86400000;
             return (
               <div key={i} style={styles.row}>
                 <span>{h.amount} TON</span>
