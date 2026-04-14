@@ -49,6 +49,7 @@ function App() {
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferralCount(userData.referralCount || 0);
         } else {
+          // New User Initialization
           await syncToFirebase(`users/${APP_CONFIG.MY_UID}`, {
             balance: 0, completed: [], withdrawHistory: [], referralCount: 0, uid: APP_CONFIG.MY_UID
           });
@@ -101,7 +102,7 @@ function App() {
     copyBtnSmall: { backgroundColor: '#facc15', border: '1px solid #000', borderRadius: '5px', padding: '2px 8px', fontSize: '10px', fontWeight: 'bold', marginLeft: '5px' }
   };
 
-  // 14 Social Tasks အပြည့်
+  // 14 Social Tasks
   const staticSocialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
@@ -119,7 +120,7 @@ function App() {
     { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
   ];
 
-  // 6 Bot Tasks အပြည့်
+  // 6 Bot Tasks
   const staticBotTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=" + APP_CONFIG.MY_UID },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -166,16 +167,17 @@ function App() {
                       ))}
                     </div>
                     <div style={styles.promoBox}>
-                      <small><b>TON ADDRESS:</b></small>
-                      <div style={{display:'flex', alignItems:'center'}}>
-                        <p style={{fontSize:'9px', wordBreak:'break-all', margin:'5px 0'}}>{APP_CONFIG.ADMIN_WALLET}</p>
+                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                        <small><b>TON ADDRESS:</b></small>
                         <button onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET)} style={styles.copyBtnSmall}>COPY</button>
                       </div>
-                      <small><b>MEMO (UID):</b></small>
-                      <div style={{display:'flex', alignItems:'center'}}>
-                        <p style={{fontSize:'18px', fontWeight:'900', color:'#e11d48', margin:0}}>{APP_CONFIG.MY_UID}</p>
+                      <p style={{fontSize:'9px', wordBreak:'break-all', margin:'5px 0'}}>{APP_CONFIG.ADMIN_WALLET}</p>
+                      
+                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginTop: '10px'}}>
+                        <small><b>MEMO (UID):</b></small>
                         <button onClick={() => handleCopy(APP_CONFIG.MY_UID)} style={styles.copyBtnSmall}>COPY</button>
                       </div>
+                      <p style={{fontSize:'18px', fontWeight:'900', color:'#e11d48', margin:0}}>{APP_CONFIG.MY_UID}</p>
                     </div>
                     <button style={styles.btn} onClick={() => window.open("https://t.me/GrowTeaNews")}>SEND PAYMENT PROOF</button>
                   </div>
@@ -212,7 +214,7 @@ function App() {
                      setBalance(newBal); setCompleted(newComp);
                      syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, completed: newComp });
                      alert("Success! +0.001 TON"); setRewardInput('');
-                  } else { alert("Invalid!"); }
+                  } else { alert("Invalid Code!"); }
                 }}>CLAIM CODE</button>
               </div>
             )}
