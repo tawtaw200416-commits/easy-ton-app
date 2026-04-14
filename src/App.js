@@ -16,15 +16,18 @@ function App() {
   const [referralCount, setReferralCount] = useState(0);
   const [loading, setLoading] = useState(true);
   
+  const [customTasks, setCustomTasks] = useState([]); 
+  const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
+
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [showAddPromo, setShowAddPromo] = useState(false);
   const [rewardInput, setRewardInput] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
 
-  const syncToFirebase = (path, data) => {
+  const syncToFirebase = (path, data, method = 'PATCH') => {
     return fetch(`${APP_CONFIG.FIREBASE_URL}/${path}.json`, {
-      method: 'PATCH',
+      method: method,
       body: JSON.stringify(data)
     });
   };
@@ -33,13 +36,21 @@ function App() {
     if (tg) { tg.ready(); tg.expand(); }
     const initApp = async () => {
       try {
-        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
-        const userData = await res.json();
+        const [userRes, tasksRes] = await Promise.all([
+          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
+          fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`)
+        ]);
+        const userData = await userRes.json();
+        const tasksData = await tasksRes.json();
+
         if (userData) {
           setBalance(Number(userData.balance) || 0);
           setCompleted(userData.completed || []);
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferralCount(userData.referralCount || 0);
+        }
+        if (tasksData) {
+          setCustomTasks(Object.values(tasksData));
         }
       } catch (e) { console.error(e); }
       setLoading(false);
@@ -82,7 +93,7 @@ function App() {
     copyBtnSmall: { backgroundColor: '#facc15', border: '1px solid #000', borderRadius: '5px', padding: '2px 8px', fontSize: '10px', fontWeight: 'bold', marginLeft: '5px' }
   };
 
-  const socialTasks = [
+  const staticSocialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
     { id: 's3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
@@ -99,6 +110,17 @@ function App() {
     { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
   ];
 
+  const allSocialTasks = [...staticSocialTasks, ...customTasks.filter(t => t.type === 'social')];
+  const allBotTasks = [
+    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=" + APP_CONFIG.MY_UID },
+    { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_" + APP_CONFIG.MY_UID },
+    { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=" + APP_CONFIG.MY_UID },
+    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=" + APP_CONFIG.MY_UID },
+    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=" + APP_CONFIG.MY_UID },
+    ...customTasks.filter(t => t.type === 'bot')
+  ];
+
   if (loading) return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', background:'#facc15'}}><b>SYNCING DATA...</b></div>;
 
   return (
@@ -112,8 +134,10 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
-            {['BOT', 'SOCIAL', 'REWARD'].map(t => (
-              <button key={t} onClick={() => {setActiveTab(t.toLowerCase()); setShowAddPromo(false);}} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '2px solid #000', backgroundColor: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight: 'bold' }}>{t}</button>
+            {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
+              (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && (
+                <button key={t} onClick={() => {setActiveTab(t.toLowerCase()); setShowAddPromo(false);}} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '2px solid #000', backgroundColor: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight: 'bold', fontSize: '10px' }}>{t}</button>
+              )
             ))}
           </div>
 
@@ -145,7 +169,7 @@ function App() {
                     <button style={styles.btn} onClick={() => window.open("https://t.me/GrowTeaNews")}>SEND PAYMENT PROOF</button>
                   </div>
                 ) : (
-                  socialTasks.filter(t => !completed.includes(t.id)).map(t => (
+                  allSocialTasks.filter(t => !completed.includes(t.id)).map(t => (
                     <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
                   ))
                 )}
@@ -153,14 +177,7 @@ function App() {
               </>
             )}
 
-            {activeTab === 'bot' && [
-              { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=" + APP_CONFIG.MY_UID },
-              { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-              { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_" + APP_CONFIG.MY_UID },
-              { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=" + APP_CONFIG.MY_UID },
-              { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=" + APP_CONFIG.MY_UID },
-              { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=" + APP_CONFIG.MY_UID }
-            ].filter(t => !completed.includes(t.id)).map(t => (
+            {activeTab === 'bot' && allBotTasks.filter(t => !completed.includes(t.id)).map(t => (
               <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
             ))}
             
@@ -175,6 +192,26 @@ function App() {
                      alert("Success! +0.001 TON Added!"); setRewardInput('');
                   } else { alert("Invalid Code!"); }
                 }}>CLAIM CODE</button>
+              </div>
+            )}
+
+            {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
+              <div>
+                <h4 style={{textAlign:'center', margin:'0 0 10px 0'}}>ADMIN TASK MANAGER</h4>
+                <input style={styles.input} placeholder="Task Name" value={newTask.name} onChange={e => setNewTask({...newTask, name: e.target.value})} />
+                <input style={styles.input} placeholder="Link" value={newTask.link} onChange={e => setNewTask({...newTask, link: e.target.value})} />
+                <select style={styles.input} value={newTask.type} onChange={e => setNewTask({...newTask, type: e.target.value})}>
+                  <option value="bot">BOT TASK</option>
+                  <option value="social">SOCIAL TASK</option>
+                </select>
+                <button style={styles.btn} onClick={() => {
+                  if(!newTask.name || !newTask.link) return alert("Fill all fields!");
+                  const taskId = 'task_' + Date.now();
+                  syncToFirebase(`global_tasks/${taskId}`, {...newTask, id: taskId}).then(() => {
+                    alert("Task Added Successfully!");
+                    window.location.reload();
+                  });
+                }}>PUBLISH TASK</button>
               </div>
             )}
           </div>
