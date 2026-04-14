@@ -7,7 +7,7 @@ const APP_CONFIG = {
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606",
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
-  SUPPORT_BOT: "http://t.me/EasyTonHelp_Bot" // Bro ပေးထားတဲ့ Link
+  SUPPORT_BOT: "http://t.me/EasyTonHelp_Bot" 
 };
 
 function App() {
@@ -60,8 +60,8 @@ function App() {
         let userData = await userRes.json();
         const tasksData = await tasksRes.json();
 
-        // ID တူရင် Data အဟောင်း ပြန်ပေါ်အောင် လုပ်ဆောင်ပေးထားပါတယ်
         if (userData) {
+          // ID တူရင် အရင်လုပ်ထားသမျှ Data တွေ ပြန်ပေါ်အောင် ပေးထားပါတယ်
           setBalance(Number(userData.balance) || 0);
           setCompleted(userData.completed || []);
           setWithdrawHistory(userData.withdrawHistory || []);
@@ -226,7 +226,7 @@ function App() {
                           <button onClick={() => copyToClipboard(APP_CONFIG.MY_UID)} style={styles.smallCopyBtn}>COPY</button>
                        </div>
                     </div>
-                    {/* ပုံထဲကအတိုင်း I Paid ကို Contact Support လို့ပြောင်းပြီး Link ချိတ်ပေးထားပါတယ် */}
+                    {/* ပုံထဲကအတိုင်း CONTACT SUPPORT ကို Link အသစ်နဲ့ ပြင်ပေးထားပါတယ် */}
                     <button style={{...styles.btn, background: '#10b981'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT, '_blank')}>CONTACT SUPPORT (SEND PROOF)</button>
                     <button style={{...styles.btn, background:'none', color:'#000', marginTop:10}} onClick={() => setShowAddPromo(false)}>BACK</button>
                   </div>
@@ -307,7 +307,7 @@ function App() {
             <div style={styles.row}><span>Balance:</span><strong>{balance.toFixed(5)} TON</strong></div>
           </div>
 
-          {/* Profile မှာ Support ခလုတ် အသစ်ထည့်ထားပါတယ် */}
+          {/* Profile မှာ Support Link အသစ် ထည့်ပေးထားပါတယ် */}
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
              <h4 style={{margin: '0 0 10px 0', color: '#facc15'}}>NEED HELP?</h4>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT, '_blank')}>CONTACT SUPPORT</button>
@@ -315,7 +315,7 @@ function App() {
 
           <div style={{backgroundColor:'#fee2e2', color:'#b91c1c', padding:'15px', borderRadius:'15px', fontSize:'12px', border:'1px solid #f87171', marginTop: 10}}>
             <b>⚠️ SECURITY NOTICE:</b><br/>
-            Fake referrals or bot automation are strictly prohibited. If detected, your account will be <b>PERMANENTLY BANNED</b> and your balance will be confiscated.
+            Fake referrals or bot automation are strictly prohibited. If detected, your account will be <b>PERMANENTLY BANNED</b>.
           </div>
         </div>
       )}
