@@ -35,15 +35,23 @@ function App() {
     });
   };
 
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    tg?.showAlert("Copied to clipboard!");
+  };
+
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     const initApp = async () => {
       try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const refId = urlParams.get('tgWebAppStartParam'); // ?start=UID
+
         const [userRes, tasksRes] = await Promise.all([
           fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
           fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`)
         ]);
-        const userData = await userRes.json();
+        let userData = await userRes.json();
         const tasksData = await tasksRes.json();
 
         if (userData) {
@@ -52,13 +60,29 @@ function App() {
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferrals(userData.referrals || []);
         } else {
+          // --- Handle New User & Referral Logic ---
+          userData = { balance: 0, completed: [], referrals: [], withdrawHistory: [] };
           await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PUT',
-            body: JSON.stringify({ balance: 0, completed: [], referrals: [], withdrawHistory: [] })
+            body: JSON.stringify(userData)
           });
+
+          // If invited by someone
+          if (refId && refId !== APP_CONFIG.MY_UID) {
+            const referrerRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${refId}.json`);
+            const referrerData = await referrerRes.json();
+            if (referrerData) {
+              const newRefBal = Number(((referrerData.balance || 0) + 0.0005).toFixed(5));
+              const newRefList = referrerData.referrals ? [...referrerData.referrals, APP_CONFIG.MY_UID] : [APP_CONFIG.MY_UID];
+              await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${refId}.json`, {
+                method: 'PATCH',
+                body: JSON.stringify({ balance: newRefBal, referrals: newRefList })
+              });
+            }
+          }
         }
-        if (tasksData) setCustomTasks(Object.values(tasksData));
         
+        if (tasksData) setCustomTasks(Object.values(tasksData));
         isDataLoaded.current = true;
         setLoading(false);
       } catch (e) { setLoading(false); }
@@ -83,7 +107,6 @@ function App() {
     } else { setTimeout(completeTask, 5000); }
   };
 
-  // --- Ads Watch Function (0.0001 TON) ---
   const handleWatchAds = () => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
@@ -114,7 +137,8 @@ function App() {
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eee' },
     input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
     promoBox: { backgroundColor: '#f1f5f9', padding: '15px', borderRadius: '15px', border: '2px dashed #000', margin: '15px 0' },
-    adsBox: { background: 'linear-gradient(to right, #000, #334155)', color: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '2px solid #fff' }
+    adsBox: { background: 'linear-gradient(to right, #000, #334155)', color: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '2px solid #fff' },
+    copyText: { fontSize:9, wordBreak:'break-all', fontWeight:'bold', background:'#e2e8f0', padding:8, borderRadius:8, cursor:'pointer' }
   };
 
   const botList = [
@@ -191,10 +215,10 @@ function App() {
                         <option value="300 Views - 0.5 TON">300 Views - 0.5 TON</option>
                     </select>
                     <div style={styles.promoBox}>
-                       <small><b>PAY TON TO:</b></small>
-                       <p style={{fontSize:9, wordBreak:'break-all', fontWeight:'bold', margin:'5px 0'}}>{APP_CONFIG.ADMIN_WALLET}</p>
-                       <small><b>REQUIRED MEMO (UID):</b></small>
-                       <p style={{fontSize:22, fontWeight:'bold', color:'#e11d48', margin:0}}>{APP_CONFIG.MY_UID}</p>
+                       <small><b>PAY TON TO (Tap to copy):</b></small>
+                       <p onClick={() => copyToClipboard(APP_CONFIG.ADMIN_WALLET)} style={styles.copyText}>{APP_CONFIG.ADMIN_WALLET}</p>
+                       <small><b>REQUIRED MEMO (Tap to copy):</b></small>
+                       <p onClick={() => copyToClipboard(APP_CONFIG.MY_UID)} style={{...styles.copyText, fontSize:22, color:'#e11d48'}}>{APP_CONFIG.MY_UID}</p>
                     </div>
                     <button style={styles.btn} onClick={handleSendToAdmin}>I PAID (SEND PROOF TO ADMIN)</button>
                     <button style={{...styles.btn, background:'none', color:'#000', marginTop:10}} onClick={() => setShowAddPromo(false)}>BACK</button>
@@ -245,7 +269,7 @@ function App() {
           <div style={styles.promoBox}>
             <small>YOUR INVITE LINK:</small>
             <p style={{fontSize:11, fontWeight:'bold', wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
-            <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}} style={styles.btn}>COPY LINK</button>
+            <button onClick={() => copyToClipboard(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`)} style={styles.btn}>COPY LINK</button>
           </div>
           <h4>INVITE HISTORY</h4>
           {referrals.length === 0 ? <small>No friends invited yet.</small> : referrals.map((ref, i) => (
