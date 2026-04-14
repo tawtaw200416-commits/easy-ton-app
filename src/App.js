@@ -28,6 +28,7 @@ function App() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [selectedPlan, setSelectedPlan] = useState(null);
 
+  // --- Firebase Sync ---
   const syncToFirebase = (path, data) => {
     return fetch(`${APP_CONFIG.FIREBASE_URL}/${path}.json`, {
       method: 'PATCH',
@@ -57,16 +58,17 @@ function App() {
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferralCount(userData.referralCount || 0);
           setReferralList(userData.referralList || []);
-          
-          // --- Referral Logic Check ---
-          // Bot ကနေတစ်ဆင့် start parameter ပါလာခဲ့ရင် (လူသစ်ဖြစ်ခဲ့ရင်)
+
+          // --- Automatic Referral Reward Logic ---
+          // URL ကနေ referral link နဲ့ ဝင်လာတာကို စစ်ဆေးတာ (Telegram Start Param)
           const urlParams = new URLSearchParams(window.location.search);
           const referrerId = urlParams.get('tgWebAppStartParam');
           
-          if (referrerId && !userData.joinedViaReferral) {
-            handleReferralReward(referrerId);
+          if (referrerId && !userData.hasBeenReferred) {
+            handleNewReferral(referrerId);
           }
         }
+        
         if (tasksData) {
           setCustomTasks(Object.values(tasksData));
         }
@@ -76,9 +78,9 @@ function App() {
     initApp();
   }, []);
 
-  const handleReferralReward = async (refId) => {
+  const handleNewReferral = async (refId) => {
     try {
-      // ၁။ Referrer (ဖိတ်ခေါ်တဲ့သူ) ရဲ့ Data ကို ယူမယ်
+      // ၁။ Referrer (ဖိတ်ခေါ်သူ) ရဲ့ data ကို ယူမယ်
       const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${refId}.json`);
       const refData = await res.json();
 
@@ -87,15 +89,15 @@ function App() {
         const newRefList = [...(refData.referralList || []), { uid: APP_CONFIG.MY_UID, date: Date.now() }];
         const newRefCount = (refData.referralCount || 0) + 1;
 
-        // Referrer ဆီကို Reward ပို့မယ်
+        // Referrer ရဲ့ balance နဲ့ list ကို update လုပ်မယ်
         await syncToFirebase(`users/${refId}`, {
           balance: newRefBalance,
           referralList: newRefList,
           referralCount: newRefCount
         });
 
-        // ကိုယ့်ကိုယ်ကိုလည်း Referral သုံးထားတယ်လို့ မှတ်သားမယ် (တစ်ကြိမ်ပဲရအောင်)
-        await syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { joinedViaReferral: true });
+        // ကိုယ့်ကိုယ်ကို reward ရပြီးသားလို့ မှတ်သားမယ်
+        await syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { hasBeenReferred: true });
       }
     } catch (e) { console.error("Referral Error:", e); }
   };
@@ -121,7 +123,6 @@ function App() {
     } else { setTimeout(completeTask, 5000); }
   };
 
-  // UI Styles (ထိန်းသိမ်းထားသည်)
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
     headerCard: { textAlign: 'center', background: 'linear-gradient(135deg, #000, #1e293b)', padding: '25px', borderRadius: '25px', marginBottom: '20px', border: '4px solid #fff' },
@@ -133,16 +134,13 @@ function App() {
     input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
     copyBox: { background: '#f1f5f9', padding: '12px', borderRadius: '12px', border: '1px dashed #000', marginBottom: '10px', position: 'relative' },
     copyBtn: { position: 'absolute', right: '10px', top: '10px', padding: '5px 10px', fontSize: '10px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '5px' },
-    planBtn: (active) => ({ flex: 1, padding: '10px', border: '2px solid #000', borderRadius: '10px', backgroundColor: active ? '#000' : '#fff', color: active ? '#fff' : '#000', fontSize: '10px', fontWeight: 'bold' }),
-    badge: { background: '#10b981', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: 'bold' },
-    warning: { background: '#fff1f2', color: '#e11d48', padding: '15px', borderRadius: '15px', border: '1px solid #f43f5e', fontSize: '11px', marginTop: '10px' }
+    badge: { background: '#10b981', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: 'bold' }
   };
 
   if (loading) return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', background:'#facc15'}}><b>SYNCING DATA...</b></div>;
 
   return (
     <div style={styles.main}>
-      {/* Header */}
       <div style={styles.headerCard}>
         <small style={{ color: '#facc15' }}>CURRENT BALANCE</small>
         <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:'18px', color: '#facc15'}}>TON</span></h1>
@@ -160,20 +158,16 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && (
-              <>
-              {[
-                { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=" + APP_CONFIG.MY_UID },
-                { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-                { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_" + APP_CONFIG.MY_UID },
-                { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=" + APP_CONFIG.MY_UID },
-                { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=" + APP_CONFIG.MY_UID },
-                { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=" + APP_CONFIG.MY_UID }
-              ].concat(customTasks.filter(t => t.type === 'bot')).filter(t => !completed.includes(t.id)).map(t => (
-                <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '90px', padding: '10px'}}>START</button></div>
-              ))}
-              </>
-            )}
+            {activeTab === 'bot' && [
+              { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=" + APP_CONFIG.MY_UID },
+              { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+              { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_" + APP_CONFIG.MY_UID },
+              { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=" + APP_CONFIG.MY_UID },
+              { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=" + APP_CONFIG.MY_UID },
+              { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=" + APP_CONFIG.MY_UID }
+            ].concat(customTasks.filter(t => t.type === 'bot')).filter(t => !completed.includes(t.id)).map(t => (
+              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '90px', padding: '10px'}}>START</button></div>
+            ))}
 
             {activeTab === 'social' && !showAddTask && (
               <>
@@ -181,25 +175,15 @@ function App() {
                 {[
                   { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
                   { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-                  { id: 's3', name: "@cryptogold_online", link: "https://t.me/cryptogold_online_official" },
-                  { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
-                  { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
-                  { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
-                  { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
                   { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
-                  { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
-                  { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-                  { id: 's11', name: "@ton_news_daily", link: "https://t.me/ton_news_daily" },
-                  { id: 's12', name: "@crypto_king_mm", link: "https://t.me/crypto_king_mm" },
-                  { id: 's13', name: "@earn_with_ton", link: "https://t.me/earn_with_ton" },
-                  { id: 's14', name: "@ton_reward_center", link: "https://t.me/ton_reward_center" }
+                  { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
                 ].concat(customTasks.filter(t => t.type === 'social')).filter(t => !completed.includes(t.id)).map(t => (
                   <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '90px', padding: '10px'}}>JOIN</button></div>
                 ))}
               </>
             )}
-            
-            {/* ShowAddTask, Reward, Admin Sections remain same... */}
+
+            {/* Admin Add Task Section */}
             {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
               <div>
                 <h3 style={{marginTop:0, textAlign: 'center'}}>ADD NEW TASK</h3>
@@ -210,9 +194,16 @@ function App() {
                   <option value="social">SOCIAL TASK</option>
                 </select>
                 <button style={styles.yellowBtn} onClick={() => {
-                  if (!newTask.name || !newTask.link) return alert("Fill all fields");
-                  const id = 'task_' + Date.now();
-                  fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({...newTask, id}) }).then(() => { alert("Saved!"); window.location.reload(); });
+                    if (!newTask.name || !newTask.link) return alert("Fill all fields");
+                    const id = 'task_' + Date.now();
+                    fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { 
+                      method: 'PUT', 
+                      body: JSON.stringify({...newTask, id}) 
+                    }).then(() => { 
+                      alert("Saved!"); 
+                      setNewTask({ name: '', link: '', type: 'bot' });
+                      window.location.reload(); 
+                    });
                 }}>SAVE TO DATABASE</button>
               </div>
             )}
@@ -235,35 +226,8 @@ function App() {
                 <span>User ID: {ref.uid}</span>
                 <span style={{color:'#10b981', fontWeight:'bold'}}>+0.0005 TON</span>
               </div>
-            )) : <small style={{color:'#666'}}>No referrals yet. Share link to earn!</small>}
+            )) : <small style={{color:'#666'}}>Share your link to grow your history!</small>}
           </div>
-        </div>
-      )}
-
-      {/* Withdraw & Profile remain same... */}
-      {activeNav === 'withdraw' && (
-        <div style={styles.card}>
-          <h3>WITHDRAW TON</h3>
-          <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
-          <button style={styles.yellowBtn} onClick={() => {
-            const amt = parseFloat(withdrawAmount);
-            if(amt >= 0.1 && amt <= balance) {
-              const nb = Number((balance - amt).toFixed(5));
-              const nh = [{ id: Date.now(), amount: amt, status: 'Pending' }, ...withdrawHistory];
-              setBalance(nb); setWithdrawHistory(nh);
-              syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: nb, withdrawHistory: nh });
-              alert("Requested!"); setWithdrawAmount('');
-            } else { alert("Error"); }
-          }}>WITHDRAW NOW</button>
-        </div>
-      )}
-
-      {activeNav === 'profile' && (
-        <div style={styles.card}>
-          <h2 style={{textAlign:'center', marginTop:0, marginBottom:15}}>USER PROFILE</h2>
-          <div style={styles.row}><span>Status:</span><span style={styles.badge}>VERIFIED</span></div>
-          <div style={styles.row}><span>UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
-          <div style={styles.row}><span>Balance:</span><strong>{balance.toFixed(5)} TON</strong></div>
         </div>
       )}
 
