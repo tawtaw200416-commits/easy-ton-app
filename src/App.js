@@ -10,7 +10,7 @@ const APP_CONFIG = {
   ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_CHAT_ID: "5020977059",
   HELP_BOT: "https://t.me/EasyTonHelp_Bot",
-  REWARD_CODE: "EASY2",
+  REWARD_CODE: "EASY3",
   REWARD_AMT: 0.001
 };
 
@@ -170,7 +170,7 @@ function App() {
 
           <div style={styles.card}>
             {activeTab === 'bot' && allBotTasks.filter(t => !completed.includes(t.id)).map(t => (
-              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.0005, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
+              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
             ))}
 
             {activeTab === 'social' && (
