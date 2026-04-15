@@ -9,7 +9,9 @@ const APP_CONFIG = {
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_CHAT_ID: "5020977059",
-  HELP_BOT: "https://t.me/EasyTonHelp_Bot"
+  HELP_BOT: "https://t.me/EasyTonHelp_Bot",
+  REWARD_CODE: "EASY2", // သင်သတ်မှတ်ခိုင်းတဲ့ code
+  REWARD_AMT: 0.001     // 0.001 TON
 };
 
 function App() {
@@ -190,7 +192,6 @@ function App() {
                         <option>1000 Views - 1.5 TON</option>
                     </select>
                     
-                    {/* Copy Address Area */}
                     <div style={styles.promoBox}>
                       <div style={{marginBottom: '10px'}}>
                         <small style={{display:'block', color:'#666'}}>Admin Wallet Address:</small>
@@ -222,11 +223,18 @@ function App() {
 
             {activeTab === 'reward' && (
               <div style={{textAlign:'center'}}>
-                <input style={styles.input} placeholder="Enter Gift Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
-                <button style={styles.btn} onClick={() => {
-                   if(rewardCode.toLowerCase() === 'gift2026') handleTaskReward('code_gift2026', 0.001, null);
-                   else alert("Invalid Code!");
-                }}>CLAIM REWARD</button>
+                {completed.includes('code_'+APP_CONFIG.REWARD_CODE) ? (
+                    <p style={{color:'#10b981', fontWeight:'bold'}}>✅ Code Already Claimed!</p>
+                ) : (
+                    <>
+                        <input style={styles.input} placeholder="Enter Code (EASY2)" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
+                        <button style={styles.btn} onClick={() => {
+                        if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
+                            handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, APP_CONFIG.REWARD_AMT, null);
+                        } else alert("Invalid Code!");
+                        }}>CLAIM 0.001 TON</button>
+                    </>
+                )}
               </div>
             )}
 
