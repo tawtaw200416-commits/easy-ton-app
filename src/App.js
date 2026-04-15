@@ -152,12 +152,14 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={styles.card}>
-            <button onClick={() => runTaskWithAd(() => {
-               const newBal = Number((balance + 0.0001).toFixed(5));
+            {/* Watch Video - Double Tap for 0.0002 TON (No Limit) */}
+            <button onDoubleClick={() => runTaskWithAd(() => {
+               const newBal = Number((balance + 0.0002).toFixed(5));
                setBalance(newBal);
                syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal });
-               alert("Watched! +0.0001 TON");
-            })} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (FAST REWARD)</button>
+               alert("Watched! +0.0002 TON");
+            })} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (UNLIMITED)</button>
+            <p style={{fontSize:'8px', textAlign:'center', marginTop:'5px', color:'#666'}}>Double tap to earn 0.0002 TON</p>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
@@ -170,7 +172,15 @@ function App() {
 
           <div style={styles.card}>
             {activeTab === 'bot' && allBotTasks.filter(t => !completed.includes(t.id)).map(t => (
-              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
+              <div key={t.id} style={styles.row}>
+                <b>{t.name}</b>
+                <button 
+                  onDoubleClick={() => handleTaskReward(t.id, 0.001, t.link)} 
+                  style={{...styles.btn, width: '80px', padding: '8px', fontSize:'9px'}}
+                >
+                  DBL TAP
+                </button>
+              </div>
             ))}
 
             {activeTab === 'social' && (
@@ -201,7 +211,15 @@ function App() {
                   </div>
                 )}
                 {allSocialTasks.filter(t => !completed.includes(t.id)).map(t => (
-                  <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.0005, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
+                  <div key={t.id} style={styles.row}>
+                    <b>{t.name}</b>
+                    <button 
+                      onDoubleClick={() => handleTaskReward(t.id, 0.001, t.link)} 
+                      style={{...styles.btn, width: '80px', padding: '8px', fontSize:'9px'}}
+                    >
+                      DBL TAP
+                    </button>
+                  </div>
                 ))}
               </>
             )}
@@ -213,17 +231,16 @@ function App() {
                 ) : (
                     <>
                         <input style={styles.input} placeholder="Enter Code (EASY2)" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
-                        <button style={styles.btn} onClick={() => {
+                        <button onDoubleClick={() => {
                         if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
                             handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, APP_CONFIG.REWARD_AMT, null);
                         } else alert("Wrong code!");
-                        }}>CLAIM 0.001 TON</button>
+                        }} style={styles.btn}>CLAIM (DBL TAP)</button>
                     </>
                 )}
               </div>
             )}
 
-            {/* Admin Add Task - ပြန်ထည့်ပေးထားပါတယ် */}
             {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
                 <div>
                     <h4 style={{marginTop:0}}>ADD SYSTEM TASK</h4>
@@ -246,7 +263,6 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center', marginTop:0}}>REFERRALS</h2>
-          {/* Refer Reward Text - ပြန်ထည့်ပေးထားပါတယ် */}
           <p style={{textAlign:'center', fontSize:14, fontWeight:'bold', color:'#3b82f6'}}>Get 0.0005 TON for every friend!</p>
           <div style={styles.promoBox}>
              <small>Your Link:</small>
@@ -269,7 +285,7 @@ function App() {
           <h3>WITHDRAW</h3>
           <input style={styles.input} placeholder="Amount (Min 0.1)" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
           <input style={styles.input} placeholder="TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
-          <button style={styles.btn} onClick={() => {
+          <button onDoubleClick={() => {
             const amt = parseFloat(withdrawAmount);
             if(amt >= 0.1 && balance >= amt) {
               runTaskWithAd(() => {
@@ -281,9 +297,8 @@ function App() {
                 alert("Withdrawal Pending!");
               });
             } else alert("Invalid balance or amount.");
-          }}>WITHDRAW</button>
+          }} style={styles.btn}>WITHDRAW (DBL TAP)</button>
 
-          {/* Withdraw History List - ပြန်ထည့်ပေးထားပါတယ် */}
           <h4 style={{marginTop:25}}>WITHDRAW HISTORY</h4>
           {withdrawHistory.length === 0 ? (
             <p style={{fontSize:12, color:'#888', textAlign:'center'}}>No history yet.</p>
