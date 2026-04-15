@@ -53,7 +53,6 @@ function App() {
     });
   };
 
-  // ကြော်ငြာကြည့်ပြီးမှ Reward ပေးမဲ့ Main Function
   const runTaskWithAd = (callback) => {
     if (isAdLoading) return;
     if (window.Adsgram) {
@@ -61,12 +60,11 @@ function App() {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
         .then(() => { 
             setIsAdLoading(false); 
-            if (callback) callback(); // ကြော်ငြာပြီးမှ callback လုပ်မယ်
+            if (callback) callback(); 
         })
         .catch((err) => { 
             setIsAdLoading(false); 
-            console.error("Ad Error:", err);
-            alert("Ad skipped or failed. No reward!"); 
+            alert("Ad missed! No reward."); 
         });
     } else {
       alert("Adsgram not connected yet.");
@@ -105,11 +103,10 @@ function App() {
       setCompleted(newComp);
       syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, completed: newComp });
       if (link) window.open(link, '_blank');
-      alert(`Success! +${reward} TON added.`);
+      alert(`Claimed! +${reward} TON`);
     });
   };
 
-  // Styles (သင့်မူရင်းအတိုင်း)
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: 'linear-gradient(135deg, #000, #1e293b)', padding: '25px', borderRadius: '25px', marginBottom: '20px', border: '4px solid #fff' },
@@ -159,8 +156,8 @@ function App() {
                const newBal = Number((balance + 0.0001).toFixed(5));
                setBalance(newBal);
                syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal });
-               alert("Ad Watched! +0.0001 TON");
-            })} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (0.0001 TON)</button>
+               alert("Watched! +0.0001 TON");
+            })} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (FAST REWARD)</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
@@ -225,16 +222,35 @@ function App() {
                 )}
               </div>
             )}
+
+            {/* Admin Add Task - ပြန်ထည့်ပေးထားပါတယ် */}
+            {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
+                <div>
+                    <h4 style={{marginTop:0}}>ADD SYSTEM TASK</h4>
+                    <input style={styles.input} placeholder="Task Name" onChange={e => setNewTask({...newTask, name: e.target.value})} />
+                    <input style={styles.input} placeholder="Telegram Link" onChange={e => setNewTask({...newTask, link: e.target.value})} />
+                    <select style={styles.input} onChange={e => setNewTask({...newTask, type: e.target.value})}>
+                        <option value="bot">BOT TASK</option>
+                        <option value="social">SOCIAL TASK</option>
+                    </select>
+                    <button style={styles.btn} onClick={() => {
+                        const id = "task_" + Date.now();
+                        syncToFirebase(`global_tasks/${id}`, {...newTask, id}).then(() => alert("New Task Added!"));
+                    }}>PUBLISH TASK</button>
+                </div>
+            )}
           </div>
         </>
       )}
 
       {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h2 style={{textAlign:'center'}}>REFERRALS</h2>
+          <h2 style={{textAlign:'center', marginTop:0}}>REFERRALS</h2>
+          {/* Refer Reward Text - ပြန်ထည့်ပေးထားပါတယ် */}
+          <p style={{textAlign:'center', fontSize:14, fontWeight:'bold', color:'#3b82f6'}}>Get 0.0005 TON for every friend!</p>
           <div style={styles.promoBox}>
              <small>Your Link:</small>
-             <p style={{fontSize:10}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
+             <p style={{fontSize:10, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
              <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}} style={{...styles.btn, padding:'10px'}}>COPY LINK</button>
           </div>
           <h4 style={{marginTop:20}}>History ({referrals.length})</h4>
@@ -264,8 +280,24 @@ function App() {
                 sendAdminNotify(`💰 WD REQ: ${amt} TON\nUID: ${APP_CONFIG.MY_UID}\nAddr: ${withdrawAddress}`);
                 alert("Withdrawal Pending!");
               });
-            } else alert("Insufficient balance or amount too low.");
+            } else alert("Invalid balance or amount.");
           }}>WITHDRAW</button>
+
+          {/* Withdraw History List - ပြန်ထည့်ပေးထားပါတယ် */}
+          <h4 style={{marginTop:25}}>WITHDRAW HISTORY</h4>
+          {withdrawHistory.length === 0 ? (
+            <p style={{fontSize:12, color:'#888', textAlign:'center'}}>No history yet.</p>
+          ) : (
+            withdrawHistory.map((h, i) => (
+              <div key={i} style={styles.row}>
+                <div>
+                  <b style={{fontSize:14}}>{h.amount} TON</b><br/>
+                  <small style={{fontSize:10, color:'#888'}}>{new Date(h.date).toLocaleDateString()}</small>
+                </div>
+                <span style={{color: h.status === 'Pending' ? '#f59e0b' : '#10b981', fontWeight:'bold', fontSize:12}}>{h.status}</span>
+              </div>
+            ))
+          )}
         </div>
       )}
 
