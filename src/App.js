@@ -10,7 +10,7 @@ const APP_CONFIG = {
   ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_CHAT_ID: "5020977059",
   HELP_BOT: "https://t.me/EasyTonHelp_Bot",
-  REWARD_CODE: "EASY3",
+  REWARD_CODE: "EASY2",
   REWARD_AMT: 0.001
 };
 
@@ -64,11 +64,20 @@ function App() {
         })
         .catch((err) => { 
             setIsAdLoading(false); 
-            alert("Ad missed! No reward."); 
+            // ကြော်ငြာမတက်လည်း နောက်တစ်ဆင့်သွားလို့ရအောင် callback ပေးထားနိုင်ပါတယ် (သို့) alert ပေးပါ
+            if (callback) callback(); 
         });
     } else {
-      alert("Adsgram not connected yet.");
+      if (callback) callback();
     }
+  };
+
+  // Nav ပြောင်းတိုင်း ကြော်ငြာခေါ်တဲ့ Function
+  const handleNavChange = (newNav) => {
+    if (newNav === activeNav) return;
+    runTaskWithAd(() => {
+        setActiveNav(newNav);
+    });
   };
 
   useEffect(() => {
@@ -152,14 +161,13 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={styles.card}>
-            {/* Watch Video - Double Tap for 0.0002 TON (No Limit) */}
-            <button onDoubleClick={() => runTaskWithAd(() => {
+            <button onClick={() => runTaskWithAd(() => {
+               // Reward for Watch Video: 0.0002 TON
                const newBal = Number((balance + 0.0002).toFixed(5));
                setBalance(newBal);
                syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal });
                alert("Watched! +0.0002 TON");
-            })} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (UNLIMITED)</button>
-            <p style={{fontSize:'8px', textAlign:'center', marginTop:'5px', color:'#666'}}>Double tap to earn 0.0002 TON</p>
+            })} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (+0.0002 TON)</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
@@ -171,16 +179,9 @@ function App() {
           </div>
 
           <div style={styles.card}>
+            {/* Reward for Bot Task: 0.001 TON */}
             {activeTab === 'bot' && allBotTasks.filter(t => !completed.includes(t.id)).map(t => (
-              <div key={t.id} style={styles.row}>
-                <b>{t.name}</b>
-                <button 
-                  onDoubleClick={() => handleTaskReward(t.id, 0.001, t.link)} 
-                  style={{...styles.btn, width: '80px', padding: '8px', fontSize:'9px'}}
-                >
-                  DBL TAP
-                </button>
-              </div>
+              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
             ))}
 
             {activeTab === 'social' && (
@@ -210,16 +211,9 @@ function App() {
                     }}>SEND PROOF</button>
                   </div>
                 )}
+                {/* Reward for Social Task: 0.001 TON */}
                 {allSocialTasks.filter(t => !completed.includes(t.id)).map(t => (
-                  <div key={t.id} style={styles.row}>
-                    <b>{t.name}</b>
-                    <button 
-                      onDoubleClick={() => handleTaskReward(t.id, 0.001, t.link)} 
-                      style={{...styles.btn, width: '80px', padding: '8px', fontSize:'9px'}}
-                    >
-                      DBL TAP
-                    </button>
-                  </div>
+                  <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
                 ))}
               </>
             )}
@@ -231,11 +225,11 @@ function App() {
                 ) : (
                     <>
                         <input style={styles.input} placeholder="Enter Code (EASY2)" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
-                        <button onDoubleClick={() => {
+                        <button style={styles.btn} onClick={() => {
                         if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
                             handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, APP_CONFIG.REWARD_AMT, null);
                         } else alert("Wrong code!");
-                        }} style={styles.btn}>CLAIM (DBL TAP)</button>
+                        }}>CLAIM 0.001 TON</button>
                     </>
                 )}
               </div>
@@ -263,7 +257,7 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center', marginTop:0}}>REFERRALS</h2>
-          <p style={{textAlign:'center', fontSize:14, fontWeight:'bold', color:'#3b82f6'}}>Get 0.0005 TON for every friend!</p>
+          <p style={{textAlign:'center', fontSize:14, fontWeight:'bold', color:'#3b82f6'}}>Get 0.001 TON for every friend!</p>
           <div style={styles.promoBox}>
              <small>Your Link:</small>
              <p style={{fontSize:10, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
@@ -273,7 +267,7 @@ function App() {
           {referrals.map((r, i) => (
                 <div key={i} style={styles.row}>
                     <div style={{fontSize:12}}>User: {r.id}</div>
-                    <b style={{color:'#10b981'}}>+0.0005 TON</b>
+                    <b style={{color:'#10b981'}}>+0.001 TON</b>
                 </div>
             ))
           }
@@ -285,7 +279,7 @@ function App() {
           <h3>WITHDRAW</h3>
           <input style={styles.input} placeholder="Amount (Min 0.1)" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
           <input style={styles.input} placeholder="TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
-          <button onDoubleClick={() => {
+          <button style={styles.btn} onClick={() => {
             const amt = parseFloat(withdrawAmount);
             if(amt >= 0.1 && balance >= amt) {
               runTaskWithAd(() => {
@@ -297,7 +291,7 @@ function App() {
                 alert("Withdrawal Pending!");
               });
             } else alert("Invalid balance or amount.");
-          }} style={styles.btn}>WITHDRAW (DBL TAP)</button>
+          }}>WITHDRAW</button>
 
           <h4 style={{marginTop:25}}>WITHDRAW HISTORY</h4>
           {withdrawHistory.length === 0 ? (
@@ -325,9 +319,10 @@ function App() {
         </div>
       )}
 
+      {/* Navigation Menu: Click တစ်ချက်နှိပ်ရင် ကြော်ငြာတက်ပြီးမှ ရွှေ့ပေးပါမည် */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => setActiveNav(n)} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
+          <div key={n} onClick={() => handleNavChange(n)} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
         ))}
       </div>
     </div>
