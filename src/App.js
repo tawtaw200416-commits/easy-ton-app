@@ -64,7 +64,6 @@ function App() {
         })
         .catch((err) => { 
             setIsAdLoading(false); 
-            // ကြော်ငြာမတက်လည်း နောက်တစ်ဆင့်သွားလို့ရအောင် callback ပေးထားနိုင်ပါတယ် (သို့) alert ပေးပါ
             if (callback) callback(); 
         });
     } else {
@@ -72,7 +71,6 @@ function App() {
     }
   };
 
-  // Nav ပြောင်းတိုင်း ကြော်ငြာခေါ်တဲ့ Function
   const handleNavChange = (newNav) => {
     if (newNav === activeNav) return;
     runTaskWithAd(() => {
@@ -162,7 +160,6 @@ function App() {
         <>
           <div style={styles.card}>
             <button onClick={() => runTaskWithAd(() => {
-               // Reward for Watch Video: 0.0002 TON
                const newBal = Number((balance + 0.0002).toFixed(5));
                setBalance(newBal);
                syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal });
@@ -173,20 +170,19 @@ function App() {
           <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
               (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && (
-                <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '2px solid #000', backgroundColor: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight: 'bold', fontSize: '10px' }}>{t}</button>
+                <button key={t} onClick={() => runTaskWithAd(() => setActiveTab(t.toLowerCase()))} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '2px solid #000', backgroundColor: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight: 'bold', fontSize: '10px' }}>{t}</button>
               )
             ))}
           </div>
 
           <div style={styles.card}>
-            {/* Reward for Bot Task: 0.001 TON */}
             {activeTab === 'bot' && allBotTasks.filter(t => !completed.includes(t.id)).map(t => (
               <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
             ))}
 
             {activeTab === 'social' && (
               <>
-                <button style={{...styles.btn, backgroundColor:'#facc15', color:'#000', border:'2px solid #000', marginBottom:'15px'}} onClick={() => setShowAddPromo(!showAddPromo)}>+ ADD TASK (PROMOTE)</button>
+                <button style={{...styles.btn, backgroundColor:'#facc15', color:'#000', border:'2px solid #000', marginBottom:'15px'}} onClick={() => runTaskWithAd(() => setShowAddPromo(!showAddPromo))}>+ ADD TASK (PROMOTE)</button>
                 {showAddPromo && (
                   <div style={{marginBottom:'20px'}}>
                     <input style={styles.input} placeholder="Channel Name" onChange={e => setPromoForm({...promoForm, name: e.target.value})} />
@@ -205,13 +201,12 @@ function App() {
                       </div>
                     </div>
 
-                    <button style={{...styles.btn, backgroundColor:'#3b82f6'}} onClick={() => {
+                    <button style={{...styles.btn, backgroundColor:'#3b82f6'}} onClick={() => runTaskWithAd(() => {
                         sendAdminNotify(`📢 NEW PROMO\nUID: ${APP_CONFIG.MY_UID}\nName: ${promoForm.name}\nPkg: ${promoForm.package}`);
                         window.open(APP_CONFIG.HELP_BOT);
-                    }}>SEND PROOF</button>
+                    })}>SEND PROOF</button>
                   </div>
                 )}
-                {/* Reward for Social Task: 0.001 TON */}
                 {allSocialTasks.filter(t => !completed.includes(t.id)).map(t => (
                   <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
                 ))}
@@ -244,10 +239,10 @@ function App() {
                         <option value="bot">BOT TASK</option>
                         <option value="social">SOCIAL TASK</option>
                     </select>
-                    <button style={styles.btn} onClick={() => {
+                    <button style={styles.btn} onClick={() => runTaskWithAd(() => {
                         const id = "task_" + Date.now();
                         syncToFirebase(`global_tasks/${id}`, {...newTask, id}).then(() => alert("New Task Added!"));
-                    }}>PUBLISH TASK</button>
+                    })}>PUBLISH TASK</button>
                 </div>
             )}
           </div>
@@ -261,7 +256,7 @@ function App() {
           <div style={styles.promoBox}>
              <small>Your Link:</small>
              <p style={{fontSize:10, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
-             <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}} style={{...styles.btn, padding:'10px'}}>COPY LINK</button>
+             <button onClick={() => runTaskWithAd(() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");})} style={{...styles.btn, padding:'10px'}}>COPY LINK</button>
           </div>
           <h4 style={{marginTop:20}}>History ({referrals.length})</h4>
           {referrals.map((r, i) => (
@@ -315,11 +310,10 @@ function App() {
           <h2 style={{textAlign:'center'}}>PROFILE</h2>
           <div style={styles.row}><span>UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
           <div style={styles.row}><span>BALANCE:</span><strong>{balance.toFixed(5)} TON</strong></div>
-          <button style={{...styles.btn, marginTop:20, backgroundColor:'#3b82f6'}} onClick={() => window.open(APP_CONFIG.HELP_BOT)}>HELP</button>
+          <button style={{...styles.btn, marginTop:20, backgroundColor:'#3b82f6'}} onClick={() => runTaskWithAd(() => window.open(APP_CONFIG.HELP_BOT))}>HELP</button>
         </div>
       )}
 
-      {/* Navigation Menu: Click တစ်ချက်နှိပ်ရင် ကြော်ငြာတက်ပြီးမှ ရွှေ့ပေးပါမည် */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => handleNavChange(n)} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
