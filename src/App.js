@@ -31,7 +31,6 @@ function App() {
   const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
   const [isAdLoading, setIsAdLoading] = useState(false);
 
-  // Local Storage Sync
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
@@ -53,7 +52,6 @@ function App() {
     });
   };
 
-  // ခလုတ်တိုင်းအတွက် Ads ပြသမည့် အဓိက Function
   const runWithAd = (callback) => {
     if (isAdLoading) return;
     if (window.Adsgram) {
@@ -65,7 +63,6 @@ function App() {
         })
         .catch(() => { 
             setIsAdLoading(false); 
-            // Ads fail ဖြစ်လျှင်လည်း User အဆင်ပြေစေရန် callback ကို ဆက်ပေးသည်
             if (callback) callback(); 
         });
     } else {
@@ -120,18 +117,28 @@ function App() {
     input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' }
   };
 
-  // ပျောက်နေသော Task များစာရင်း (Default Tasks)
+  // --- ပေးထားသော Task စာရင်းများ ---
   const defaultBots = [
     { id: 'b_gt', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b_gm', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
     { id: 'b_wt', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-    { id: 'b_eb', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" }
+    { id: 'b_eb', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'b_td', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b_pb', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
   ];
 
-  const defaultSocials = [
-    { id: 's_etf', name: "Join EasyTON Free Channel", link: "https://t.me/easytonfree" },
-    { id: 's_ads', name: "Join ADS TON Channel", link: "https://t.me/ADS_TON1" }
+  const socialChannels = [
+    "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", "@M9460", 
+    "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO", 
+    "@kombo_crypta", "@easytonfree", "@WORLDBESTCRYTO1", "@MONEYHUB9_69", 
+    "@zrbtua", "@perviu1million"
   ];
+
+  const defaultSocials = socialChannels.map((handle) => ({
+    id: `s_${handle.replace('@','')}`,
+    name: handle,
+    link: `https://t.me/${handle.replace('@','')}`
+  }));
 
   const allBotTasks = [...defaultBots, ...customTasks.filter(t => t.type === 'bot')];
   const allSocialTasks = [...defaultSocials, ...customTasks.filter(t => t.type === 'social')];
