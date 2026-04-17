@@ -51,32 +51,33 @@ function App() {
     });
   };
 
+  // --- Ad Engine Logic ---
   const runTaskWithAd = (callback, isNav = false) => {
     if (isAdLoading) return;
-    const AdController = window.Adsgram?.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-
-    if (AdController) {
-      setIsAdLoading(true);
-      AdController.show()
-        .then(() => { 
-            setIsAdLoading(false); 
-            if (callback) callback(); 
-        })
-        .catch((err) => { 
-            setIsAdLoading(false); 
-            if(isNav) {
-                if (callback) callback();
-            } else {
-                alert("Ad failed or skipped. No reward granted.");
-            }
-        });
-    } else {
-      if(isNav) {
-          if (callback) callback();
-      } else {
-          alert("Ad system loading... Please wait a moment.");
-      }
+    
+    // Check if Adsgram is available
+    if (!window.Adsgram) {
+      if (isNav) return callback(); // If nav, just go. If task, block it.
+      return alert("Ads system not loaded. Check your internet or disable Adblock.");
     }
+
+    const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
+
+    setIsAdLoading(true);
+    AdController.show()
+      .then(() => { 
+          setIsAdLoading(false); 
+          if (callback) callback(); 
+      })
+      .catch((err) => { 
+          setIsAdLoading(false); 
+          console.error("Ad Error:", err);
+          if(isNav) {
+              callback(); // Allow navigation even if ad fails
+          } else {
+              alert("You must watch the full ad to claim rewards.");
+          }
+      });
   };
 
   const handleNavChange = (newNav) => {
@@ -108,7 +109,7 @@ function App() {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: 'linear-gradient(135deg, #000, #1e293b)', padding: '25px', borderRadius: '25px', marginBottom: '20px', border: '4px solid #fff' },
     card: { backgroundColor: '#fff', padding: '18px', borderRadius: '20px', marginBottom: '12px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
-    btn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' },
+    btn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', opacity: isAdLoading ? 0.6 : 1 },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0', zIndex: 100 },
     navItem: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '11px', fontWeight: 'bold', cursor:'pointer' }),
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eee' },
@@ -129,9 +130,11 @@ function App() {
   return (
     <div style={styles.main}>
       <div style={styles.header}>
-        <small style={{ color: '#facc15' }}>CURRENT BALANCE</small>
+        <small style={{ color: '#facc15' }}>TOTAL BALANCE</small>
         <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:16, color:'#facc15'}}>TON</span></h1>
-        <div style={{fontSize:10, color: isAdLoading ? '#fbbf24' : '#10b981'}}>● {isAdLoading ? "LOADING ADS..." : "STATUS: ACTIVE"}</div>
+        <div style={{fontSize:10, color: isAdLoading ? '#fbbf24' : '#10b981'}}>
+            ● {isAdLoading ? "LOADING ADS..." : "SYSTEM READY"}
+        </div>
       </div>
 
       {activeNav === 'earn' && (
@@ -141,8 +144,10 @@ function App() {
                const newBal = Number((balance + 0.0002).toFixed(5));
                setBalance(newBal);
                syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal });
-               alert("Video Reward Claimed! +0.0002 TON");
-            })} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (+0.0002 TON)</button>
+               alert("Ad Reward Claimed! +0.0002 TON");
+            })} style={{...styles.btn, backgroundColor:'#ef4444'}}>
+                📺 WATCH VIDEO (+0.0002 TON)
+            </button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
@@ -163,12 +168,12 @@ function App() {
                 <button style={{...styles.btn, backgroundColor:'#facc15', color:'#000', border:'2px solid #000', marginBottom:'15px'}} onClick={() => setShowAddPromo(!showAddPromo)}>+ ADD TASK (PROMOTE)</button>
                 {showAddPromo && (
                   <div style={{marginBottom:'20px'}}>
-                    <input style={styles.input} placeholder="Channel Link (e.g. @yourchannel)" value={promoLink} onChange={e => setPromoLink(e.target.value)} />
+                    <input style={styles.input} placeholder="Channel/Group Link" value={promoLink} onChange={e => setPromoLink(e.target.value)} />
                     <button style={{...styles.btn, backgroundColor:'#3b82f6'}} onClick={() => {
                         if(!promoLink) return alert("Enter link!");
-                        sendAdminNotify(`📢 NEW PROMO\nUID: ${APP_CONFIG.MY_UID}\nLink: ${promoLink}`);
+                        sendAdminNotify(`📢 PROMO REQ\nUID: ${APP_CONFIG.MY_UID}\nLink: ${promoLink}`);
                         window.open(APP_CONFIG.HELP_BOT);
-                    }}>SUBMIT PROOF</button>
+                    }}>SEND PROOF</button>
                   </div>
                 )}
                 {[...defaultSocials.map(name => ({id: 's_'+name, name, link: `https://t.me/${name.replace('@','')}`})), ...customTasks.filter(ct => ct.type === 'social')].filter(t => !completed.includes(t.id)).map(t => (
@@ -179,18 +184,18 @@ function App() {
 
             {activeTab === 'reward' && (
               <div style={{textAlign:'center'}}>
-                <input style={styles.input} placeholder="Enter Code (EASY3)" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
+                <input style={styles.input} placeholder="Promo Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
                 <button style={styles.btn} onClick={() => {
                    if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
                        handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, APP_CONFIG.REWARD_AMT, null);
-                   } else alert("Wrong code!");
-                }}>CLAIM 0.001 TON</button>
+                   } else alert("Invalid Code!");
+                }}>CLAIM REWARD</button>
               </div>
             )}
 
             {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
                 <div>
-                    <h4 style={{marginTop:0}}>ADD SYSTEM TASK</h4>
+                    <h4>ADD SYSTEM TASK</h4>
                     <input style={styles.input} placeholder="Task Name" value={newTask.name} onChange={e => setNewTask({...newTask, name: e.target.value})} />
                     <input style={styles.input} placeholder="Telegram Link" value={newTask.link} onChange={e => setNewTask({...newTask, link: e.target.value})} />
                     <select style={styles.input} onChange={e => setNewTask({...newTask, type: e.target.value})}>
@@ -200,7 +205,7 @@ function App() {
                     <button style={{...styles.btn, backgroundColor:'#22c55e'}} onClick={() => {
                         const id = "task_" + Date.now();
                         syncToFirebase(`global_tasks/${id}`, {...newTask, id}).then(() => { alert("Published!"); setNewTask({name:'', link:'', type:'bot'}); });
-                    }}>PUBLISH TASK</button>
+                    }}>PUBLISH</button>
                 </div>
             )}
           </div>
@@ -210,16 +215,16 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center'}}>REFERRALS</h2>
-          <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}} style={styles.btn}>COPY INVITE LINK</button>
-          <p style={{fontSize:12, textAlign:'center', marginTop:10}}>Get 0.001 TON per friend!</p>
+          <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!");}} style={styles.btn}>COPY LINK</button>
+          <p style={{fontSize:12, textAlign:'center', marginTop:10}}>Reward: 0.001 TON per active referral.</p>
         </div>
       )}
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h3>WITHDRAW</h3>
-          <p style={{fontSize:12, color:'#666'}}>Enter the amount you wish to withdraw only.</p>
-          <input style={styles.input} placeholder="Amount (Min 0.1)" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <h3>WITHDRAWAL</h3>
+          <p style={{fontSize:11, color:'#666'}}>Minimum withdrawal: 0.1 TON</p>
+          <input style={styles.input} type="number" placeholder="Enter Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
           <button style={styles.btn} onClick={() => {
             const amt = parseFloat(withdrawAmount);
             if(amt >= 0.1 && balance >= amt) {
@@ -229,19 +234,19 @@ function App() {
                 setBalance(newBal); setWithdrawHistory(newHist);
                 syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, withdrawHistory: newHist });
                 sendAdminNotify(`💰 WD REQ: ${amt} TON\nUID: ${APP_CONFIG.MY_UID}`);
-                alert("Withdrawal Requested!");
+                alert("Request Sent Successfully!");
               });
-            } else alert("Low balance or invalid amount!");
-          }}>SUBMIT WITHDRAW</button>
+            } else alert("Insufficient balance or invalid amount!");
+          }}>SUBMIT REQUEST</button>
         </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h2 style={{textAlign:'center'}}>PROFILE</h2>
+          <h2 style={{textAlign:'center'}}>MY PROFILE</h2>
           <div style={styles.row}><span>USER ID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
-          <div style={styles.row}><span>BALANCE:</span><strong>{balance.toFixed(5)} TON</strong></div>
-          <button style={{...styles.btn, marginTop:20, backgroundColor:'#3b82f6'}} onClick={() => window.open(APP_CONFIG.HELP_BOT)}>GET HELP</button>
+          <div style={styles.row}><span>TOTAL EARNED:</span><strong>{balance.toFixed(5)} TON</strong></div>
+          <button style={{...styles.btn, marginTop:20, backgroundColor:'#3b82f6'}} onClick={() => window.open(APP_CONFIG.HELP_BOT)}>CONTACT SUPPORT</button>
         </div>
       )}
 
