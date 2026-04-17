@@ -58,36 +58,49 @@ function App() {
     if (window.Adsgram) {
       setIsAdLoading(true);
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
-        .then(() => { 
-            setIsAdLoading(false); 
-            if (callback) callback(); 
-        })
-        .catch((err) => { 
-            setIsAdLoading(false); 
-            if (callback) callback(); 
-        });
-    } else {
-      if (callback) callback();
-    }
+        .then(() => { setIsAdLoading(false); if (callback) callback(); })
+        .catch(() => { setIsAdLoading(false); if (callback) callback(); });
+    } else { if (callback) callback(); }
   };
 
   const handleNavChange = (newNav) => {
     if (newNav === activeNav) return;
-    runTaskWithAd(() => {
-        setActiveNav(newNav);
-    });
+    runTaskWithAd(() => { setActiveNav(newNav); });
   };
 
+  // Referral System Logic
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     const initApp = async () => {
       try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const refId = urlParams.get('tgWebAppStartParam'); // link ထဲပါလာတဲ့ referral id
+
         const [userRes, tasksRes] = await Promise.all([
           fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
           fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`)
         ]);
-        const userData = await userRes.json();
+        
+        let userData = await userRes.json();
         const tasksData = await tasksRes.json();
+
+        // အကယ်၍ user က အသစ်ဖြစ်ပြီး referral link နဲ့ ဝင်လာတာဆိုရင်
+        if (!userData && refId && refId !== APP_CONFIG.MY_UID) {
+            // ဖိတ်ခေါ်သူ (Inviter) ဆီကို Reward ပို့ရန်
+            const inviterRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${refId}.json`);
+            const inviterData = await inviterRes.json();
+            
+            if (inviterData) {
+                const newInvBal = Number((inviterData.balance + 0.001).toFixed(5));
+                const newInvRefs = [...(inviterData.referrals || []), { id: APP_CONFIG.MY_UID, date: Date.now() }];
+                await syncToFirebase(`users/${refId}`, { balance: newInvBal, referrals: newInvRefs });
+            }
+            
+            // User အသစ်အတွက် Initial Data သတ်မှတ်ရန်
+            userData = { balance: 0.0000, completed: [], withdrawHistory: [], referrals: [], invitedBy: refId };
+            await syncToFirebase(`users/${APP_CONFIG.MY_UID}`, userData);
+        }
+
         if (userData) {
           setBalance(Number(userData.balance || 0));
           setCompleted(userData.completed || []);
@@ -148,6 +161,8 @@ function App() {
     ...customTasks.filter(t => t.type === 'social')
   ];
 
+  if (loading) return <div style={{textAlign:'center', marginTop:'50px', fontWeight:'bold'}}>LOADING...</div>;
+
   return (
     <div style={styles.main}>
       <div style={styles.header}>
@@ -192,7 +207,6 @@ function App() {
                         <option>500 Views - 0.8 TON</option>
                         <option>1000 Views - 1.5 TON</option>
                     </select>
-                    
                     <div style={styles.promoBox}>
                       <small style={{color:'#666'}}>Admin Wallet:</small>
                       <div style={{display:'flex', gap:'5px', marginTop:'5px'}}>
@@ -200,7 +214,6 @@ function App() {
                         <span style={styles.badge} onClick={()=>{navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Wallet Copied!");}}>COPY</span>
                       </div>
                     </div>
-
                     <button style={{...styles.btn, backgroundColor:'#3b82f6'}} onClick={() => runTaskWithAd(() => {
                         sendAdminNotify(`📢 NEW PROMO\nUID: ${APP_CONFIG.MY_UID}\nName: ${promoForm.name}\nPkg: ${promoForm.package}`);
                         window.open(APP_CONFIG.HELP_BOT);
