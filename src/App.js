@@ -10,7 +10,7 @@ const APP_CONFIG = {
   ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_CHAT_ID: "5020977059",
   HELP_BOT: "https://t.me/EasyTonHelp_Bot",
-  REWARD_CODE: "EASY3", // Code ကို EASY3 သို့ ပြောင်းလဲထားသည်
+  REWARD_CODE: "EASY3", 
   REWARD_AMT: 0.001
 };
 
@@ -67,12 +67,15 @@ function App() {
             if(isNav) {
                 if (callback) callback();
             } else {
-                alert("Ads မတက်ပါ သို့မဟုတ် ကျော်လိုက်ပါသဖြင့် Reward မရရှိပါ။");
+                alert("Ad failed or skipped. No reward granted.");
             }
         });
     } else {
-      if(isNav) if (callback) callback();
-      else alert("Ads system loading... ကျေးဇူးပြု၍ ခဏစောင့်ပေးပါ။");
+      if(isNav) {
+          if (callback) callback();
+      } else {
+          alert("Ad system loading... Please wait a moment.");
+      }
     }
   };
 
@@ -215,9 +218,8 @@ function App() {
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3>WITHDRAW</h3>
-          <p style={{fontSize:12, color:'#666'}}>ငွေထုတ်ရန် ပမာဏကိုသာ ရိုက်ထည့်ပါ</p>
+          <p style={{fontSize:12, color:'#666'}}>Enter the amount you wish to withdraw only.</p>
           <input style={styles.input} placeholder="Amount (Min 0.1)" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-          {/* TON Address input ကို ဖြုတ်လိုက်ပါပြီ */}
           <button style={styles.btn} onClick={() => {
             const amt = parseFloat(withdrawAmount);
             if(amt >= 0.1 && balance >= amt) {
@@ -231,6 +233,15 @@ function App() {
               });
             } else alert("Low balance or invalid amount!");
           }}>SUBMIT WITHDRAW</button>
+        </div>
+      )}
+
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h2 style={{textAlign:'center'}}>PROFILE</h2>
+          <div style={styles.row}><span>USER ID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
+          <div style={styles.row}><span>BALANCE:</span><strong>{balance.toFixed(5)} TON</strong></div>
+          <button style={{...styles.btn, marginTop:20, backgroundColor:'#3b82f6'}} onClick={() => window.open(APP_CONFIG.HELP_BOT)}>GET HELP</button>
         </div>
       )}
 
