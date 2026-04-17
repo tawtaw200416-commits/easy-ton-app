@@ -10,7 +10,7 @@ const APP_CONFIG = {
   ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_CHAT_ID: "5020977059",
   HELP_BOT: "https://t.me/EasyTonHelp_Bot",
-  REWARD_CODE: "EASY2",
+  REWARD_CODE: "EASY3",
   REWARD_AMT: 0.001
 };
 
@@ -64,20 +64,11 @@ function App() {
         })
         .catch((err) => { 
             setIsAdLoading(false); 
-            // ကြော်ငြာမတက်လည်း နောက်တစ်ဆင့်သွားလို့ရအောင် callback ပေးထားနိုင်ပါတယ် (သို့) alert ပေးပါ
-            if (callback) callback(); 
+            alert("Ad missed! No reward."); 
         });
     } else {
-      if (callback) callback();
+      alert("Adsgram not connected yet.");
     }
-  };
-
-  // Nav ပြောင်းတိုင်း ကြော်ငြာခေါ်တဲ့ Function
-  const handleNavChange = (newNav) => {
-    if (newNav === activeNav) return;
-    runTaskWithAd(() => {
-        setActiveNav(newNav);
-    });
   };
 
   useEffect(() => {
@@ -162,12 +153,11 @@ function App() {
         <>
           <div style={styles.card}>
             <button onClick={() => runTaskWithAd(() => {
-               // Reward for Watch Video: 0.0002 TON
-               const newBal = Number((balance + 0.0002).toFixed(5));
+               const newBal = Number((balance + 0.0001).toFixed(5));
                setBalance(newBal);
                syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal });
-               alert("Watched! +0.0002 TON");
-            })} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (+0.0002 TON)</button>
+               alert("Watched! +0.0001 TON");
+            })} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (FAST REWARD)</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
@@ -179,9 +169,8 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            {/* Reward for Bot Task: 0.001 TON */}
             {activeTab === 'bot' && allBotTasks.filter(t => !completed.includes(t.id)).map(t => (
-              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
+              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.0005, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
             ))}
 
             {activeTab === 'social' && (
@@ -211,9 +200,8 @@ function App() {
                     }}>SEND PROOF</button>
                   </div>
                 )}
-                {/* Reward for Social Task: 0.001 TON */}
                 {allSocialTasks.filter(t => !completed.includes(t.id)).map(t => (
-                  <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
+                  <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.0005, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
                 ))}
               </>
             )}
@@ -235,6 +223,7 @@ function App() {
               </div>
             )}
 
+            {/* Admin Add Task - ပြန်ထည့်ပေးထားပါတယ် */}
             {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
                 <div>
                     <h4 style={{marginTop:0}}>ADD SYSTEM TASK</h4>
@@ -257,7 +246,8 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center', marginTop:0}}>REFERRALS</h2>
-          <p style={{textAlign:'center', fontSize:14, fontWeight:'bold', color:'#3b82f6'}}>Get 0.001 TON for every friend!</p>
+          {/* Refer Reward Text - ပြန်ထည့်ပေးထားပါတယ် */}
+          <p style={{textAlign:'center', fontSize:14, fontWeight:'bold', color:'#3b82f6'}}>Get 0.0005 TON for every friend!</p>
           <div style={styles.promoBox}>
              <small>Your Link:</small>
              <p style={{fontSize:10, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
@@ -267,7 +257,7 @@ function App() {
           {referrals.map((r, i) => (
                 <div key={i} style={styles.row}>
                     <div style={{fontSize:12}}>User: {r.id}</div>
-                    <b style={{color:'#10b981'}}>+0.001 TON</b>
+                    <b style={{color:'#10b981'}}>+0.0005 TON</b>
                 </div>
             ))
           }
@@ -293,6 +283,7 @@ function App() {
             } else alert("Invalid balance or amount.");
           }}>WITHDRAW</button>
 
+          {/* Withdraw History List - ပြန်ထည့်ပေးထားပါတယ် */}
           <h4 style={{marginTop:25}}>WITHDRAW HISTORY</h4>
           {withdrawHistory.length === 0 ? (
             <p style={{fontSize:12, color:'#888', textAlign:'center'}}>No history yet.</p>
@@ -319,10 +310,9 @@ function App() {
         </div>
       )}
 
-      {/* Navigation Menu: Click တစ်ချက်နှိပ်ရင် ကြော်ငြာတက်ပြီးမှ ရွှေ့ပေးပါမည် */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => handleNavChange(n)} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
+          <div key={n} onClick={() => setActiveNav(n)} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
         ))}
       </div>
     </div>
