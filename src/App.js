@@ -17,7 +17,7 @@ const APP_CONFIG = {
 };
 
 function App() {
-  const [balance, setBalance] = useState(0.0000);
+  const [balance, setBalance] = useState(0.00000);
   const [completed, setCompleted] = useState([]);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
   const [referrals, setReferrals] = useState([]);
@@ -27,34 +27,13 @@ function App() {
   const [activeTab, setActiveTab] = useState('bot');
   const [rewardCode, setRewardCode] = useState('');
   const [showAddPromo, setShowAddPromo] = useState(false);
-  const [promoLink, setPromoLink] = useState(''); // Link တစ်ခုတည်းအတွက် state
+  const [promoLink, setPromoLink] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [isAdLoading, setIsAdLoading] = useState(false);
-  
   const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
 
-  const defaultBots = [
-    { id: 'b_gt', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-    { id: 'b_gm', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-    { id: 'b_wt', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-    { id: 'b_eb', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-    { id: 'b_td', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
-    { id: 'b_pb', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
-  ];
-
-  const defaultSocials = [
-    "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", "@M9460", 
-    "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO", 
-    "@kombo_crypta", "@easytonfree", "@WORLDBESTCRYTO1", "@MONEYHUB9_69", "@zrbtua", "@perviu1million"
-  ];
-
-  const allBotTasks = [...defaultBots, ...customTasks.filter(t => t.type === 'bot')];
-  const allSocialTasks = [
-    ...defaultSocials.map(name => ({id: name, name, link: `https://t.me/${name.replace('@','')}`})), 
-    ...customTasks.filter(t => t.type === 'social')
-  ];
-
+  // Sync to Firebase Helper
   const syncToFirebase = (path, data) => {
     return fetch(`${APP_CONFIG.FIREBASE_URL}/${path}.json`, {
       method: 'PATCH',
@@ -62,6 +41,7 @@ function App() {
     });
   };
 
+  // Telegram Notification
   const sendAdminNotify = (msg) => {
     fetch(`https://api.telegram.org/bot${APP_CONFIG.ADMIN_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
@@ -70,7 +50,7 @@ function App() {
     });
   };
 
-  // Adsgram logic - ကြော်ငြာကြည့်ပြီးမှ အလုပ်လုပ်မည့် function
+  // Improved Ad Logic - ကြော်ငြာကြည့်ပြီးမှ ရှေ့ဆက်မည့် Function
   const runTaskWithAd = (callback) => {
     if (isAdLoading) return;
     if (window.Adsgram) {
@@ -81,20 +61,22 @@ function App() {
           if (callback) callback(); 
         })
         .catch((err) => { 
-          console.error("Ad error:", err);
+          console.error("Ad failed:", err);
           setIsAdLoading(false); 
-          if (callback) callback(); 
+          if (callback) callback(); // ကြော်ငြာမတက်လည်း user စိတ်မပျက်အောင် ရှေ့ဆက်ခွင့်ပေးထားပါတယ်
         });
-    } else { 
-      if (callback) callback(); 
+    } else {
+      if (callback) callback();
     }
   };
 
+  // Page ရွေ့တိုင်း Ads ပြမည့် function
   const handleNavChange = (newNav) => {
     if (newNav === activeNav) return;
     runTaskWithAd(() => { setActiveNav(newNav); });
   };
 
+  // App initialization
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     const initApp = async () => {
@@ -118,10 +100,9 @@ function App() {
     initApp();
   }, []);
 
+  // Task Rewards handling
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
-    
-    // ကြော်ငြာအရင်ပြ၊ ပြီးမှ link ဖွင့်ပြီး reward ပေါင်းမယ်
     runTaskWithAd(() => {
       if (link) window.open(link, '_blank');
       const newBal = Number((balance + reward).toFixed(5));
@@ -139,9 +120,29 @@ function App() {
     btn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: '900', cursor: 'pointer' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0', zIndex: 100 },
     navItem: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '12px', fontWeight: 'bold', cursor:'pointer' }),
-    row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '2px solid #f1f5f9' },
     input: { width: '100%', padding: '14px', borderRadius: '12px', border: '3px solid #000', marginBottom: '10px', boxSizing: 'border-box' }
   };
+
+  const defaultBots = [
+    { id: 'b_gt', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'b_gm', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'b_wt', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'b_eb', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'b_td', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b_pb', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
+  ];
+
+  const defaultSocials = [
+    "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", "@M9460", 
+    "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO", 
+    "@kombo_crypta", "@easytonfree", "@WORLDBESTCRYTO1", "@MONEYHUB9_69", "@zrbtua", "@perviu1million"
+  ];
+
+  const allBotTasks = [...defaultBots, ...customTasks.filter(t => t.type === 'bot')];
+  const allSocialTasks = [
+    ...defaultSocials.map(name => ({id: name, name, link: `https://t.me/${name.replace('@','')}`})), 
+    ...customTasks.filter(t => t.type === 'social')
+  ];
 
   if (loading) return <div style={{textAlign:'center', marginTop:'100px', fontWeight:'bold'}}>SYNCING...</div>;
 
@@ -150,7 +151,7 @@ function App() {
       <div style={styles.header}>
         <small style={{ color: '#facc15', fontWeight:'bold' }}>CURRENT BALANCE</small>
         <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:16, color:'#facc15'}}>TON</span></h1>
-        <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● ACTIVE STATUS {isAdLoading && "(LOADING AD...)"}</div>
+        <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● ACTIVE STATUS {isAdLoading && "(ADS LOADING...)"}</div>
       </div>
 
       {activeNav === 'earn' && (
@@ -174,7 +175,10 @@ function App() {
 
           <div style={styles.card}>
             {activeTab === 'bot' && allBotTasks.filter(t => !completed.includes(t.id)).map(t => (
-              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, APP_CONFIG.BOT_TASK_REWARD, t.link)} style={{...styles.btn, width: '90px', padding: '10px', backgroundColor: '#10b981'}}>START</button></div>
+              <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '2px solid #f1f5f9' }}>
+                <b>{t.name}</b>
+                <button onClick={() => handleTaskReward(t.id, APP_CONFIG.BOT_TASK_REWARD, t.link)} style={{...styles.btn, width: '90px', padding: '10px', backgroundColor: '#10b981'}}>START</button>
+              </div>
             ))}
 
             {activeTab === 'social' && (
@@ -182,9 +186,9 @@ function App() {
                 <button style={{...styles.btn, backgroundColor:'#facc15', color:'#000', border:'3px solid #000', marginBottom:'15px'}} onClick={() => runTaskWithAd(() => setShowAddPromo(!showAddPromo))}>+ ADD TASK (PROMOTE)</button>
                 {showAddPromo && (
                   <div style={{marginBottom:'20px', padding: '10px', border: '2px dashed #000', borderRadius: '10px'}}>
-                    <input style={styles.input} placeholder="Enter Channel Link Only" value={promoLink} onChange={e => setPromoLink(e.target.value)} />
+                    <input style={styles.input} placeholder="Channel Link Only" value={promoLink} onChange={e => setPromoLink(e.target.value)} />
                     <button style={{...styles.btn, backgroundColor:'#3b82f6'}} onClick={() => {
-                        if(!promoLink) return alert("Enter link first!");
+                        if(!promoLink) return alert("Please enter link!");
                         runTaskWithAd(() => {
                           sendAdminNotify(`📢 NEW PROMO\nUID: ${APP_CONFIG.MY_UID}\nLink: ${promoLink}`);
                           window.open(APP_CONFIG.HELP_BOT);
@@ -193,7 +197,10 @@ function App() {
                   </div>
                 )}
                 {allSocialTasks.filter(t => !completed.includes(t.id)).map(t => (
-                  <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '90px', padding: '10px'}}>JOIN</button></div>
+                  <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '2px solid #f1f5f9' }}>
+                    <b>{t.name}</b>
+                    <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '90px', padding: '10px'}}>JOIN</button>
+                  </div>
                 ))}
               </>
             )}
@@ -202,8 +209,9 @@ function App() {
               <div style={{textAlign:'center'}}>
                 <input style={styles.input} placeholder="Enter Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
                 <button style={styles.btn} onClick={() => {
-                   if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, APP_CONFIG.REWARD_AMT);
-                   else alert("Wrong code!");
+                   if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
+                      handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, APP_CONFIG.REWARD_AMT);
+                   } else alert("Wrong code!");
                 }}>CLAIM</button>
               </div>
             )}
@@ -242,7 +250,10 @@ function App() {
           </div>
           <h4 style={{marginTop:20}}>History ({referrals.length})</h4>
           {referrals.map((r, i) => (
-            <div key={i} style={styles.row}><div>User UID: {r.id}</div><b style={{color:'#10b981'}}>+0.001 TON</b></div>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '2px solid #f1f5f9' }}>
+               <div>User UID: {r.id}</div>
+               <b style={{color:'#10b981'}}>+0.001 TON</b>
+            </div>
           ))}
         </div>
       )}
@@ -271,12 +282,17 @@ function App() {
       {activeNav === 'profile' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center', marginTop: 0}}>PROFILE</h2>
-          <div style={styles.row}><span>USER UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
-          <div style={styles.row}><span>BALANCE:</span><strong style={{color:'#10b981'}}>{balance.toFixed(5)} TON</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '2px solid #f1f5f9' }}>
+            <span>USER UID:</span><strong>{APP_CONFIG.MY_UID}</strong>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '2px solid #f1f5f9' }}>
+            <span>BALANCE:</span><strong style={{color:'#10b981'}}>{balance.toFixed(5)} TON</strong>
+          </div>
           <button style={{...styles.btn, marginTop:25, backgroundColor:'#3b82f6'}} onClick={() => runTaskWithAd(() => window.open(APP_CONFIG.HELP_BOT))}>CONTACT SUPPORT</button>
         </div>
       )}
 
+      {/* Navigation Menu */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => handleNavChange(n)} style={styles.navItem(activeNav === n)}>
