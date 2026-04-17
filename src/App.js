@@ -52,20 +52,25 @@ function App() {
     });
   };
 
+  // ကြော်ငြာပြသရန်နှင့် ကြော်ငြာပြီးမှ အလုပ်လုပ်ရန် အဓိက Function
   const runWithAd = (callback) => {
     if (isAdLoading) return;
     if (window.Adsgram) {
       setIsAdLoading(true);
-      window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
-        .then(() => { 
+      const adController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
+      adController.show()
+        .then((result) => { 
+            // ကြော်ငြာကြည့်ပြီးမှ callback ကို run ပါမယ်
             setIsAdLoading(false); 
             if (callback) callback(); 
         })
-        .catch(() => { 
+        .catch((result) => { 
             setIsAdLoading(false); 
+            // Ads fail ဖြစ်လျှင်လည်း User အဆင်ပြေစေရန် callback ကို ဆက် run ပေးပါမယ်
             if (callback) callback(); 
         });
     } else {
+      // Adsgram library မရှိလျှင် တိုက်ရိုက် run ပါမယ်
       if (callback) callback();
     }
   };
@@ -95,6 +100,7 @@ function App() {
 
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Task already completed!");
+    // ကြော်ငြာကြည့်ပြီးမှ TON ပေါင်းထည့်ပေးပါမယ်
     runWithAd(() => {
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
@@ -117,7 +123,7 @@ function App() {
     input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' }
   };
 
-  // --- ပေးထားသော Task စာရင်းများ ---
+  // --- Start Bot Tasks ---
   const defaultBots = [
     { id: 'b_gt', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b_gm', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -127,6 +133,7 @@ function App() {
     { id: 'b_pb', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
   ];
 
+  // --- Social Channels ---
   const socialChannels = [
     "@GrowTeaNews", "@GoldenMinerNews", "@cryptogold_online_official", "@M9460", 
     "@USDTcloudminer_channel", "@ADS_TON1", "@goblincrypto", "@WORLDBESTCRYTO", 
@@ -148,12 +155,13 @@ function App() {
       <div style={styles.header}>
         <small style={{ color: '#facc15' }}>CURRENT BALANCE</small>
         <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:16, color:'#facc15'}}>TON</span></h1>
-        <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● {isAdLoading ? "SHOWING ADS..." : "ACTIVE STATUS"}</div>
+        <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● {isAdLoading ? "LOADING ADS..." : "ACTIVE STATUS"}</div>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={styles.card}>
+            {/* Watch Video ခလုတ်ကို နှိပ်လျှင်လည်း ကြော်ငြာပြပါမယ် */}
             <button onClick={() => runWithAd(() => {
                const newBal = Number((balance + 0.0002).toFixed(5));
                setBalance(newBal);
@@ -163,6 +171,7 @@ function App() {
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
+            {/* Tabs ပြောင်းလျှင်လည်း ကြော်ငြာပြပါမယ် */}
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
               (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && (
                 <button key={t} onClick={() => runWithAd(() => setActiveTab(t.toLowerCase()))} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '2px solid #000', backgroundColor: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight: 'bold', fontSize: '10px' }}>{t}</button>
@@ -220,23 +229,16 @@ function App() {
         </>
       )}
 
+      {/* Navigation ပြောင်းလျှင်လည်း ကြော်ငြာပြပါမယ် */}
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center', marginTop:0}}>INVITE FRIENDS</h2>
-          <p style={{textAlign:'center', color:'#3b82f6', fontWeight:'bold'}}>Invite your friends and earn 0.001 TON for each referral!</p>
+          <p style={{textAlign:'center', color:'#3b82f6', fontWeight:'bold'}}>Invite and earn 0.001 TON for each referral!</p>
           <div style={{backgroundColor:'#f1f5f9', padding:'15px', borderRadius:'15px', border:'2px dashed #000'}}>
              <small>Your Referral Link:</small>
              <p style={{fontSize:10, wordBreak:'break-all', margin:'10px 0'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
              <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!");}} style={{...styles.btn, padding:'10px'}}>COPY LINK</button>
           </div>
-
-          <h4 style={{marginTop:'25px', borderBottom:'2px solid #000'}}>REFERRAL HISTORY ({referrals.length})</h4>
-          {referrals.length > 0 ? referrals.map((r, i) => (
-            <div key={i} style={styles.row}>
-              <span>User ID: {r.uid || r.id}</span>
-              <b style={{color:'#10b981'}}>+0.001 TON</b>
-            </div>
-          )) : <p style={{fontSize:12, textAlign:'center', color:'#888', marginTop:'10px'}}>No referrals yet. Start inviting!</p>}
         </div>
       )}
 
