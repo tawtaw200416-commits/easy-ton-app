@@ -13,49 +13,14 @@
     <style>
       body {
         margin: 0;
-        padding: 0;
         background-color: #facc15; 
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        overflow-x: hidden;
-        /* Mobile မှာ ဖိနှိပ်ရင် အရောင်မတက်အောင် */
+        font-family: sans-serif;
         -webkit-tap-highlight-color: transparent;
-        /* စာလုံးတွေ ပိုကြည်လင်အောင် */
-        -webkit-font-smoothing: antialiased;
       }
-
-      #root {
-        min-height: 100vh;
-      }
-      
-      /* App အစစ်လို ခံစားရအောင် စာသား select လုပ်တာ ပိတ်ထားခြင်း */
-      * {
-        user-select: none;
-        -webkit-user-select: none;
-        box-sizing: border-box;
-      }
-
-      /* Scroll bar ကို ဖျောက်ထားခြင်း */
-      ::-webkit-scrollbar {
-        display: none;
-      }
+      * { box-sizing: border-box; user-select: none; }
     </style>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    
     <div id="root"></div>
-
-    <script>
-      // Telegram WebApp ကို စတင်နှိုးခြင်း
-      const tg = window.Telegram?.WebApp;
-      if (tg) {
-        tg.ready();
-        tg.expand(); // App ကို အပြည့်ချဲ့လိုက်ခြင်း
-        
-        // Telegram Header နဲ့ Background အရောင် သတ်မှတ်ခြင်း
-        tg.setHeaderColor('#facc15');
-        tg.setBackgroundColor('#facc15');
-      }
-    </script>
   </body>
 </html>
