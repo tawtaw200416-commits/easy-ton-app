@@ -4,7 +4,7 @@ const tg = window.Telegram?.WebApp;
 
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
-  ADMINS: ["1793453606", "5020977059"], // Admin list
+  ADMINS: ["1793453606", "5020977059"], 
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606",
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
@@ -27,15 +27,13 @@ function App() {
   const [activeTab, setActiveTab] = useState('bot');
   const [rewardCode, setRewardCode] = useState('');
   const [showAddPromo, setShowAddPromo] = useState(false);
-  const [promoForm, setPromoForm] = useState({ name: '', link: '', package: '100 Views - 0.2 TON' });
+  const [promoLink, setPromoLink] = useState(''); // Link တစ်ခုတည်းအတွက် state
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [isAdLoading, setIsAdLoading] = useState(false);
   
-  // Admin Task States
   const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
 
-  // Default Tasks
   const defaultBots = [
     { id: 'b_gt', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b_gm', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -72,14 +70,24 @@ function App() {
     });
   };
 
+  // Adsgram logic - ကြော်ငြာကြည့်ပြီးမှ အလုပ်လုပ်မည့် function
   const runTaskWithAd = (callback) => {
     if (isAdLoading) return;
     if (window.Adsgram) {
       setIsAdLoading(true);
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
-        .then(() => { setIsAdLoading(false); if (callback) callback(); })
-        .catch(() => { setIsAdLoading(false); if (callback) callback(); });
-    } else { if (callback) callback(); }
+        .then(() => { 
+          setIsAdLoading(false); 
+          if (callback) callback(); 
+        })
+        .catch((err) => { 
+          console.error("Ad error:", err);
+          setIsAdLoading(false); 
+          if (callback) callback(); 
+        });
+    } else { 
+      if (callback) callback(); 
+    }
   };
 
   const handleNavChange = (newNav) => {
@@ -112,8 +120,10 @@ function App() {
 
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
-    if (link) window.open(link, '_blank');
+    
+    // ကြော်ငြာအရင်ပြ၊ ပြီးမှ link ဖွင့်ပြီး reward ပေါင်းမယ်
     runTaskWithAd(() => {
+      if (link) window.open(link, '_blank');
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
       setBalance(newBal); setCompleted(newComp);
@@ -130,8 +140,7 @@ function App() {
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0', zIndex: 100 },
     navItem: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '12px', fontWeight: 'bold', cursor:'pointer' }),
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '2px solid #f1f5f9' },
-    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '3px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
-    promoBox: { backgroundColor: '#f1f5f9', padding: '12px', borderRadius: '12px', border: '2px dashed #000', margin: '10px 0' }
+    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '3px solid #000', marginBottom: '10px', boxSizing: 'border-box' }
   };
 
   if (loading) return <div style={{textAlign:'center', marginTop:'100px', fontWeight:'bold'}}>SYNCING...</div>;
@@ -141,7 +150,7 @@ function App() {
       <div style={styles.header}>
         <small style={{ color: '#facc15', fontWeight:'bold' }}>CURRENT BALANCE</small>
         <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:16, color:'#facc15'}}>TON</span></h1>
-        <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● ACTIVE STATUS</div>
+        <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● ACTIVE STATUS {isAdLoading && "(LOADING AD...)"}</div>
       </div>
 
       {activeNav === 'earn' && (
@@ -157,7 +166,8 @@ function App() {
           <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
               (t !== 'ADMIN' || APP_CONFIG.ADMINS.includes(APP_CONFIG.MY_UID)) && (
-                <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '3px solid #000', backgroundColor: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight: 'bold', fontSize: '11px' }}>{t}</button>
+                <button key={t} onClick={() => runTaskWithAd(() => setActiveTab(t.toLowerCase()))} 
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '3px solid #000', backgroundColor: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight: 'bold', fontSize: '11px' }}>{t}</button>
               )
             ))}
           </div>
@@ -169,14 +179,16 @@ function App() {
 
             {activeTab === 'social' && (
               <>
-                <button style={{...styles.btn, backgroundColor:'#facc15', color:'#000', border:'3px solid #000', marginBottom:'15px'}} onClick={() => setShowAddPromo(!showAddPromo)}>+ ADD TASK (PROMOTE)</button>
+                <button style={{...styles.btn, backgroundColor:'#facc15', color:'#000', border:'3px solid #000', marginBottom:'15px'}} onClick={() => runTaskWithAd(() => setShowAddPromo(!showAddPromo))}>+ ADD TASK (PROMOTE)</button>
                 {showAddPromo && (
                   <div style={{marginBottom:'20px', padding: '10px', border: '2px dashed #000', borderRadius: '10px'}}>
-                    <input style={styles.input} placeholder="Channel Name" onChange={e => setPromoForm({...promoForm, name: e.target.value})} />
-                    <input style={styles.input} placeholder="Channel Link" onChange={e => setPromoForm({...promoForm, link: e.target.value})} />
+                    <input style={styles.input} placeholder="Enter Channel Link Only" value={promoLink} onChange={e => setPromoLink(e.target.value)} />
                     <button style={{...styles.btn, backgroundColor:'#3b82f6'}} onClick={() => {
-                        sendAdminNotify(`📢 NEW PROMO\nUID: ${APP_CONFIG.MY_UID}\nLink: ${promoForm.link}`);
-                        window.open(APP_CONFIG.HELP_BOT);
+                        if(!promoLink) return alert("Enter link first!");
+                        runTaskWithAd(() => {
+                          sendAdminNotify(`📢 NEW PROMO\nUID: ${APP_CONFIG.MY_UID}\nLink: ${promoLink}`);
+                          window.open(APP_CONFIG.HELP_BOT);
+                        });
                     }}>SEND PROOF</button>
                   </div>
                 )}
@@ -199,18 +211,20 @@ function App() {
             {activeTab === 'admin' && APP_CONFIG.ADMINS.includes(APP_CONFIG.MY_UID) && (
               <div>
                 <h4 style={{marginTop: 0}}>CREATE NEW TASK</h4>
-                <input style={styles.input} placeholder="Task Name (e.g. My Bot)" value={newTask.name} onChange={e => setNewTask({...newTask, name: e.target.value})} />
-                <input style={styles.input} placeholder="Task Link (https://...)" value={newTask.link} onChange={e => setNewTask({...newTask, link: e.target.value})} />
+                <input style={styles.input} placeholder="Task Name" value={newTask.name} onChange={e => setNewTask({...newTask, name: e.target.value})} />
+                <input style={styles.input} placeholder="Task Link" value={newTask.link} onChange={e => setNewTask({...newTask, link: e.target.value})} />
                 <select style={styles.input} value={newTask.type} onChange={e => setNewTask({...newTask, type: e.target.value})}>
                   <option value="bot">BOT TASK</option>
                   <option value="social">SOCIAL TASK</option>
                 </select>
                 <button style={{...styles.btn, backgroundColor: '#10b981'}} onClick={() => {
                   if(!newTask.name || !newTask.link) return alert("Fill all info!");
-                  const id = "task_" + Date.now();
-                  syncToFirebase(`global_tasks/${id}`, {...newTask, id}).then(() => {
-                    alert("Task Added!");
-                    window.location.reload();
+                  runTaskWithAd(() => {
+                    const id = "task_" + Date.now();
+                    syncToFirebase(`global_tasks/${id}`, {...newTask, id}).then(() => {
+                      alert("Task Added!");
+                      window.location.reload();
+                    });
                   });
                 }}>PUBLISH TASK</button>
               </div>
@@ -222,7 +236,7 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center', marginTop:0}}>REFERRALS</h2>
-          <div style={styles.promoBox}>
+          <div style={{backgroundColor: '#f1f5f9', padding: '12px', borderRadius: '12px', border: '2px dashed #000', margin: '10px 0'}}>
              <p style={{fontSize:10, wordBreak:'break-all', fontWeight:'bold', textAlign:'center'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
              <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}} style={{...styles.btn, padding:'10px', backgroundColor: '#3b82f6'}}>COPY LINK</button>
           </div>
@@ -259,7 +273,7 @@ function App() {
           <h2 style={{textAlign:'center', marginTop: 0}}>PROFILE</h2>
           <div style={styles.row}><span>USER UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
           <div style={styles.row}><span>BALANCE:</span><strong style={{color:'#10b981'}}>{balance.toFixed(5)} TON</strong></div>
-          <button style={{...styles.btn, marginTop:25, backgroundColor:'#3b82f6'}} onClick={() => window.open(APP_CONFIG.HELP_BOT)}>CONTACT SUPPORT</button>
+          <button style={{...styles.btn, marginTop:25, backgroundColor:'#3b82f6'}} onClick={() => runTaskWithAd(() => window.open(APP_CONFIG.HELP_BOT))}>CONTACT SUPPORT</button>
         </div>
       )}
 
