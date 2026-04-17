@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+Import React, { useState, useEffect } from 'react';
 
 const tg = window.Telegram?.WebApp;
 
@@ -10,8 +10,8 @@ const APP_CONFIG = {
   ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_CHAT_ID: "5020977059",
   HELP_BOT: "https://t.me/EasyTonHelp_Bot",
-  REWARD_CODE: "EASY2",
-  REWARD_AMT: 0.001
+  REWARD_CODE: "EASY3", // သင်သတ်မှတ်ခိုင်းတဲ့ code
+  REWARD_AMT: 0.001     // 0.001 TON
 };
 
 function App() {
@@ -21,6 +21,7 @@ function App() {
   const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem('refs')) || []);
   const [customTasks, setCustomTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [rewardCode, setRewardCode] = useState('');
@@ -29,6 +30,7 @@ function App() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
+  
   const [isAdLoading, setIsAdLoading] = useState(false);
 
   useEffect(() => {
@@ -38,9 +40,9 @@ function App() {
     localStorage.setItem('refs', JSON.stringify(referrals));
   }, [balance, completed, withdrawHistory, referrals]);
 
-  const syncToFirebase = (path, data) => {
+  const syncToFirebase = (path, data, method = 'PATCH') => {
     return fetch(`${APP_CONFIG.FIREBASE_URL}/${path}.json`, {
-      method: 'PATCH',
+      method: method,
       body: JSON.stringify(data)
     });
   };
@@ -60,15 +62,19 @@ function App() {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
         .then(() => { 
             setIsAdLoading(false); 
-            if (callback) callback(); 
+            callback(); 
         })
-        .catch((err) => { 
+        .catch(() => { 
             setIsAdLoading(false); 
-            alert("Ad missed! No reward."); 
+            alert("Ad missed! Try again."); 
         });
     } else {
-      alert("Adsgram not connected yet.");
+      alert("Adsgram not connected.");
     }
+  };
+
+  const navigateWithAd = (nav) => {
+    runTaskWithAd(() => setActiveNav(nav));
   };
 
   useEffect(() => {
@@ -102,7 +108,7 @@ function App() {
       setBalance(newBal);
       setCompleted(newComp);
       syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, completed: newComp });
-      if (link) window.open(link, '_blank');
+      if (link) window.open(link);
       alert(`Claimed! +${reward} TON`);
     });
   };
@@ -187,17 +193,26 @@ function App() {
                     </select>
                     
                     <div style={styles.promoBox}>
-                      <small style={{color:'#666'}}>Admin Wallet:</small>
-                      <div style={{display:'flex', gap:'5px', marginTop:'5px'}}>
-                        <code style={{fontSize:'9px', flex:1, background:'#eee', padding:'5px'}}>{APP_CONFIG.ADMIN_WALLET}</code>
-                        <span style={styles.badge} onClick={()=>{navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Wallet Copied!");}}>COPY</span>
+                      <div style={{marginBottom: '10px'}}>
+                        <small style={{display:'block', color:'#666'}}>Admin Wallet Address:</small>
+                        <div style={{display:'flex', gap:'5px', alignItems:'center', marginTop:'5px'}}>
+                          <code style={{fontSize:'10px', flex:1, background:'#eee', padding:'5px', borderRadius:'5px'}}>{APP_CONFIG.ADMIN_WALLET}</code>
+                          <span style={styles.badge} onClick={()=>{navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Wallet Copied!");}}>COPY</span>
+                        </div>
+                      </div>
+                      <div>
+                        <small style={{display:'block', color:'#666'}}>Your UID (Use in Payment):</small>
+                        <div style={{display:'flex', gap:'5px', alignItems:'center', marginTop:'5px'}}>
+                          <code style={{fontSize:'10px', flex:1, background:'#eee', padding:'5px', borderRadius:'5px'}}>{APP_CONFIG.MY_UID}</code>
+                          <span style={styles.badge} onClick={()=>{navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("UID Copied!");}}>COPY</span>
+                        </div>
                       </div>
                     </div>
 
                     <button style={{...styles.btn, backgroundColor:'#3b82f6'}} onClick={() => {
                         sendAdminNotify(`📢 NEW PROMO\nUID: ${APP_CONFIG.MY_UID}\nName: ${promoForm.name}\nPkg: ${promoForm.package}`);
                         window.open(APP_CONFIG.HELP_BOT);
-                    }}>SEND PROOF</button>
+                    }}>SEND PROOF TO ADMIN</button>
                   </div>
                 )}
                 {allSocialTasks.filter(t => !completed.includes(t.id)).map(t => (
@@ -209,21 +224,20 @@ function App() {
             {activeTab === 'reward' && (
               <div style={{textAlign:'center'}}>
                 {completed.includes('code_'+APP_CONFIG.REWARD_CODE) ? (
-                    <p style={{color:'#10b981', fontWeight:'bold'}}>✅ EASY2 Claimed!</p>
+                    <p style={{color:'#10b981', fontWeight:'bold'}}>✅ Code Already Claimed!</p>
                 ) : (
                     <>
                         <input style={styles.input} placeholder="Enter Code (EASY2)" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
                         <button style={styles.btn} onClick={() => {
                         if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
                             handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, APP_CONFIG.REWARD_AMT, null);
-                        } else alert("Wrong code!");
+                        } else alert("Invalid Code!");
                         }}>CLAIM 0.001 TON</button>
                     </>
                 )}
               </div>
             )}
 
-            {/* Admin Add Task - ပြန်ထည့်ပေးထားပါတယ် */}
             {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
                 <div>
                     <h4 style={{marginTop:0}}>ADD SYSTEM TASK</h4>
@@ -235,7 +249,7 @@ function App() {
                     </select>
                     <button style={styles.btn} onClick={() => {
                         const id = "task_" + Date.now();
-                        syncToFirebase(`global_tasks/${id}`, {...newTask, id}).then(() => alert("New Task Added!"));
+                        syncToFirebase(`global_tasks/${id}`, {...newTask, id}, 'PUT').then(() => alert("New Task Added!"));
                     }}>PUBLISH TASK</button>
                 </div>
             )}
@@ -246,17 +260,16 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center', marginTop:0}}>REFERRALS</h2>
-          {/* Refer Reward Text - ပြန်ထည့်ပေးထားပါတယ် */}
           <p style={{textAlign:'center', fontSize:14, fontWeight:'bold', color:'#3b82f6'}}>Get 0.0005 TON for every friend!</p>
           <div style={styles.promoBox}>
-             <small>Your Link:</small>
-             <p style={{fontSize:10, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
+             <small>INVITE LINK:</small>
+             <p style={{fontSize:11, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
              <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}} style={{...styles.btn, padding:'10px'}}>COPY LINK</button>
           </div>
-          <h4 style={{marginTop:20}}>History ({referrals.length})</h4>
+          <h4 style={{marginTop:20}}>INVITE LIST ({referrals.length})</h4>
           {referrals.map((r, i) => (
                 <div key={i} style={styles.row}>
-                    <div style={{fontSize:12}}>User: {r.id}</div>
+                    <div style={{fontSize:12}}>User: {r.id} <br/><small style={{color:'#10b981'}}>● Successful</small></div>
                     <b style={{color:'#10b981'}}>+0.0005 TON</b>
                 </div>
             ))
@@ -268,7 +281,7 @@ function App() {
         <div style={styles.card}>
           <h3>WITHDRAW</h3>
           <input style={styles.input} placeholder="Amount (Min 0.1)" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-          <input style={styles.input} placeholder="TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+          <input style={styles.input} placeholder="TON Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
           <button style={styles.btn} onClick={() => {
             const amt = parseFloat(withdrawAmount);
             if(amt >= 0.1 && balance >= amt) {
@@ -277,42 +290,33 @@ function App() {
                 const newHist = [{ id: Date.now(), amount: amt, status: 'Pending', date: Date.now() }, ...withdrawHistory];
                 setBalance(newBal); setWithdrawHistory(newHist);
                 syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, withdrawHistory: newHist });
-                sendAdminNotify(`💰 WD REQ: ${amt} TON\nUID: ${APP_CONFIG.MY_UID}\nAddr: ${withdrawAddress}`);
-                alert("Withdrawal Pending!");
+                sendAdminNotify(`💰 WITHDRAWAL\nUID: ${APP_CONFIG.MY_UID}\nAmount: ${amt} TON\nAddr: ${withdrawAddress}`);
+                alert("Withdrawal Pending! Admin will review.");
               });
-            } else alert("Invalid balance or amount.");
-          }}>WITHDRAW</button>
-
-          {/* Withdraw History List - ပြန်ထည့်ပေးထားပါတယ် */}
-          <h4 style={{marginTop:25}}>WITHDRAW HISTORY</h4>
-          {withdrawHistory.length === 0 ? (
-            <p style={{fontSize:12, color:'#888', textAlign:'center'}}>No history yet.</p>
-          ) : (
-            withdrawHistory.map((h, i) => (
-              <div key={i} style={styles.row}>
-                <div>
-                  <b style={{fontSize:14}}>{h.amount} TON</b><br/>
-                  <small style={{fontSize:10, color:'#888'}}>{new Date(h.date).toLocaleDateString()}</small>
-                </div>
-                <span style={{color: h.status === 'Pending' ? '#f59e0b' : '#10b981', fontWeight:'bold', fontSize:12}}>{h.status}</span>
-              </div>
-            ))
-          )}
+            } else alert("Invalid Amount or Insufficient Balance.");
+          }}>REQUEST WITHDRAW</button>
+          <h4 style={{marginTop:20}}>HISTORY</h4>
+          {withdrawHistory.map((h, i) => (
+            <div key={i} style={styles.row}>
+               <div><b>{h.amount} TON</b><br/><small>{new Date(h.date).toLocaleDateString()}</small></div>
+               <span style={{color:'#f59e0b', fontWeight:'bold'}}>{h.status}</span>
+            </div>
+          ))}
         </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center'}}>PROFILE</h2>
-          <div style={styles.row}><span>UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
-          <div style={styles.row}><span>BALANCE:</span><strong>{balance.toFixed(5)} TON</strong></div>
-          <button style={{...styles.btn, marginTop:20, backgroundColor:'#3b82f6'}} onClick={() => window.open(APP_CONFIG.HELP_BOT)}>HELP</button>
+          <div style={styles.row}><span>USER UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
+          <div style={styles.row}><span>TOTAL EARNED:</span><strong>{balance.toFixed(5)} TON</strong></div>
+          <button style={{...styles.btn, marginTop:20, backgroundColor:'#3b82f6'}} onClick={() => window.open(APP_CONFIG.HELP_BOT)}>CONTACT SUPPORT</button>
         </div>
       )}
 
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => setActiveNav(n)} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
+          <div key={n} onClick={() => navigateWithAd(n)} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
         ))}
       </div>
     </div>
