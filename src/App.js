@@ -10,7 +10,7 @@ const APP_CONFIG = {
   ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_CHAT_ID: "5020977059",
   HELP_BOT: "https://t.me/EasyTonHelp_Bot",
-  REWARD_CODE: "EASY3",
+  REWARD_CODE: "EASY2",
   REWARD_AMT: 0.001
 };
 
@@ -20,6 +20,8 @@ function App() {
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [isAdLoading, setIsAdLoading] = useState(false);
+  const [showAddPromo, setShowAddPromo] = useState(false);
+  const [promoChannel, setPromoChannel] = useState('');
 
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
@@ -33,9 +35,16 @@ function App() {
     });
   };
 
-  // --- အဓိက ပြင်ဆင်ထားသော Ads Logic ---
-  // ကြော်ငြာကြည့်ပြီး အောင်မြင်မှ (Reward ရမှ) TON ပေါင်းပေးမည့် Function
-  const showAdAndProcess = (onSuccess) => {
+  const sendAdminNotify = (msg) => {
+    fetch(`https://api.telegram.org/bot${APP_CONFIG.ADMIN_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: APP_CONFIG.ADMIN_CHAT_ID, text: msg })
+    });
+  };
+
+  // --- အဓိက Ads Logic: ကြော်ငြာအောင်မြင်မှသာ Reward ပေးမည် ---
+  const runWithAdStrict = (onSuccess) => {
     if (isAdLoading) return;
 
     if (window.Adsgram) {
@@ -43,27 +52,26 @@ function App() {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
 
       AdController.show()
-        .then((result) => {
-          // ကြော်ငြာကြည့်တာ အောင်မြင်မှ (Reward ပေးရန် သေချာမှ) Success ဖြစ်စေမည်
+        .then(() => {
+          // ကြော်ငြာပြသမှု အောင်မြင်သောအခါမှသာ
           setIsAdLoading(false);
           if (onSuccess) onSuccess();
         })
         .catch((error) => {
-          // ကြော်ငြာမတက်ရင် သို့မဟုတ် error တက်ရင် balance မပေါင်းပါ
+          // ကြော်ငြာမတက်လျှင် သို့မဟုတ် Error ဖြစ်လျှင် Reward မပေးပါ
           setIsAdLoading(false);
-          alert("Ad failed to load. No TON added. Please try again!");
+          alert("Ads SDK not loaded or Ad failed. Please refresh! No TON added.");
           console.error("Adsgram Error:", error);
         });
     } else {
-      alert("Ads SDK not loaded. Please refresh!");
+      alert("Ads SDK not loaded. Please check your connection!");
     }
   };
 
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
     
-    // ကြော်ငြာ အရင်ပြမယ်၊ ကြော်ငြာကြည့်ပြီးမှ TON ပေါင်းမယ်
-    showAdAndProcess(() => {
+    runWithAdStrict(() => {
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
       setBalance(newBal);
@@ -74,16 +82,7 @@ function App() {
     });
   };
 
-  const watchVideoReward = () => {
-    showAdAndProcess(() => {
-      const newBal = Number((balance + 0.0002).toFixed(5));
-      setBalance(newBal);
-      syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal });
-      alert("📺 Video Reward Added! +0.0002 TON");
-    });
-  };
-
-  // --- Task Data ---
+  // --- Task Data များ ---
   const defaultBots = [
     { id: 'b_gt', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b_gm', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -101,8 +100,9 @@ function App() {
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '20px', marginBottom: '12px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0' },
-    navItem: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '11px' }),
-    row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eee' }
+    navItem: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }),
+    row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eee' },
+    input: { width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #000', marginBottom: '10px' }
   };
 
   return (
@@ -116,12 +116,12 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={styles.card}>
-            <button onClick={watchVideoReward} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (+0.0002 TON)</button>
+            <button onClick={() => handleTaskReward('video_ad', 0.0002, null)} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (+0.0002 TON)</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
-            {['BOT', 'SOCIAL', 'REWARD'].map(t => (
-              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '2px solid #000', backgroundColor: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight: 'bold' }}>{t}</button>
+            {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
+              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '2px solid #000', backgroundColor: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight: 'bold', fontSize: '10px' }}>{t}</button>
             ))}
           </div>
 
@@ -129,28 +129,39 @@ function App() {
             {activeTab === 'bot' && defaultBots.filter(t => !completed.includes(t.id)).map(t => (
               <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
             ))}
-            {activeTab === 'social' && socialChannels.map((handle, idx) => {
-              const id = `s_${handle.replace('@','')}`;
-              return !completed.includes(id) && (
-                <div key={id} style={styles.row}><b>{handle}</b><button onClick={() => handleTaskReward(id, 0.001, `https://t.me/${handle.replace('@','')}`)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
-              )
-            })}
+
+            {activeTab === 'social' && (
+              <>
+                {/* ပြန်ထည့်ပေးထားသော Promote ခလုတ် */}
+                <button style={{...styles.btn, backgroundColor:'#facc15', color:'#000', border:'2px solid #000', marginBottom:'15px'}} onClick={() => setShowAddPromo(!showAddPromo)}>+ ADD TASK (PROMOTE)</button>
+                
+                {showAddPromo && (
+                  <div style={{marginBottom:'20px'}}>
+                    <input style={styles.input} placeholder="Channel Link (e.g. @yourchannel)" value={promoChannel} onChange={e => setPromoChannel(e.target.value)} />
+                    <button style={{...styles.btn, backgroundColor:'#3b82f6'}} onClick={() => {
+                        if(!promoChannel) return alert("Enter link!");
+                        sendAdminNotify(`📢 PROMO: ${promoChannel}\nUID: ${APP_CONFIG.MY_UID}`);
+                        window.open(APP_CONFIG.HELP_BOT);
+                    }}>SUBMIT PROOF</button>
+                  </div>
+                )}
+
+                {socialChannels.map((handle) => {
+                  const id = `s_${handle.replace('@','')}`;
+                  return !completed.includes(id) && (
+                    <div key={id} style={styles.row}><b>{handle}</b><button onClick={() => handleTaskReward(id, 0.001, `https://t.me/${handle.replace('@','')}`)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
+                  );
+                })}
+              </>
+            )}
           </div>
         </>
       )}
 
-      {activeNav === 'invite' && (
-        <div style={styles.card}>
-          <h3 style={{textAlign:'center'}}>INVITE FRIENDS</h3>
-          <p style={{fontSize:12, textAlign:'center'}}>Earn 0.001 TON per friend!</p>
-          <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}} style={styles.btn}>COPY INVITE LINK</button>
-        </div>
-      )}
-
-      {/* Navigation */}
+      {/* Navigation Menu */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => showAdAndProcess(() => setActiveNav(n))} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
+          <div key={n} onClick={() => runWithAdStrict(() => setActiveNav(n))} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
         ))}
       </div>
     </div>
