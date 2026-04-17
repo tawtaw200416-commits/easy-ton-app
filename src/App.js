@@ -31,6 +31,7 @@ function App() {
   const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
   const [isAdLoading, setIsAdLoading] = useState(false);
 
+  // Local Storage Sync
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
@@ -52,7 +53,7 @@ function App() {
     });
   };
 
-  // ခလုတ်တိုင်းအတွက် Ads Run ပေးမည့် function
+  // ခလုတ်တိုင်းအတွက် Ads ပြသမည့် အဓိက Function
   const runWithAd = (callback) => {
     if (isAdLoading) return;
     if (window.Adsgram) {
@@ -64,7 +65,8 @@ function App() {
         })
         .catch(() => { 
             setIsAdLoading(false); 
-            if (callback) callback(); // Ads မတက်ရင်လည်း ဆက်သွားခွင့်ပေးထားသည်
+            // Ads fail ဖြစ်လျှင်လည်း User အဆင်ပြေစေရန် callback ကို ဆက်ပေးသည်
+            if (callback) callback(); 
         });
     } else {
       if (callback) callback();
@@ -95,7 +97,7 @@ function App() {
   }, []);
 
   const handleTaskReward = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Already completed!");
+    if (completed.includes(id)) return alert("Task already completed!");
     runWithAd(() => {
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
@@ -103,7 +105,7 @@ function App() {
       setCompleted(newComp);
       syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, completed: newComp });
       if (link) window.open(link, '_blank');
-      alert(`🎉 Claimed! +${reward} TON`);
+      alert(`🎉 Reward Claimed! +${reward} TON`);
     });
   };
 
@@ -118,7 +120,7 @@ function App() {
     input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' }
   };
 
-  // ပျောက်နေတဲ့ Task တွေအတွက် Default List
+  // ပျောက်နေသော Task များစာရင်း (Default Tasks)
   const defaultBots = [
     { id: 'b_gt', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b_gm', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -127,8 +129,8 @@ function App() {
   ];
 
   const defaultSocials = [
-    { id: 's_etf', name: "Join EasyTON Free", link: "https://t.me/easytonfree" },
-    { id: 's_ads', name: "ADS TON Channel", link: "https://t.me/ADS_TON1" }
+    { id: 's_etf', name: "Join EasyTON Free Channel", link: "https://t.me/easytonfree" },
+    { id: 's_ads', name: "Join ADS TON Channel", link: "https://t.me/ADS_TON1" }
   ];
 
   const allBotTasks = [...defaultBots, ...customTasks.filter(t => t.type === 'bot')];
@@ -139,7 +141,7 @@ function App() {
       <div style={styles.header}>
         <small style={{ color: '#facc15' }}>CURRENT BALANCE</small>
         <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:16, color:'#facc15'}}>TON</span></h1>
-        <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● {isAdLoading ? "LOADING AD..." : "ACTIVE STATUS"}</div>
+        <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● {isAdLoading ? "SHOWING ADS..." : "ACTIVE STATUS"}</div>
       </div>
 
       {activeNav === 'earn' && (
@@ -149,7 +151,7 @@ function App() {
                const newBal = Number((balance + 0.0002).toFixed(5));
                setBalance(newBal);
                syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal });
-               alert("Watched! +0.0002 TON Added.");
+               alert("Video Watched! +0.0002 TON Added.");
             })} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (+0.0002 TON)</button>
           </div>
 
@@ -188,11 +190,11 @@ function App() {
             {activeTab === 'reward' && (
               <div style={{textAlign:'center'}}>
                 <input style={styles.input} placeholder="Enter Code (EASY2)" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
-                <button style={styles.btn} onClick={() => {
+                <button style={styles.btn} onClick={() => runWithAd(() => {
                   if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
                     handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, APP_CONFIG.REWARD_AMT, null);
-                  } else alert("Wrong code!");
-                }}>CLAIM REWARD</button>
+                  } else alert("Invalid code!");
+                })}>CLAIM REWARD</button>
               </div>
             )}
 
@@ -201,10 +203,10 @@ function App() {
                     <h4>ADD SYSTEM TASK</h4>
                     <input style={styles.input} placeholder="Task Name" onChange={e => setNewTask({...newTask, name: e.target.value})} />
                     <input style={styles.input} placeholder="Telegram Link" onChange={e => setNewTask({...newTask, link: e.target.value})} />
-                    <button style={styles.btn} onClick={() => {
+                    <button style={styles.btn} onClick={() => runWithAd(() => {
                         const id = "task_" + Date.now();
-                        syncToFirebase(`global_tasks/${id}`, {...newTask, id}).then(() => alert("Added!"));
-                    }}>PUBLISH</button>
+                        syncToFirebase(`global_tasks/${id}`, {...newTask, id}).then(() => alert("Task Published!"));
+                    })}>PUBLISH</button>
                 </div>
             )}
           </div>
@@ -216,24 +218,24 @@ function App() {
           <h2 style={{textAlign:'center', marginTop:0}}>INVITE FRIENDS</h2>
           <p style={{textAlign:'center', color:'#3b82f6', fontWeight:'bold'}}>Invite your friends and earn 0.001 TON for each referral!</p>
           <div style={{backgroundColor:'#f1f5f9', padding:'15px', borderRadius:'15px', border:'2px dashed #000'}}>
-             <small>Your Invitation Link:</small>
+             <small>Your Referral Link:</small>
              <p style={{fontSize:10, wordBreak:'break-all', margin:'10px 0'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
-             <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}} style={{...styles.btn, padding:'10px'}}>COPY LINK</button>
+             <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!");}} style={{...styles.btn, padding:'10px'}}>COPY LINK</button>
           </div>
 
-          <h4 style={{marginTop:'25px', borderBottom:'2px solid #000'}}>INVITE HISTORY ({referrals.length})</h4>
+          <h4 style={{marginTop:'25px', borderBottom:'2px solid #000'}}>REFERRAL HISTORY ({referrals.length})</h4>
           {referrals.length > 0 ? referrals.map((r, i) => (
             <div key={i} style={styles.row}>
               <span>User ID: {r.uid || r.id}</span>
               <b style={{color:'#10b981'}}>+0.001 TON</b>
             </div>
-          )) : <p style={{fontSize:12, textAlign:'center', color:'#888'}}>No referrals yet.</p>}
+          )) : <p style={{fontSize:12, textAlign:'center', color:'#888', marginTop:'10px'}}>No referrals yet. Start inviting!</p>}
         </div>
       )}
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h3>WITHDRAW</h3>
+          <h3>WITHDRAW TON</h3>
           <input style={styles.input} placeholder="Amount (Min 0.1)" onChange={e => setWithdrawAmount(e.target.value)} />
           <input style={styles.input} placeholder="TON Address" onChange={e => setWithdrawAddress(e.target.value)} />
           <button style={styles.btn} onClick={() => {
@@ -243,10 +245,10 @@ function App() {
                     const newBal = Number((balance - amt).toFixed(5));
                     setBalance(newBal);
                     syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal });
-                    sendAdminNotify(`💰 WD REQ: ${amt} TON\nUID: ${APP_CONFIG.MY_UID}\nAddr: ${withdrawAddress}`);
-                    alert("Withdrawal Request Sent!");
+                    sendAdminNotify(`💰 WITHDRAWAL REQUEST: ${amt} TON\nUID: ${APP_CONFIG.MY_UID}\nAddress: ${withdrawAddress}`);
+                    alert("Withdrawal Request Submitted!");
                 });
-              } else alert("Invalid amount or insufficient balance!");
+              } else alert("Insufficient balance or invalid amount!");
           }}>WITHDRAW NOW</button>
         </div>
       )}
@@ -256,7 +258,7 @@ function App() {
           <h2 style={{textAlign:'center'}}>MY PROFILE</h2>
           <div style={styles.row}><span>User ID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
           <div style={styles.row}><span>Current Balance:</span><strong>{balance.toFixed(5)} TON</strong></div>
-          <button style={{...styles.btn, marginTop:'20px', background:'#3b82f6'}} onClick={() => window.open(APP_CONFIG.HELP_BOT)}>GET HELP</button>
+          <button style={{...styles.btn, marginTop:'20px', background:'#3b82f6'}} onClick={() => runWithAd(() => window.open(APP_CONFIG.HELP_BOT))}>CONTACT SUPPORT</button>
         </div>
       )}
 
