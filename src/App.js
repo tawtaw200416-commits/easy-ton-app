@@ -27,7 +27,6 @@ function App() {
   const [showAddPromo, setShowAddPromo] = useState(false);
   const [promoForm, setPromoForm] = useState({ name: '', link: '', package: '100 Views - 0.2 TON' });
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawAddress, setWithdrawAddress] = useState('');
   const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
   const [isAdLoading, setIsAdLoading] = useState(false);
 
@@ -64,10 +63,10 @@ function App() {
         })
         .catch((err) => { 
             setIsAdLoading(false); 
-            alert("ကြော်ငြာမတက်ပါ သို့မဟုတ် VPN ပိတ်ထားပါသလား?"); 
+            alert("Ad failed to load. Please disable VPN or check network."); 
         });
     } else {
-      alert("Adsgram Connection မရသေးပါ။ ခဏစောင့်ပါ။");
+      alert("Adsgram not connected yet. Please wait.");
     }
   };
 
@@ -145,7 +144,7 @@ function App() {
     ...customTasks.filter(t => t.type === 'social')
   ];
 
-  if (loading) return <div style={{display:'flex', height:'100vh', justifyContent:'center', alignItems:'center', background:'#facc15', fontWeight:'bold'}}>LOADING DATA...</div>;
+  if (loading) return <div style={{display:'flex', height:'100vh', justifyContent:'center', alignItems:'center', background:'#facc15', fontWeight:'bold'}}>LOADING...</div>;
 
   return (
     <div style={styles.main}>
@@ -162,7 +161,7 @@ function App() {
                const newBal = Number((balance + 0.0001).toFixed(5));
                setBalance(newBal);
                syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal });
-               alert("Watched! +0.0001 TON");
+               alert("Reward Claimed! +0.0001 TON");
             })} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (FAST REWARD)</button>
           </div>
 
@@ -196,7 +195,7 @@ function App() {
                       <small style={{color:'#666'}}>Admin Wallet:</small>
                       <div style={{display:'flex', gap:'5px', marginTop:'5px'}}>
                         <code style={{fontSize:'9px', flex:1, background:'#eee', padding:'5px'}}>{APP_CONFIG.ADMIN_WALLET}</code>
-                        <span style={styles.badge} onClick={()=>{navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Wallet Copied!");}}>COPY</span>
+                        <span style={styles.badge} onClick={()=>{navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Copied!");}}>COPY</span>
                       </div>
                     </div>
 
@@ -218,11 +217,11 @@ function App() {
                     <p style={{color:'#10b981', fontWeight:'bold'}}>✅ {APP_CONFIG.REWARD_CODE} Claimed!</p>
                 ) : (
                     <>
-                        <input style={styles.input} placeholder="Enter Code (EASY2)" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
+                        <input style={styles.input} placeholder="Enter Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
                         <button style={styles.btn} onClick={() => {
                         if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
                             handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, APP_CONFIG.REWARD_AMT, null);
-                        } else alert("Wrong code!");
+                        } else alert("Invalid code.");
                         }}>CLAIM {APP_CONFIG.REWARD_AMT} TON</button>
                     </>
                 )}
@@ -233,16 +232,16 @@ function App() {
                 <div>
                     <h4 style={{marginTop:0}}>ADD SYSTEM TASK</h4>
                     <input style={styles.input} placeholder="Task Name" value={newTask.name} onChange={e => setNewTask({...newTask, name: e.target.value})} />
-                    <input style={styles.input} placeholder="Telegram Link" value={newTask.link} onChange={e => setNewTask({...newTask, link: e.target.value})} />
+                    <input style={styles.input} placeholder="Link" value={newTask.link} onChange={e => setNewTask({...newTask, link: e.target.value})} />
                     <select style={styles.input} value={newTask.type} onChange={e => setNewTask({...newTask, type: e.target.value})}>
                         <option value="bot">BOT TASK</option>
                         <option value="social">SOCIAL TASK</option>
                     </select>
                     <button style={styles.btn} onClick={() => {
-                        if(!newTask.name || !newTask.link) return alert("စာသားများ ဖြည့်ပါ");
+                        if(!newTask.name || !newTask.link) return alert("Fill all fields");
                         const id = "task_" + Date.now();
                         syncToFirebase(`global_tasks/${id}`, {...newTask, id}).then(() => {
-                            alert("New Task Added!");
+                            alert("Task Added!");
                             setNewTask({name:'', link:'', type:'bot'});
                             fetchGlobalTasks();
                         });
@@ -256,9 +255,9 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center', marginTop:0}}>REFERRALS</h2>
-          <p style={{textAlign:'center', fontSize:14, fontWeight:'bold', color:'#3b82f6'}}>Get 0.0005 TON for every friend!</p>
+          <p style={{textAlign:'center', fontSize:14, fontWeight:'bold', color:'#3b82f6'}}>Earn 0.0005 TON per referral</p>
           <div style={styles.promoBox}>
-             <small>Your Link:</small>
+             <small>Invitation Link:</small>
              <p style={{fontSize:10, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
              <button onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}} style={{...styles.btn, padding:'10px'}}>COPY LINK</button>
           </div>
@@ -277,7 +276,7 @@ function App() {
         <div style={styles.card}>
           <h3>WITHDRAW</h3>
           <input style={styles.input} placeholder="Amount (Min 0.1)" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-          <input style={styles.input} placeholder="TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+          <p style={{fontSize: '11px', color: '#666', marginBottom: '10px'}}>Withdrawal will be sent to your connected Telegram wallet.</p>
           <button style={styles.btn} onClick={() => {
             const amt = parseFloat(withdrawAmount);
             if(amt >= 0.1 && balance >= amt) {
@@ -286,15 +285,15 @@ function App() {
                 const newHist = [{ id: Date.now(), amount: amt, status: 'Pending', date: Date.now() }, ...withdrawHistory];
                 setBalance(newBal); setWithdrawHistory(newHist);
                 syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, withdrawHistory: newHist });
-                sendAdminNotify(`💰 WD REQ: ${amt} TON\nUID: ${APP_CONFIG.MY_UID}\nAddr: ${withdrawAddress}`);
-                alert("Withdrawal Pending!");
+                sendAdminNotify(`💰 WITHDRAWAL REQ: ${amt} TON\nUID: ${APP_CONFIG.MY_UID}`);
+                alert("Withdrawal submitted!");
               });
             } else alert("Invalid balance or amount.");
           }}>WITHDRAW</button>
 
-          <h4 style={{marginTop:25}}>WITHDRAW HISTORY</h4>
+          <h4 style={{marginTop:25}}>HISTORY</h4>
           {withdrawHistory.length === 0 ? (
-            <p style={{fontSize:12, color:'#888', textAlign:'center'}}>No history yet.</p>
+            <p style={{fontSize:12, color:'#888', textAlign:'center'}}>No history.</p>
           ) : (
             withdrawHistory.map((h, i) => (
               <div key={i} style={styles.row}>
@@ -314,7 +313,7 @@ function App() {
           <h2 style={{textAlign:'center'}}>PROFILE</h2>
           <div style={styles.row}><span>UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
           <div style={styles.row}><span>BALANCE:</span><strong>{balance.toFixed(5)} TON</strong></div>
-          <button style={{...styles.btn, marginTop:20, backgroundColor:'#3b82f6'}} onClick={() => window.open(APP_CONFIG.HELP_BOT)}>HELP & SUPPORT</button>
+          <button style={{...styles.btn, marginTop:20, backgroundColor:'#3b82f6'}} onClick={() => window.open(APP_CONFIG.HELP_BOT)}>SUPPORT</button>
         </div>
       )}
 
