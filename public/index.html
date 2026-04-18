@@ -21,30 +21,15 @@
       }
       * { 
         box-sizing: border-box; 
-        user-select: none; 
-        -webkit-user-select: none;
         -webkit-tap-highlight-color: transparent;
       }
       #root:empty {
         display: flex;
-        flex-direction: column;
         justify-content: center;
         align-items: center;
         height: 100vh;
         background-color: #facc15;
-      }
-      #root:empty::after {
-        content: "LOADING...";
         font-weight: 900;
-        color: #000;
-        letter-spacing: 3px;
-        font-size: 1.2rem;
-        animation: pulse 1.5s infinite ease-in-out;
-      }
-      @keyframes pulse {
-        0% { opacity: 0.5; transform: scale(0.95); }
-        50% { opacity: 1; transform: scale(1); }
-        100% { opacity: 0.5; transform: scale(0.95); }
       }
     </style>
   </head>
