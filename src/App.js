@@ -5,7 +5,7 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "Guest_ID",
-  ADSGRAM_BLOCK_ID: "27632", // Bro ရဲ့ Unit ID အမှန်
+  ADSGRAM_BLOCK_ID: "27611", // Bro ရဲ့ Dashboard က UnitID အမှန်
   ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_CHAT_ID: "5020977059"
 };
@@ -47,30 +47,29 @@ function App() {
     } else { alert("Insufficient Balance (Min 0.1)"); }
   };
 
-  // ပေါင်းစည်းထားသော Adsgram Task Function
+  // Ads တက်ပြီးမှ Reward ပေးသည့် Logic
   const handleTaskAction = (id, link) => {
     if (isAdLoading) return;
-    window.open(link, '_blank');
-
-    const giveReward = () => {
-      setBalance(prev => Number((prev + 0.0005).toFixed(5)));
-      setCompleted(prev => [...prev, id]);
-      alert("Reward Received! +0.0005 TON");
-    };
 
     if (window.Adsgram) {
       setIsAdLoading(true);
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
+      
       AdController.show()
-        .then(() => { setIsAdLoading(false); giveReward(); })
+        .then(() => {
+          setIsAdLoading(false);
+          window.open(link, '_blank');
+          setBalance(prev => Number((prev + 0.0005).toFixed(5)));
+          setCompleted(prev => [...prev, id]);
+          alert("Reward Received! +0.0005 TON");
+        })
         .catch((err) => {
           setIsAdLoading(false);
+          alert("Ads မတက်သေးပါ၊ ခဏနေပြန်စမ်းပါ။ VPN ပိတ်ထားဖို့ မမေ့ပါနဲ့။");
           console.error(err);
-          // Ad မတက်လည်း Reward ပေးချင်ရင် ဒါကို ထားခဲ့ပါ၊ Ad ကြည့်မှ ပေးချင်ရင် alert ထုတ်ပါ
-          setTimeout(giveReward, 5000); 
         });
     } else {
-      setTimeout(giveReward, 5000);
+      alert("Adsgram Script is not loaded. index.html ကို ပြန်စစ်ပါ။");
     }
   };
 
@@ -112,7 +111,7 @@ function App() {
               { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=" + APP_CONFIG.MY_UID },
               { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=" + APP_CONFIG.MY_UID }
             ].filter(t => !completed.includes(t.id)).map(t => (
-              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '90px', padding: '10px'}}>{isAdLoading ? '...' : 'START'}</button></div>
+              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.yellowBtn, width: '90px', padding: '10px'}}>{isAdLoading ? '⌛' : 'START'}</button></div>
             ))}
 
             {activeTab === 'social' && !showAddTask && (
@@ -158,7 +157,7 @@ function App() {
                 <button style={styles.yellowBtn} onClick={() => window.open("https://t.me/GrowTeaNews")}>CONFIRM & SEND PROOF</button>
               </div>
             )}
-            {activeTab === 'reward' && (<div><input style={styles.input} placeholder="Enter Code" value={rewardInput} onChange={(e) => setRewardInput(e.target.value)} /><button style={styles.yellowBtn} onClick={() => { if(rewardInput==='EASY1'){ setBalance(p=>p+0.0005); alert("Reward Claimed!"); setRewardInput(''); } else { alert("Invalid Code!"); } }}>CLAIM</button></div>)}
+            {activeTab === 'reward' && (<div><input style={styles.input} placeholder="Enter Code" value={rewardInput} onChange={(e) => setRewardInput(e.target.value)} /><button style={styles.yellowBtn} onClick={() => { if(rewardInput==='EASY1' || rewardInput==='YTTPO'){ setBalance(p=>p+0.0005); alert("Reward Claimed!"); setRewardInput(''); } else { alert("Invalid Code!"); } }}>CLAIM</button></div>)}
           </div>
         </>
       )}
@@ -196,7 +195,7 @@ function App() {
           <div style={styles.row}><span>Status:</span><span style={{color:'#10b981'}}>VERIFIED</span></div>
           <div style={styles.row}><span>Balance:</span><strong>{balance.toFixed(5)} TON</strong></div>
           <div style={styles.warning}>
-            ⚠️ <b>WARNING:</b> Fake accounts or referral cheating will lead to a <b>PERMANENT BAN</b> and loss of all balance.
+            ⚠️ <b>WARNING:</b> Fake accounts သုံးခြင်း၊ Referral လိမ်လည်ခြင်းများ တွေ့ရှိပါက <b>Ban</b> လုပ်ခံရပါမည်။
           </div>
         </div>
       )}
