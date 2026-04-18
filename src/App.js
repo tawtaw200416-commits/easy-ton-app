@@ -5,7 +5,7 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606",
-  ADSGRAM_BLOCK_ID: "27632", // Bro ရဲ့ Unit ID အသစ်သို့ ပြောင်းထားသည်
+  ADSGRAM_BLOCK_ID: "27632", // Bro ရဲ့ Unit ID အသစ်
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_CHAT_ID: "5020977059",
@@ -26,33 +26,31 @@ function App() {
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
   }, [balance, completed]);
 
-  // --- Adsgram ပြင်ဆင်ထားသော Function ---
+  // Adsgram ခေါ်ယူသည့် Function
   const runTaskWithAd = (callback) => {
     if (isAdLoading) return;
 
     if (window.Adsgram) {
       setIsAdLoading(true);
       
-      // Adsgram Controller ကို ခေါ်ယူခြင်း
+      // Adsgram Controller စနစ်သစ်ဖြင့် ချိတ်ဆက်ခြင်း
       const AdController = window.Adsgram.init({ 
         blockId: APP_CONFIG.ADSGRAM_BLOCK_ID,
-        debug: false // စမ်းသပ်စဉ်မှာ true ထားနိုင်သည်
+        debug: false 
       });
 
       AdController.show()
         .then((result) => {
-          // ကြော်ငြာကို အဆုံးထိ ကြည့်ပြီးမှ ပိုက်ဆံတိုးပေးမည်
           setIsAdLoading(false);
-          if (callback) callback();
+          if (callback) callback(); // ကြော်ငြာကြည့်ပြီးမှ Reward ပေးမည်
         })
         .catch((result) => {
-          // Error တက်လျှင် (ဥပမာ VPN ဖွင့်ထားခြင်း သို့မဟုတ် ကြော်ငြာမရှိခြင်း)
           setIsAdLoading(false);
-          let errorMsg = result.description || "Ad missed!";
-          alert(`Error: ${errorMsg}. Please disable VPN and try again.`);
+          // Error တက်ပါက ပြသရန် (ဥပမာ- VPN ဖွင့်ထားခြင်း)
+          alert(`Error: ${result.description || "Ad missed"}. Please disable VPN!`);
         });
     } else {
-      alert("Adsgram Script is not loaded. Please check index.html.");
+      alert("Adsgram Script is not loaded. Check your index.html.");
     }
   };
 
@@ -76,41 +74,40 @@ function App() {
   }, []);
 
   const styles = {
-    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '100px', fontFamily: 'sans-serif' },
-    header: { textAlign: 'center', background: '#000', padding: '20px', borderRadius: '20px', color: '#fff', border: '4px solid #fff', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' },
-    btn: { width: '100%', padding: '15px', backgroundColor: '#000', color: '#fff', borderRadius: '12px', border: 'none', fontWeight: 'bold', marginTop: '10px', fontSize: '16px', cursor: 'pointer' },
+    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '100px', fontFamily: 'Arial, sans-serif' },
+    header: { textAlign: 'center', background: '#000', padding: '20px', borderRadius: '20px', color: '#fff', border: '4px solid #fff' },
+    btn: { width: '100%', padding: '15px', backgroundColor: '#000', color: '#fff', borderRadius: '12px', border: 'none', fontWeight: 'bold', marginTop: '10px', fontSize: '16px' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px' },
-    navItem: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' })
+    navItem: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '12px' })
   };
 
-  if (loading) return <div style={{display:'flex', height:'100vh', justifyContent:'center', alignItems:'center', background:'#facc15', fontWeight:'bold'}}>LOADING...</div>;
+  if (loading) return <div style={{display:'flex', height:'100vh', justifyContent:'center', alignItems:'center', background:'#facc15'}}>LOADING...</div>;
 
   return (
     <div style={styles.main}>
       <div style={styles.header}>
-        <small style={{letterSpacing: '1px'}}>MY BALANCE</small>
-        <h1 style={{fontSize: '32px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
+        <small>BALANCE</small>
+        <h1 style={{fontSize: '32px'}}>{balance.toFixed(5)} TON</h1>
       </div>
 
       {activeNav === 'earn' && (
-        <div style={{marginTop: '30px'}}>
-          <h3 style={{textAlign: 'center', color: '#000'}}>Daily Tasks</h3>
+        <div style={{marginTop: '20px'}}>
+          <h3 style={{textAlign: 'center'}}>Daily Tasks</h3>
           <button 
-            style={{...styles.btn, backgroundColor: isAdLoading ? '#666' : '#ef4444'}} 
+            style={{...styles.btn, backgroundColor: isAdLoading ? '#555' : '#ef4444'}} 
             disabled={isAdLoading}
             onClick={() => runTaskWithAd(() => {
               const newBal = balance + 0.0001;
               setBalance(newBal);
               syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal });
-              alert("Reward Added! +0.0001 TON");
+              alert("Reward added!");
             })}
           >
-            {isAdLoading ? '⌛ LOADING AD...' : '📺 WATCH VIDEO'}
+            {isAdLoading ? 'LOADING AD...' : '📺 WATCH VIDEO'}
           </button>
         </div>
       )}
 
-      {/* Navigation Bar */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => setActiveNav(n)} style={styles.navItem(activeNav === n)}>
