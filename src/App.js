@@ -58,36 +58,40 @@ function App() {
     if (window.Adsgram) {
       setIsAdLoading(true);
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
-        .then(() => { 
+        .then((result) => { 
             setIsAdLoading(false); 
-            if (callback) callback(); 
+            if (result.done && callback) callback(); 
         })
         .catch((err) => { 
             setIsAdLoading(false); 
-            alert("Ad missed! No reward."); 
+            alert("ကြော်ငြာမတက်ပါ သို့မဟုတ် VPN ပိတ်ထားပါသလား?"); 
         });
     } else {
-      alert("Adsgram not connected yet.");
+      alert("Adsgram Connection မရသေးပါ။ ခဏစောင့်ပါ။");
     }
+  };
+
+  const fetchGlobalTasks = async () => {
+    try {
+        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`);
+        const data = await res.json();
+        if (data) setCustomTasks(Object.values(data));
+    } catch(e) { console.error("Task Error:", e); }
   };
 
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     const initApp = async () => {
       try {
-        const [userRes, tasksRes] = await Promise.all([
-          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
-          fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`)
-        ]);
+        const userRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
         const userData = await userRes.json();
-        const tasksData = await tasksRes.json();
         if (userData) {
           setBalance(Number(userData.balance || 0));
           setCompleted(userData.completed || []);
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferrals(userData.referrals || []);
         }
-        if (tasksData) setCustomTasks(Object.values(tasksData));
+        await fetchGlobalTasks();
       } catch (e) { console.error(e); }
       setLoading(false);
     };
@@ -116,8 +120,8 @@ function App() {
     navItem: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '11px', fontWeight: 'bold', cursor:'pointer' }),
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eee' },
     input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box', backgroundColor:'#fff' },
-    promoBox: { backgroundColor: '#f1f5f9', padding: '12px', borderRadius: '12px', border: '2px dashed #000', margin: '10px 0' },
-    badge: { background: '#facc15', border: '1px solid #000', borderRadius: '5px', padding: '4px 8px', fontSize: '10px', cursor:'pointer', fontWeight:'bold', color: '#000' }
+    promoBox: { backgroundColor: '#f8fafc', padding: '12px', borderRadius: '12px', border: '2px dashed #000', margin: '10px 0' },
+    badge: { background: '#facc15', border: '1px solid #000', borderRadius: '5px', padding: '4px 8px', fontSize: '10px', cursor:'pointer', fontWeight:'bold' }
   };
 
   const defaultBots = [
@@ -140,6 +144,8 @@ function App() {
     ...defaultSocials.map(name => ({id: name, name, link: `https://t.me/${name.replace('@','')}`})), 
     ...customTasks.filter(t => t.type === 'social')
   ];
+
+  if (loading) return <div style={{display:'flex', height:'100vh', justifyContent:'center', alignItems:'center', background:'#facc15', fontWeight:'bold'}}>LOADING DATA...</div>;
 
   return (
     <div style={styles.main}>
@@ -209,7 +215,7 @@ function App() {
             {activeTab === 'reward' && (
               <div style={{textAlign:'center'}}>
                 {completed.includes('code_'+APP_CONFIG.REWARD_CODE) ? (
-                    <p style={{color:'#10b981', fontWeight:'bold'}}>✅ EASY2 Claimed!</p>
+                    <p style={{color:'#10b981', fontWeight:'bold'}}>✅ {APP_CONFIG.REWARD_CODE} Claimed!</p>
                 ) : (
                     <>
                         <input style={styles.input} placeholder="Enter Code (EASY2)" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
@@ -217,25 +223,29 @@ function App() {
                         if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
                             handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, APP_CONFIG.REWARD_AMT, null);
                         } else alert("Wrong code!");
-                        }}>CLAIM 0.001 TON</button>
+                        }}>CLAIM {APP_CONFIG.REWARD_AMT} TON</button>
                     </>
                 )}
               </div>
             )}
 
-            {/* Admin Add Task - ပြန်ထည့်ပေးထားပါတယ် */}
             {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
                 <div>
                     <h4 style={{marginTop:0}}>ADD SYSTEM TASK</h4>
-                    <input style={styles.input} placeholder="Task Name" onChange={e => setNewTask({...newTask, name: e.target.value})} />
-                    <input style={styles.input} placeholder="Telegram Link" onChange={e => setNewTask({...newTask, link: e.target.value})} />
-                    <select style={styles.input} onChange={e => setNewTask({...newTask, type: e.target.value})}>
+                    <input style={styles.input} placeholder="Task Name" value={newTask.name} onChange={e => setNewTask({...newTask, name: e.target.value})} />
+                    <input style={styles.input} placeholder="Telegram Link" value={newTask.link} onChange={e => setNewTask({...newTask, link: e.target.value})} />
+                    <select style={styles.input} value={newTask.type} onChange={e => setNewTask({...newTask, type: e.target.value})}>
                         <option value="bot">BOT TASK</option>
                         <option value="social">SOCIAL TASK</option>
                     </select>
                     <button style={styles.btn} onClick={() => {
+                        if(!newTask.name || !newTask.link) return alert("စာသားများ ဖြည့်ပါ");
                         const id = "task_" + Date.now();
-                        syncToFirebase(`global_tasks/${id}`, {...newTask, id}).then(() => alert("New Task Added!"));
+                        syncToFirebase(`global_tasks/${id}`, {...newTask, id}).then(() => {
+                            alert("New Task Added!");
+                            setNewTask({name:'', link:'', type:'bot'});
+                            fetchGlobalTasks();
+                        });
                     }}>PUBLISH TASK</button>
                 </div>
             )}
@@ -246,7 +256,6 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center', marginTop:0}}>REFERRALS</h2>
-          {/* Refer Reward Text - ပြန်ထည့်ပေးထားပါတယ် */}
           <p style={{textAlign:'center', fontSize:14, fontWeight:'bold', color:'#3b82f6'}}>Get 0.0005 TON for every friend!</p>
           <div style={styles.promoBox}>
              <small>Your Link:</small>
@@ -256,7 +265,7 @@ function App() {
           <h4 style={{marginTop:20}}>History ({referrals.length})</h4>
           {referrals.map((r, i) => (
                 <div key={i} style={styles.row}>
-                    <div style={{fontSize:12}}>User: {r.id}</div>
+                    <div style={{fontSize:12}}>User UID: {r.id}</div>
                     <b style={{color:'#10b981'}}>+0.0005 TON</b>
                 </div>
             ))
@@ -283,7 +292,6 @@ function App() {
             } else alert("Invalid balance or amount.");
           }}>WITHDRAW</button>
 
-          {/* Withdraw History List - ပြန်ထည့်ပေးထားပါတယ် */}
           <h4 style={{marginTop:25}}>WITHDRAW HISTORY</h4>
           {withdrawHistory.length === 0 ? (
             <p style={{fontSize:12, color:'#888', textAlign:'center'}}>No history yet.</p>
@@ -306,7 +314,7 @@ function App() {
           <h2 style={{textAlign:'center'}}>PROFILE</h2>
           <div style={styles.row}><span>UID:</span><strong>{APP_CONFIG.MY_UID}</strong></div>
           <div style={styles.row}><span>BALANCE:</span><strong>{balance.toFixed(5)} TON</strong></div>
-          <button style={{...styles.btn, marginTop:20, backgroundColor:'#3b82f6'}} onClick={() => window.open(APP_CONFIG.HELP_BOT)}>HELP</button>
+          <button style={{...styles.btn, marginTop:20, backgroundColor:'#3b82f6'}} onClick={() => window.open(APP_CONFIG.HELP_BOT)}>HELP & SUPPORT</button>
         </div>
       )}
 
