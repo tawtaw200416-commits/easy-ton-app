@@ -24,14 +24,12 @@ function App() {
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [rewardCode, setRewardCode] = useState('');
-  const [showAddPromo, setShowAddPromo] = useState(false);
-  const [promoForm, setPromoForm] = useState({ name: '', link: '', package: '100 Views - 0.2 TON' });
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
   const [isAdLoading, setIsAdLoading] = useState(false);
 
-  // LocalStorage ထဲသို့ အမြဲ Save ပေးခြင်း
+  // LocalStorage Sync
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
@@ -39,6 +37,7 @@ function App() {
     localStorage.setItem('refs', JSON.stringify(referrals));
   }, [balance, completed, withdrawHistory, referrals]);
 
+  // Firebase Helper
   const syncToFirebase = (path, data) => {
     return fetch(`${APP_CONFIG.FIREBASE_URL}/${path}.json`, {
       method: 'PATCH',
@@ -54,7 +53,6 @@ function App() {
     });
   };
 
-  // Adsgram Connection ကို စစ်ဆေးပြီး Ad ပြသခြင်း
   const runTaskWithAd = (callback) => {
     if (isAdLoading) return;
     if (window.Adsgram) {
@@ -66,42 +64,48 @@ function App() {
         })
         .catch((err) => { 
             setIsAdLoading(false); 
-            console.error("Adsgram Error:", err);
-            alert("ကြော်ငြာမတက်ပါ သို့မဟုတ် မပြီးဆုံးသေးပါ။"); 
+            alert("ကြော်ငြာကြည့်ရန် ခေတ္တစောင့်ဆိုင်းပါ။"); 
         });
     } else {
-      alert("Adsgram not connected yet. Please check index.html or network.");
+      alert("Adsgram not connected! Please check index.html or VPN.");
     }
   };
 
-  // Firebase မှ Data များ ဆွဲယူခြင်း
+  // အရေးကြီးဆုံး- Task များကို Firebase မှ ဆွဲယူခြင်း
+  const fetchGlobalTasks = async () => {
+    try {
+      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`);
+      const data = await res.json();
+      if (data) {
+        // Firebase Object ကို Array အဖြစ်ပြောင်းလဲခြင်း
+        const taskList = Object.keys(data).map(key => ({
+          ...data[key],
+          id: key
+        }));
+        setCustomTasks(taskList);
+      } else {
+        setCustomTasks([]);
+      }
+    } catch (e) {
+      console.error("Task loading error:", e);
+    }
+  };
+
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     const initApp = async () => {
       try {
-        const [userRes, tasksRes] = await Promise.all([
-          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
-          fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`)
-        ]);
+        const userRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
         const userData = await userRes.json();
-        const tasksData = await tasksRes.json();
         
         if (userData) {
-          // Firebase မှ data အသစ်ရှိလျှင် Update လုပ်မည်
           setBalance(prev => Math.max(prev, Number(userData.balance || 0)));
           setCompleted(prev => userData.completed || prev);
           setWithdrawHistory(prev => userData.withdrawHistory || prev);
           setReferrals(prev => userData.referrals || prev);
         }
-        
-        if (tasksData) {
-          const taskList = Object.keys(tasksData).map(key => ({
-            ...tasksData[key],
-            id: key
-          }));
-          setCustomTasks(taskList);
-        }
-      } catch (e) { console.error("Firebase Connection Error:", e); }
+        await fetchGlobalTasks();
+      } catch (e) { console.error("Init Error:", e); }
       setLoading(false);
     };
     initApp();
@@ -117,6 +121,20 @@ function App() {
       syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, completed: newComp });
       if (link) window.open(link, '_blank');
       alert(`Claimed! +${reward} TON`);
+    });
+  };
+
+  // Admin မှ Task အသစ်ထည့်ခြင်း
+  const handlePublishTask = () => {
+    if (!newTask.name || !newTask.link) return alert("စာသားများ ပြည့်စုံအောင် ဖြည့်ပါ။");
+    const taskId = "task_" + Date.now();
+    fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${taskId}.json`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...newTask, id: taskId })
+    }).then(() => {
+      alert("Task အသစ် တင်ပြီးပါပြီ!");
+      setNewTask({ name: '', link: '', type: 'bot' });
+      fetchGlobalTasks(); // Task စာရင်းကိုချက်ချင်း Update လုပ်မည်
     });
   };
 
@@ -149,7 +167,7 @@ function App() {
                setBalance(newBal);
                syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal });
                alert("Watched! +0.001 TON");
-            })} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (REWARD 0.001)</button>
+            })} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (0.001 TON)</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
@@ -195,13 +213,7 @@ function App() {
                         <option value="bot">BOT TASK</option>
                         <option value="social">SOCIAL TASK</option>
                     </select>
-                    <button style={styles.btn} onClick={() => {
-                        const id = "task_" + Date.now();
-                        syncToFirebase(`global_tasks/${id}`, {...newTask, id}).then(() => {
-                          alert("Published!");
-                          setNewTask({name:'', link:'', type:'bot'});
-                        });
-                    }}>PUBLISH</button>
+                    <button style={styles.btn} onClick={handlePublishTask}>PUBLISH NOW</button>
                 </div>
             )}
           </div>
