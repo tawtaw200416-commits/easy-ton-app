@@ -11,7 +11,7 @@ const APP_CONFIG = {
   ADMIN_CHAT_ID: "5020977059",
   HELP_BOT: "https://t.me/EasyTonHelp_Bot",
   REWARD_CODE: "EASY3",
-  REWARD_AMT: 0.001 // Code Reward
+  REWARD_AMT: 0.001 
 };
 
 function App() {
@@ -31,7 +31,7 @@ function App() {
   const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
   const [isAdLoading, setIsAdLoading] = useState(false);
 
-  // Local Storage သိမ်းဆည်းခြင်း
+  // LocalStorage ထဲသို့ အမြဲ Save ပေးခြင်း
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
@@ -54,6 +54,7 @@ function App() {
     });
   };
 
+  // Adsgram Connection ကို စစ်ဆေးပြီး Ad ပြသခြင်း
   const runTaskWithAd = (callback) => {
     if (isAdLoading) return;
     if (window.Adsgram) {
@@ -65,14 +66,15 @@ function App() {
         })
         .catch((err) => { 
             setIsAdLoading(false); 
-            alert("Adsgram not connected or ad missed."); 
+            console.error("Adsgram Error:", err);
+            alert("ကြော်ငြာမတက်ပါ သို့မဟုတ် မပြီးဆုံးသေးပါ။"); 
         });
     } else {
-      alert("Adsgram not connected yet.");
+      alert("Adsgram not connected yet. Please check index.html or network.");
     }
   };
 
-  // Firebase မှ Data များဆွဲယူခြင်း (History နှင့် Tasks များမပျောက်စေရန်)
+  // Firebase မှ Data များ ဆွဲယူခြင်း
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     const initApp = async () => {
@@ -85,21 +87,21 @@ function App() {
         const tasksData = await tasksRes.json();
         
         if (userData) {
-          setBalance(Number(userData.balance || 0));
-          setCompleted(userData.completed || []);
-          setWithdrawHistory(userData.withdrawHistory || []); // History ပြန်ဖတ်ခြင်း
-          setReferrals(userData.referrals || []);
+          // Firebase မှ data အသစ်ရှိလျှင် Update လုပ်မည်
+          setBalance(prev => Math.max(prev, Number(userData.balance || 0)));
+          setCompleted(prev => userData.completed || prev);
+          setWithdrawHistory(prev => userData.withdrawHistory || prev);
+          setReferrals(prev => userData.referrals || prev);
         }
         
         if (tasksData) {
-          // Firebase Object ကို Array အဖြစ်သို့ အမှန်ကန်ဆုံးပြောင်းလဲခြင်း
           const taskList = Object.keys(tasksData).map(key => ({
             ...tasksData[key],
             id: key
           }));
           setCustomTasks(taskList);
         }
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("Firebase Connection Error:", e); }
       setLoading(false);
     };
     initApp();
@@ -126,12 +128,10 @@ function App() {
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0', zIndex: 100 },
     navItem: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '11px', fontWeight: 'bold', cursor:'pointer' }),
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eee' },
-    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box', backgroundColor:'#fff' },
-    badge: { background: '#facc15', border: '1px solid #000', borderRadius: '5px', padding: '4px 8px', fontSize: '10px', cursor:'pointer', fontWeight:'bold' }
+    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box', backgroundColor:'#fff' }
   };
 
-  const allBotTasks = customTasks.filter(t => t.type === 'bot');
-  const allSocialTasks = customTasks.filter(t => t.type === 'social');
+  if (loading) return <div style={{display:'flex', height:'100vh', justifyContent:'center', alignItems:'center', background:'#facc15', fontWeight:'bold'}}>LOADING DATA...</div>;
 
   return (
     <div style={styles.main}>
@@ -144,7 +144,6 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={styles.card}>
-            {/* Reward 0.001 TON သို့ ပြောင်းထားသည် */}
             <button onClick={() => runTaskWithAd(() => {
                const newBal = Number((balance + 0.001).toFixed(5));
                setBalance(newBal);
@@ -162,28 +161,13 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && allBotTasks.filter(t => !completed.includes(t.id)).map(t => (
+            {activeTab === 'bot' && customTasks.filter(t => t.type === 'bot' && !completed.includes(t.id)).map(t => (
               <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
             ))}
 
-            {activeTab === 'social' && (
-              <>
-                <button style={{...styles.btn, backgroundColor:'#facc15', color:'#000', border:'2px solid #000', marginBottom:'15px'}} onClick={() => setShowAddPromo(!showAddPromo)}>+ PROMOTE YOUR CHANNEL</button>
-                {showAddPromo && (
-                  <div style={{marginBottom:'20px'}}>
-                    <input style={styles.input} placeholder="Channel Name" onChange={e => setPromoForm({...promoForm, name: e.target.value})} />
-                    <input style={styles.input} placeholder="Channel Link" onChange={e => setPromoForm({...promoForm, link: e.target.value})} />
-                    <button style={{...styles.btn, backgroundColor:'#3b82f6'}} onClick={() => {
-                        sendAdminNotify(`📢 PROMO: ${promoForm.name}\nLink: ${promoForm.link}`);
-                        window.open(APP_CONFIG.HELP_BOT);
-                    }}>CONTACT ADMIN</button>
-                  </div>
-                )}
-                {allSocialTasks.filter(t => !completed.includes(t.id)).map(t => (
-                  <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
-                ))}
-              </>
-            )}
+            {activeTab === 'social' && customTasks.filter(t => t.type === 'social' && !completed.includes(t.id)).map(t => (
+              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>JOIN</button></div>
+            ))}
 
             {activeTab === 'reward' && (
               <div style={{textAlign:'center'}}>
