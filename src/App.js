@@ -70,14 +70,10 @@ function App() {
     } else { onSuccess(); }
   };
 
-  // --- Link ကိုနှိပ်ပြီးမှ Reward ပေးရန် ---
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return;
     runWithAd(() => {
-      // 1. Link ကိုအရင်ဖွင့်ခိုင်းပါမည်
       window.open(link, '_blank');
-      
-      // 2. Link ဖွင့်ပြီးမှသာ Balance ပေါင်းပေးပါမည်
       setTimeout(() => {
         const newBal = Number((balance + reward).toFixed(5));
         const newComp = [...completed, id];
@@ -88,11 +84,10 @@ function App() {
           body: JSON.stringify({ balance: newBal, completed: newComp })
         });
         alert(`Success! +${reward} TON`);
-      }, 2000); 
+      }, 3000); 
     });
   };
 
-  // --- ပုံ ၂ ပါအတိုင်း NEW PROMO Format ပြင်ဆင်မှု ---
   const submitChannel = () => {
     if (!channelInput.trim()) return alert("Enter link.");
     runWithAd(() => {
@@ -107,7 +102,7 @@ function App() {
 
   const handleWithdraw = () => {
     const amt = Number(withdrawAmount);
-    if (amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Invalid amount or address.");
+    if (amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Invalid details.");
     runWithAd(() => {
       const newBal = Number((balance - amt).toFixed(5));
       const newEntry = { amount: amt, address: withdrawAddress, date: new Date().toLocaleString(), status: "Pending" };
@@ -120,8 +115,8 @@ function App() {
       });
       const withdrawMsg = `WITHDRAW REQ\nUID: ${APP_CONFIG.MY_UID}\nAmt: ${amt} TON\nAdd: ${withdrawAddress}`;
       const encoded = btoa(unescape(encodeURIComponent(withdrawMsg))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      tg.openTelegramLink(`${APP_CONFIG.MAIN_BOT}?start=${encoded}`);
-      alert("Withdraw request sent! Balance updated.");
+      if (tg) tg.openTelegramLink(`${APP_CONFIG.MAIN_BOT}?start=${encoded}`); else window.open(`${APP_CONFIG.MAIN_BOT}?start=${encoded}`, '_blank');
+      alert("Withdraw request sent to Admin! Waiting for 24h approval.");
     });
   };
 
@@ -129,12 +124,15 @@ function App() {
     { id: 'bot_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'bot_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
     { id: 'bot_3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'bot_4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'bot_5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
     ...customTasks.filter(t => t.type === 'bot')
   ];
 
   const socialTasks = [
     { id: 'soc_1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 'soc_2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 'soc_3', name: "@easytonfree", link: "https://t.me/easytonfree" },
     { id: 'soc_6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
     ...customTasks.filter(t => t.type === 'social')
   ];
@@ -160,10 +158,8 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
-            {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
-              (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && (
+            {['BOT', 'SOCIAL', 'REWARD'].map(t => (
                 <button key={t} onClick={() => runWithAd(() => setActiveTab(t.toLowerCase()))} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight:'bold', border:'2px solid #000'}}>{t}</button>
-              )
             ))}
           </div>
 
@@ -188,7 +184,7 @@ function App() {
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
-                <button style={styles.btn} onClick={() => runWithAd(() => { rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE ? handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001, APP_CONFIG.HELP_BOT) : alert('Invalid!'); })}>CLAIM</button>
+                <button style={styles.btn} onClick={() => runWithAd(() => { rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE ? handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001, APP_CONFIG.HELP_BOT) : alert('Invalid Code!'); })}>CLAIM</button>
               </div>
             )}
           </div>
@@ -201,24 +197,36 @@ function App() {
           <p style={{fontSize:'14px', color:'#666'}}>Get <b>{APP_CONFIG.REF_REWARD} TON</b> for every friend!</p>
           <div style={{background:'#eee', padding:'10px', borderRadius:'10px', wordBreak:'break-all', fontSize:'12px', border:'1px dashed #000'}}>{APP_CONFIG.MAIN_BOT}?start={APP_CONFIG.MY_UID}</div>
           <button style={{...styles.btn, marginTop:'10px'}} onClick={() => { navigator.clipboard.writeText(`${APP_CONFIG.MAIN_BOT}?start=${APP_CONFIG.MY_UID}`); alert("Copied!"); }}>COPY</button>
-          <h4 style={{marginTop:'20px'}}>Invite History (24h wait)</h4>
-          {referrals.map((r, i) => (<div key={i} style={styles.row}><span>User: {r.id}</span><span style={{color:'#f59e0b'}}>Wait 24h</span></div>))}
+          <h4 style={{marginTop:'20px'}}>Invite History (Wait 24h)</h4>
+          {referrals.length === 0 ? <p style={{fontSize:12, color:'#999'}}>No history found.</p> : referrals.map((r, i) => (<div key={i} style={styles.row}><span>User: {r.id}</span><span style={{color:'#f59e0b'}}>Processing...</span></div>))}
         </div>
       )}
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3>Withdraw TON</h3>
-          <input style={styles.input} type="number" placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} type="number" placeholder="Amount (Min 0.1)" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
           <input style={styles.input} placeholder="Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
-          <button style={{...styles.btn, background:'#3b82f6'}} onClick={handleWithdraw}>WITHDRAW</button>
-          {withdrawHistory.map((h, i) => (<div key={i} style={styles.row}><div><b>{h.amount} TON</b><br/><small>{h.date}</small></div><div style={{color: '#f59e0b'}}>● {h.status}</div></div>))}
+          <button style={{...styles.btn, background:'#3b82f6'}} onClick={handleWithdraw}>WITHDRAW NOW</button>
+          <h4 style={{marginTop:'25px'}}>Withdraw History</h4>
+          {withdrawHistory.length === 0 ? <p style={{fontSize:12, color:'#999'}}>No history found.</p> : withdrawHistory.map((h, i) => (<div key={i} style={styles.row}><div><b>{h.amount} TON</b><br/><small>{h.date}</small></div><div style={{color: '#f59e0b'}}>● {h.status}</div></div>))}
+        </div>
+      )}
+
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h3>My Profile</h3>
+          <div style={styles.row}><span>System Status:</span> <b style={{color:'#10b981'}}>Active</b></div>
+          <div style={styles.row}><span>UID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={styles.row}><span>Balance:</span> <b>{balance.toFixed(5)} TON</b></div>
+          <div style={styles.row}><span>Completed Tasks:</span> <b>{completed.length}</b></div>
+          <button style={{...styles.btn, marginTop: 15, background: '#24A1DE'}} onClick={() => { if (tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT, '_blank'); }}>CONTACT SUPPORT</button>
         </div>
       )}
 
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => runWithAd(() => setActiveNav(n))} style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold'}}>{n.toUpperCase()}</div>
+          <div key={n} onClick={() => runWithAd(() => setActiveNav(n))} style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold', cursor:'pointer'}}>{n.toUpperCase()}</div>
         ))}
       </div>
     </div>
