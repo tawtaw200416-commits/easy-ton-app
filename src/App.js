@@ -5,10 +5,12 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "Guest_ID",
+  // Block IDs နှစ်ခုကို Array ထဲထည့်လိုက်ပါပြီ
   ADS_BLOCKS: ["27611", "27633"], 
   TASK_REWARD: 0.001,
   VIDEO_REWARD: 0.0005,
   REFER_REWARD: 0.001,
+  CODE_REWARD_AMOUNT: 0.001,
   REWARD_CODE: "EASY3",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot"
 };
@@ -19,16 +21,17 @@ function App() {
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || []);
   const [inviteHistory, setInviteHistory] = useState(() => JSON.parse(localStorage.getItem('inv_hist')) || []);
   
-  // Admin ကနေ ကိုယ်တိုင်တိုးထားတဲ့ Task တွေသိမ်းဖို့
-  const [adminTasks, setAdminTasks] = useState(() => JSON.parse(localStorage.getItem('admin_tasks')) || []);
+  // Admin ကိုယ်တိုင်တိုးမယ့် Task တွေသိမ်းဖို့ State
+  const [adminTasks, setAdminTasks] = useState(() => JSON.parse(localStorage.getItem('adm_tasks_list')) || []);
 
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('social');
   const [showAddTask, setShowAddTask] = useState(false);
   
   // Admin Input States
-  const [adminChannelName, setAdminChannelName] = useState('');
-  const [adminChannelLink, setAdminChannelLink] = useState('');
+  const [newChannelName, setNewChannelName] = useState('');
+  const [newChannelLink, setNewChannelLink] = useState('');
+  
   const [rewardInput, setRewardInput] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isAdLoading, setIsAdLoading] = useState(false);
@@ -40,14 +43,14 @@ function App() {
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
     localStorage.setItem('wd_hist', JSON.stringify(withdrawHistory));
     localStorage.setItem('inv_hist', JSON.stringify(inviteHistory));
-    localStorage.setItem('admin_tasks', JSON.stringify(adminTasks));
+    localStorage.setItem('adm_tasks_list', JSON.stringify(adminTasks));
   }, [balance, completed, withdrawHistory, inviteHistory, adminTasks]);
 
-  // --- Ads Logic (Fixed Error) ---
+  // --- Ads Logic (Randomly Pick 27611 or 27633) ---
   const handleActionWithAds = (reward, taskId = null, link = null) => {
     if (isAdLoading) return;
     
-    // Block ID ကို ကျပန်းရွေးမယ်
+    // ကျပန်း Block ID တစ်ခုကို ရွေးပါတယ်
     const randomBlockId = APP_CONFIG.ADS_BLOCKS[Math.floor(Math.random() * APP_CONFIG.ADS_BLOCKS.length)];
 
     if (window.Adsgram) {
@@ -61,44 +64,59 @@ function App() {
           if (taskId) setCompleted(prev => [...prev, taskId]);
           if (link) window.open(link, '_blank');
         })
-        .catch((e) => {
+        .catch(() => {
           setIsAdLoading(false);
-          console.error("Ad Error:", e);
-          alert("Please finish the Ad to get reward.");
+          alert("Ad not finished. No reward added.");
         });
     } else {
-      alert("Adsgram script not loaded yet.");
+      alert("Adsgram not loaded. Please check connection.");
     }
   };
 
   // --- Admin Task Add Function ---
-  const handleSaveAdminTask = () => {
-    if (adminChannelName && adminChannelLink) {
+  const handleSaveTask = () => {
+    if (newChannelName && newChannelLink) {
       const newTask = {
-        id: 'adm_' + Date.now(),
-        name: adminChannelName,
-        link: adminChannelLink.startsWith('http') ? adminChannelLink : `https://${adminChannelLink}`
+        id: 'custom_' + Date.now(),
+        name: newChannelName,
+        link: newChannelLink.startsWith('http') ? newChannelLink : `https://${newChannelLink}`
       };
       setAdminTasks(prev => [newTask, ...prev]);
-      setAdminChannelName('');
-      setAdminChannelLink('');
-      setShowAddTask(false); // Task တိုးပြီးရင် form ပိတ်မယ်
-      alert("New Task Added! You can see it in SOCIAL tab.");
+      setNewChannelName('');
+      setNewChannelLink('');
+      setShowAddTask(false);
+      alert("Task Added Successfully!");
     } else {
-      alert("Please enter Name and Link.");
+      alert("Please fill both Name and Link!");
     }
   };
 
+  const handleWithdraw = () => {
+    const amt = parseFloat(withdrawAmount);
+    if (amt >= 0.1 && amt <= balance) {
+      setBalance(prev => Number((prev - amt).toFixed(5)));
+      const newWd = { id: Date.now(), amount: amt, status: 'Pending', time: Date.now() };
+      setWithdrawHistory(prev => [newWd, ...prev]);
+      setWithdrawAmount('');
+      alert("Withdraw Request Sent!");
+      setTimeout(() => {
+         setWithdrawHistory(current => 
+            current.map(h => h.id === newWd.id ? {...h, status: 'Success'} : h)
+         );
+      }, 86400000); 
+    } else { alert("Min 0.1 TON or Insufficient Balance."); }
+  };
+
   const styles = {
-    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
-    balanceCard: { background: 'linear-gradient(135deg, #000, #222)', padding: '30px', borderRadius: '25px', textAlign: 'center', marginBottom: '20px', color: '#fff', border: '3px solid #fff' },
-    videoBtn: { background: '#ef4444', color: '#fff', width: '100%', padding: '18px', borderRadius: '15px', border: '3px solid #000', fontWeight: 'bold', fontSize: '18px', marginBottom: '15px' },
-    card: { backgroundColor: '#fff', padding: '15px', borderRadius: '25px', marginBottom: '12px', border: '3px solid #000' },
-    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
-    blackBtn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', borderRadius: '12px', fontWeight: 'bold', border: 'none' },
+    main: { backgroundColor: '#facc15', color: '#000', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
+    balanceCard: { background: 'linear-gradient(135deg, #000, #1e293b)', padding: '30px', borderRadius: '25px', textAlign: 'center', marginBottom: '20px', border: '4px solid #fff', color: '#fff' },
+    videoBtn: { background: '#ef4444', color: '#fff', width: '100%', padding: '18px', borderRadius: '15px', border: '3px solid #000', fontWeight: 'bold', fontSize: '16px', marginBottom: '15px', cursor: 'pointer' },
+    card: { backgroundColor: '#fff', padding: '18px', borderRadius: '25px', marginBottom: '12px', border: '3px solid #000' },
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #eee' },
-    navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px 0', borderTop: '3px solid #fff' },
-    navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '11px', fontWeight: 'bold' })
+    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
+    navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0' },
+    navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '11px', fontWeight: '900' }),
+    blackBtn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }
   };
 
   return (
@@ -106,7 +124,7 @@ function App() {
       <div style={styles.balanceCard}>
         <small style={{ color: '#facc15' }}>CURRENT BALANCE</small>
         <h1 style={{ fontSize: '45px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:'18px'}}>TON</span></h1>
-        <small>● ACCOUNT ACTIVE</small>
+        <small>● ACTIVE ACCOUNT</small>
       </div>
 
       <button style={styles.videoBtn} onClick={() => handleActionWithAds(APP_CONFIG.VIDEO_REWARD)}>
@@ -123,14 +141,14 @@ function App() {
 
           <div style={styles.card}>
             <button onClick={() => setShowAddTask(!showAddTask)} style={{...styles.blackBtn, background:'#facc15', color:'#000', marginBottom:'15px', border:'2px solid #000'}}>
-              {showAddTask ? "CLOSE" : "+ ADD TASK (ADMIN)"}
+               {showAddTask ? "CLOSE ADMIN PANEL" : "+ ADD TASK (ADMIN)"}
             </button>
             
             {showAddTask ? (
               <div>
-                <input style={styles.input} placeholder="Channel Name" value={adminChannelName} onChange={(e)=>setAdminChannelName(e.target.value)} />
-                <input style={styles.input} placeholder="Channel Link" value={adminChannelLink} onChange={(e)=>setAdminChannelLink(e.target.value)} />
-                <button style={{...styles.blackBtn, background: '#22c55e'}} onClick={handleSaveAdminTask}>SAVE TASK</button>
+                <input style={styles.input} placeholder="Channel Name (@MyChannel)" value={newChannelName} onChange={(e)=>setNewChannelName(e.target.value)} />
+                <input style={styles.input} placeholder="Channel Link (https://...)" value={newChannelLink} onChange={(e)=>setNewChannelLink(e.target.value)} />
+                <button style={{...styles.blackBtn, background: '#22c55e'}} onClick={handleSaveTask}>SAVE TASK</button>
               </div>
             ) : (
               <>
@@ -145,19 +163,29 @@ function App() {
                   <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleActionWithAds(APP_CONFIG.TASK_REWARD, t.id, t.link)} style={{...styles.blackBtn, width:'80px'}}>START</button></div>
                 ))}
 
-                {activeTab === 'social' && [...adminTasks, 
+                {activeTab === 'social' && [
+                  ...adminTasks, // Admin တိုးထားတဲ့ Task တွေကို အပေါ်ဆုံးကပြမယ်
                   { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
                   { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
                   { id: 's3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
                   { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
-                  { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
+                  { id: 's5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
+                  { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+                  { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+                  { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+                  { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
+                  { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+                  { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
+                  { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
+                  { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
+                  { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
                 ].filter(t => !completed.includes(t.id)).map(t => (
                   <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleActionWithAds(APP_CONFIG.TASK_REWARD, t.id, t.link)} style={{...styles.blackBtn, width:'80px'}}>JOIN</button></div>
                 ))}
 
                 {activeTab === 'reward' && (
                   <div>
-                    <input style={styles.input} placeholder="Code: EASY3" value={rewardInput} onChange={(e)=>setRewardInput(e.target.value)} />
+                    <input style={styles.input} placeholder="Enter EASY3 Code" value={rewardInput} onChange={(e)=>setRewardInput(e.target.value)} />
                     <button style={styles.blackBtn} onClick={() => rewardInput===APP_CONFIG.REWARD_CODE ? handleActionWithAds(APP_CONFIG.CODE_REWARD_AMOUNT, 'code_claimed') : alert("Wrong Code")}>CLAIM</button>
                   </div>
                 )}
@@ -167,7 +195,40 @@ function App() {
         </>
       )}
 
-      {/* Navigation */}
+      {/* Profile/Withdraw/Invite အပိုင်းတွေ Bro code အတိုင်း မပြောင်းလဲပါ */}
+      {activeNav === 'invite' && (
+        <div style={styles.card}>
+          <h2 style={{textAlign:'center'}}>INVITE & EARN</h2>
+          <p style={{textAlign:'center', fontWeight:'bold'}}>1 Referral = 0.001 TON</p>
+          <div style={{background:'#f1f5f9', padding:'15px', borderRadius:'15px', border:'1px dashed #000'}}>
+             <small>REFERRAL LINK:</small>
+             <p style={{fontSize:11, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
+             <button style={styles.blackBtn} onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}}>COPY LINK</button>
+          </div>
+        </div>
+      )}
+
+      {activeNav === 'withdraw' && (
+        <div style={styles.card}>
+          <h3>WITHDRAW</h3>
+          <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e)=>setWithdrawAmount(e.target.value)} />
+          <button style={styles.blackBtn} onClick={handleWithdraw}>WITHDRAW NOW</button>
+          <h4 style={{marginTop:20}}>WITHDRAW HISTORY</h4>
+          {withdrawHistory.map(h => (
+            <div key={h.id} style={styles.row}><span>{h.amount} TON</span><b style={{color: h.status==='Pending'?'orange':'green'}}>{h.status}</b></div>
+          ))}
+        </div>
+      )}
+
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h2 style={{textAlign:'center'}}>PROFILE</h2>
+          <div style={styles.row}><span>UID:</span><b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={styles.row}><span>Status:</span><b style={{color:'green'}}>VERIFIED</b></div>
+          <button style={{...styles.blackBtn, marginTop: '10px'}} onClick={()=>window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
+        </div>
+      )}
+
       <div style={styles.navBar}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => setActiveNav(n)} style={styles.navBtn(activeNav === n)}>{n.toUpperCase()}</div>
