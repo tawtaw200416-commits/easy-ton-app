@@ -27,10 +27,7 @@ function App() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   
-  // Admin Task Input States
   const [adminTask, setAdminTask] = useState({ name: '', link: '', type: 'bot' });
-  
-  // States for Add Channel
   const [isAddingChannel, setIsAddingChannel] = useState(false);
   const [channelInput, setChannelInput] = useState('');
 
@@ -69,7 +66,6 @@ function App() {
     fetchData();
   }, [fetchData]);
 
-  // --- Ads Logic with Callback ---
   const runWithAd = (onSuccess) => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
@@ -89,21 +85,20 @@ function App() {
         method: 'PATCH',
         body: JSON.stringify({ balance: newBal, completed: newComp })
       });
-      if (link) window.open(link, '_blank');
+      if (link) {
+        if (tg) tg.openTelegramLink(link);
+        else window.open(link, '_blank');
+      }
       alert(`Success! +${reward} TON`);
     });
   };
 
-  // --- Admin Add Task Logic ---
   const handleAddAdminTask = async () => {
     if (!adminTask.name || !adminTask.link) return alert("Please fill Name and Link.");
     try {
       const response = await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, {
         method: 'POST',
-        body: JSON.stringify({
-          ...adminTask,
-          id: 'custom_' + Date.now()
-        })
+        body: JSON.stringify({ ...adminTask, id: 'custom_' + Date.now() })
       });
       if (response.ok) {
         alert("New task added successfully!");
@@ -137,14 +132,24 @@ function App() {
     });
   };
 
+  // --- ပြင်ဆင်လိုက်သော Channel ပို့သည့် Function ---
   const submitChannel = () => {
     if (!channelInput.trim()) return alert("Please enter a link.");
-    window.open(`${APP_CONFIG.HELP_BOT}?start=addchannel_${btoa(channelInput)}`, '_blank');
+    
+    // Telegram search parameter မှာ error မတက်အောင် safe string ဖြစ်အောင်လုပ်ခြင်း
+    const safeChannelData = btoa(channelInput.trim()).replace(/=/g, "");
+    const botUrl = `${APP_CONFIG.HELP_BOT}?start=addchannel_${safeChannelData}`;
+    
+    if (tg) {
+      tg.openTelegramLink(botUrl);
+    } else {
+      window.open(botUrl, '_blank');
+    }
+
     setChannelInput('');
     setIsAddingChannel(false);
   };
 
-  // Task Lists
   const botTasks = [
     { id: 'bot_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'bot_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -285,7 +290,7 @@ function App() {
           <div style={styles.row}><span>Status:</span> <b style={{color:'#10b981'}}>Active</b></div>
           <div style={styles.row}><span>Your Balance:</span> <b>{balance.toFixed(5)} TON</b></div>
           <div style={styles.row}><span>User ID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
-          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => window.open(APP_CONFIG.HELP_BOT)}>@EasyTonHelp_Bot</b></div>
+          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => { if(tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT); }}>@EasyTonHelp_Bot</b></div>
         </div>
       )}
 
