@@ -42,7 +42,7 @@ function App() {
   }, [balance, completed, withdrawHistory, inviteHistory, adminTasks]);
 
   // --- Ads Logic (နှိပ်လိုက်တိုင်း ကြော်ငြာအရင်လာမည်) ---
-  const handleActionWithAds = (reward, taskId = null, link = null) => {
+  const handleActionWithAds = (reward, taskId = null, link = null, callback = null) => {
     if (isAdLoading) return;
     const randomBlockId = APP_CONFIG.ADS_BLOCKS[Math.floor(Math.random() * APP_CONFIG.ADS_BLOCKS.length)];
 
@@ -58,22 +58,17 @@ function App() {
           }
           if (taskId) setCompleted(prev => [...prev, taskId]);
           if (link) window.open(link, '_blank');
+          if (callback) callback(); // Tab ပြောင်းတာမျိုးအတွက်
         })
         .catch(() => {
           setIsAdLoading(false);
-          alert("Skip လုပ်လို့မရပါဘူး။ ကြော်ငြာဆုံးအောင်ကြည့်ပေးပါ။");
+          alert("Ad skipped or failed. No reward."); // English လို ပြောင်းထားသည်
+          if (callback) callback(); // Error တက်ရင်လည်း Tab ကတော့ ပြောင်းပေးလိုက်မယ်
         });
     } else {
-      // Adsgram မရှိရင်တောင် Link ပွင့်အောင်လုပ်ထားပေးပါတယ် (Developer အတွက်)
       if (link) window.open(link, '_blank');
+      if (callback) callback();
     }
-  };
-
-  // Tab ပြောင်းရင် ကြော်ငြာအရင်တက်ခိုင်းတဲ့ logic
-  const switchTabWithAds = (tabName) => {
-    // Tab ပြောင်းတဲ့အခါ Reward မပေးဘဲ ကြော်ငြာပဲ ပြမှာဖြစ်လို့ reward ကို 0 ထားပါတယ်
-    handleActionWithAds(0); 
-    setActiveTab(tabName);
   };
 
   const handleSaveTask = () => {
@@ -87,20 +82,20 @@ function App() {
       setNewChannelName('');
       setNewChannelLink('');
       setShowAddTask(false);
-      alert("Admin Task Added!");
+      alert("Task Added Successfully!");
     }
   };
 
   const styles = {
     main: { backgroundColor: '#facc15', color: '#000', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
     balanceCard: { background: 'linear-gradient(135deg, #000, #1e293b)', padding: '30px', borderRadius: '25px', textAlign: 'center', marginBottom: '20px', border: '4px solid #fff', color: '#fff' },
-    videoBtn: { background: '#ef4444', color: '#fff', width: '100%', padding: '18px', borderRadius: '15px', border: '3px solid #000', fontWeight: 'bold', fontSize: '18px', marginBottom: '15px' },
+    videoBtn: { background: '#ef4444', color: '#fff', width: '100%', padding: '18px', borderRadius: '15px', border: '3px solid #000', fontWeight: 'bold', fontSize: '16px', marginBottom: '15px', cursor: 'pointer' },
     card: { backgroundColor: '#fff', padding: '18px', borderRadius: '25px', marginBottom: '12px', border: '3px solid #000' },
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #eee' },
-    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px' },
+    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
     navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0' },
-    navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '11px', fontWeight: '900' }),
-    blackBtn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold' }
+    navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }),
+    blackBtn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }
   };
 
   return (
@@ -119,13 +114,13 @@ function App() {
         <>
           <div style={{display:'flex', gap:'5px', marginBottom:'15px'}}>
             {['bot', 'social', 'reward'].map(t => (
-              <button key={t} onClick={() => switchTabWithAds(t)} style={{flex:1, padding:'10px', background:activeTab===t?'#000':'#fff', color:activeTab===t?'#fff':'#000', border:'2px solid #000', borderRadius:'12px', fontWeight:'bold'}}>{t.toUpperCase()}</button>
+              <button key={t} onClick={() => handleActionWithAds(0, null, null, () => setActiveTab(t))} style={{flex:1, padding:'10px', background:activeTab===t?'#000':'#fff', color:activeTab===t?'#fff':'#000', border:'2px solid #000', borderRadius:'12px', fontWeight:'bold'}}>{t.toUpperCase()}</button>
             ))}
           </div>
 
           <div style={styles.card}>
             <button onClick={() => setShowAddTask(!showAddTask)} style={{...styles.blackBtn, background:'#facc15', color:'#000', marginBottom:'15px', border:'2px solid #000'}}>
-               {showAddTask ? "CANCEL" : "+ ADD TASK (ADMIN)"}
+               {showAddTask ? "CLOSE PANEL" : "+ ADD TASK (ADMIN)"}
             </button>
             
             {showAddTask ? (
@@ -179,10 +174,46 @@ function App() {
         </>
       )}
 
-      {/* Footer Nav and other sections */}
+      {activeNav === 'invite' && (
+        <div style={styles.card}>
+          <h2 style={{textAlign:'center'}}>INVITE & EARN</h2>
+          <p style={{textAlign:'center', fontWeight:'bold'}}>1 Referral = 0.001 TON</p>
+          <div style={{background:'#f1f5f9', padding:'15px', borderRadius:'15px', border:'1px dashed #000'}}>
+             <small>REFERRAL LINK:</small>
+             <p style={{fontSize:11, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
+             <button style={styles.blackBtn} onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}}>COPY LINK</button>
+          </div>
+        </div>
+      )}
+
+      {activeNav === 'withdraw' && (
+        <div style={styles.card}>
+          <h3>WITHDRAW</h3>
+          <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e)=>setWithdrawAmount(e.target.value)} />
+          <button style={styles.blackBtn} onClick={() => handleActionWithAds(0, null, null, () => {
+             const amt = parseFloat(withdrawAmount);
+             if (amt >= 0.1 && amt <= balance) {
+               setBalance(prev => Number((prev - amt).toFixed(5)));
+               setWithdrawHistory(prev => [{id: Date.now(), amount: amt, status: 'Pending'}, ...prev]);
+               setWithdrawAmount('');
+               alert("Withdraw Request Sent!");
+             } else { alert("Insufficient Balance or Min 0.1 TON"); }
+          })}>WITHDRAW NOW</button>
+        </div>
+      )}
+
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h2 style={{textAlign:'center'}}>PROFILE</h2>
+          <div style={styles.row}><span>UID:</span><b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={styles.row}><span>Status:</span><b style={{color:'green'}}>VERIFIED</b></div>
+          <button style={{...styles.blackBtn, marginTop: '10px'}} onClick={()=>window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
+        </div>
+      )}
+
       <div style={styles.navBar}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => { handleActionWithAds(0); setActiveNav(n); }} style={styles.navBtn(activeNav === n)}>{n.toUpperCase()}</div>
+          <div key={n} onClick={() => handleActionWithAds(0, null, null, () => setActiveNav(n))} style={styles.navBtn(activeNav === n)}>{n.toUpperCase()}</div>
         ))}
       </div>
     </div>
