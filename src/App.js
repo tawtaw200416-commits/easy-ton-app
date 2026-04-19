@@ -7,7 +7,8 @@ const APP_CONFIG = {
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606",
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
-  HELP_BOT: "https://t.me/EasyTONFree_Bot", // ဒုတိယပုံထဲမှ Main Bot Link
+  MAIN_BOT: "https://t.me/EasyTonFree_Bot", // ပုံထဲက Main Bot Link
+  HELP_BOT: "https://t.me/EasyTonHelp_Bot",
   REWARD_CODE: "EASY3",
   MIN_WITHDRAW: 0.1,
   REF_REWARD: 0.001,
@@ -90,7 +91,21 @@ function App() {
     });
   };
 
-  // --- Withdraw လုပ်လျှင် Bot ထဲသို့ စာပို့ခြင်း ---
+  const handleAddAdminTask = async () => {
+    if (!adminTask.name || !adminTask.link) return alert("Please fill Name and Link.");
+    try {
+      const response = await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, {
+        method: 'POST',
+        body: JSON.stringify({ ...adminTask, id: 'custom_' + Date.now() })
+      });
+      if (response.ok) {
+        alert("New task added successfully!");
+        setAdminTask({ name: '', link: '', type: 'bot' });
+        fetchData();
+      }
+    } catch (e) { alert("Error adding task!"); }
+  };
+
   const handleWithdraw = () => {
     const amt = Number(withdrawAmount);
     if (amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdraw is ${APP_CONFIG.MIN_WITHDRAW} TON`);
@@ -103,43 +118,39 @@ function App() {
         amount: amt, address: withdrawAddress,
         date: new Date().toLocaleString(), status: "Pending"
       };
-      
-      // Bot ဆီပို့မည့် Format
-      const withdrawInfo = `WD_Request:${amt}TON_Addr:${withdrawAddress}`;
-      const encodedWD = btoa(unescape(encodeURIComponent(withdrawInfo))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      const botWDUrl = `${APP_CONFIG.HELP_BOT}?start=withdraw_${encodedWD}`;
-
+      const newHistory = [newEntry, ...withdrawHistory];
       setBalance(newBal);
-      setWithdrawHistory([newEntry, ...withdrawHistory]);
-      
+      setWithdrawHistory(newHistory);
+      setWithdrawAmount(''); setWithdrawAddress('');
       fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
         method: 'PATCH',
-        body: JSON.stringify({ balance: newBal, withdrawHistory: [newEntry, ...withdrawHistory] })
+        body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
       });
-
-      if (tg) tg.openTelegramLink(botWDUrl);
-      else window.open(botWDUrl, '_blank');
-
-      alert("Withdrawal request recorded! Bot message sent.");
-      setWithdrawAmount(''); setWithdrawAddress('');
+      alert("Withdrawal request sent! It will be reviewed within 24 hours.");
     });
   };
 
-  // --- Channel တင်လျှင် Bot ထဲသို့ စာပို့ခြင်း ---
+  // --- ပုံထဲကအတိုင်း Bot ထဲကို NEW PROMO အဖြစ်ရောက်အောင် ပို့မယ့် logic ---
   const submitChannel = () => {
     if (!channelInput.trim()) return alert("Please enter a link.");
     
-    runWithAd(() => {
-      const rawData = channelInput.trim();
-      const encodedData = btoa(unescape(encodeURIComponent(rawData))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      const botUrl = `${APP_CONFIG.HELP_BOT}?start=addchannel_${encodedData}`;
-      
-      if (tg) tg.openTelegramLink(botUrl);
-      else window.open(botUrl, '_blank');
+    // ပုံထဲကအတိုင်း Format စီခြင်း (NEW PROMO, UID, Name)
+    const rawMsg = `NEW_PROMO_UID_${APP_CONFIG.MY_UID}_NAME_${channelInput.trim()}`;
+    
+    // Telegram search parameter ထဲမှာ error မတက်အောင် encode လုပ်ခြင်း
+    const encodedData = btoa(unescape(encodeURIComponent(rawMsg))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    
+    // Main Bot (EasyTonFree Bot) ဆီကို start parameter နဲ့ လှမ်းပို့တာပါ
+    const botUrl = `${APP_CONFIG.MAIN_BOT}?start=${encodedData}`;
+    
+    if (tg) {
+      tg.openTelegramLink(botUrl);
+    } else {
+      window.open(botUrl, '_blank');
+    }
 
-      setChannelInput('');
-      setIsAddingChannel(false);
-    });
+    setChannelInput('');
+    setIsAddingChannel(false);
   };
 
   const botTasks = [
@@ -232,6 +243,22 @@ function App() {
                 })}>CLAIM REWARD</button>
               </div>
             )}
+
+            {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
+              <div>
+                <h3 style={{textAlign:'center', marginBottom:15}}>ADMIN PANEL</h3>
+                <label>Task Name:</label>
+                <input style={styles.input} placeholder="e.g. Join My Channel" value={adminTask.name} onChange={e => setAdminTask({...adminTask, name: e.target.value})} />
+                <label>Link:</label>
+                <input style={styles.input} placeholder="https://t.me/..." value={adminTask.link} onChange={e => setAdminTask({...adminTask, link: e.target.value})} />
+                <label>Type:</label>
+                <select style={{...styles.input, appearance:'none'}} value={adminTask.type} onChange={e => setAdminTask({...adminTask, type: e.target.value})}>
+                  <option value="bot">BOT TASK</option>
+                  <option value="social">SOCIAL TASK</option>
+                </select>
+                <button style={{...styles.btn, background:'#10b981'}} onClick={handleAddAdminTask}>CONFIRM ADD TASK</button>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -242,6 +269,10 @@ function App() {
           <p style={{fontSize:'14px', color:'#666'}}>Get <b>{APP_CONFIG.REF_REWARD} TON</b> for every friend you invite!</p>
           <div style={{background:'#eee', padding:'10px', borderRadius:'10px', wordBreak:'break-all', fontSize:'12px', border:'1px dashed #000'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</div>
           <button style={{...styles.btn, marginTop:'10px'}} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!"); }}>COPY LINK</button>
+          <h4 style={{marginTop:'20px'}}>Invite History</h4>
+          {referrals.length === 0 ? <p style={{fontSize:'12px', color:'#999'}}>No referrals yet.</p> : 
+            referrals.map((r, i) => (<div key={i} style={styles.row}><span>User ID: {r.id}</span><span style={{color:'#10b981'}}>+0.001 TON</span></div>))
+          }
         </div>
       )}
 
@@ -253,6 +284,16 @@ function App() {
           <button style={{...styles.btn, background:'#3b82f6'}} onClick={handleWithdraw}>WITHDRAW NOW</button>
           <h4 style={{marginTop:'25px'}}>Withdraw History</h4>
           {withdrawHistory.map((h, i) => (<div key={i} style={{...styles.row, fontSize:'12px'}}><div><b>{h.amount} TON</b><br/><small>{h.date}</small></div><div style={{color: h.status === 'Pending' ? '#f59e0b' : '#10b981'}}>● {h.status}</div></div>))}
+        </div>
+      )}
+
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h3>My Profile</h3>
+          <div style={styles.row}><span>Status:</span> <b style={{color:'#10b981'}}>Active</b></div>
+          <div style={styles.row}><span>Your Balance:</span> <b>{balance.toFixed(5)} TON</b></div>
+          <div style={styles.row}><span>User ID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => { if(tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT); }}>@EasyTonHelp_Bot</b></div>
         </div>
       )}
 
