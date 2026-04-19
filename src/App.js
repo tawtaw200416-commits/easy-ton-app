@@ -31,8 +31,6 @@ function App() {
   const [isAdLoading, setIsAdLoading] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
-
-  // Admin အတွက် Task အသစ်ထည့်ရန် State
   const [adminTask, setAdminTask] = useState({ name: '', link: '', type: 'bot' });
 
   // LocalStorage Sync
@@ -57,7 +55,7 @@ function App() {
         setBalance(Number(userData.balance || 0));
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
-        setReferrals(userData.referrals || []);
+        setReferrals(userData.referrals || []); // Referral History ဖတ်ယူခြင်း
       }
       if (tasksData) setCustomTasks(Object.values(tasksData));
     } catch (e) { console.error("Sync Error:", e); }
@@ -116,13 +114,10 @@ function App() {
     });
   };
 
-  // ADMIN အတွက် Task အသစ်ထည့်ရန် Logic
   const handleAddAdminTask = async () => {
     if (!adminTask.name || !adminTask.link) return alert("ကျေးဇူးပြု၍ Task အချက်အလက် အကုန်ဖြည့်ပါ။");
-    
     const taskId = 'task_' + Date.now();
     const newTaskObj = { ...adminTask, id: taskId };
-
     try {
       await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${taskId}.json`, {
         method: 'PUT',
@@ -131,9 +126,7 @@ function App() {
       setCustomTasks([...customTasks, newTaskObj]);
       setAdminTask({ name: '', link: '', type: 'bot' });
       alert("Task အသစ်ကို အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။");
-    } catch (e) {
-      alert("Error: Server သို့ မပို့နိုင်ပါ။");
-    }
+    } catch (e) { alert("Error: Server သို့ မပို့နိုင်ပါ။"); }
   };
 
   const handleWithdraw = () => {
@@ -246,18 +239,16 @@ function App() {
                 </div>
             )}
 
-            {/* Admin Task Input Section - Admin တစ်ယောက်တည်းသာ မြင်ရမည် */}
             {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
               <div>
                 <h3 style={{marginTop:0}}>ADD GLOBAL TASK</h3>
-                <input style={styles.input} placeholder="Task Name (e.g. Join News)" value={adminTask.name} onChange={e => setAdminTask({...adminTask, name: e.target.value})} />
-                <input style={styles.input} placeholder="Task Link (https://...)" value={adminTask.link} onChange={e => setAdminTask({...adminTask, link: e.target.value})} />
+                <input style={styles.input} placeholder="Task Name" value={adminTask.name} onChange={e => setAdminTask({...adminTask, name: e.target.value})} />
+                <input style={styles.input} placeholder="Task Link" value={adminTask.link} onChange={e => setAdminTask({...adminTask, link: e.target.value})} />
                 <select style={{...styles.input, appearance:'auto'}} value={adminTask.type} onChange={e => setAdminTask({...adminTask, type: e.target.value})}>
                   <option value="bot">BOT TASK</option>
                   <option value="social">SOCIAL TASK</option>
                 </select>
                 <button style={{...styles.btn, backgroundColor:'#10b981'}} onClick={handleAddAdminTask}>ADD TASK NOW</button>
-                <p style={{fontSize:10, marginTop:10}}>*ဒီမှာထည့်လိုက်တဲ့ Task တွေဟာ User အားလုံးဆီမှာ သွားပေါ်မှာပါ။</p>
               </div>
             )}
           </div>
@@ -272,6 +263,21 @@ function App() {
             https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}
           </div>
           <button style={styles.btn} onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert('Copied!');}}>COPY LINK</button>
+          
+          <h4 style={{marginTop:'20px', borderTop:'2px solid #eee', paddingTop:'15px'}}>INVITE HISTORY</h4>
+          {referrals.length > 0 ? (
+            referrals.map((ref, idx) => (
+              <div key={idx} style={styles.row}>
+                <div style={{fontSize:'13px'}}>
+                  <b>ID: {ref.uid || ref.id}</b>
+                  <br/><small style={{color:'#666'}}>{ref.date || "Just now"}</small>
+                </div>
+                <div style={{color:'#10b981', fontWeight:'bold', fontSize:'12px'}}>● COMPLETE</div>
+              </div>
+            ))
+          ) : (
+            <p style={{textAlign:'center', fontSize:'12px', color:'#999'}}>No referrals yet.</p>
+          )}
         </div>
       )}
 
