@@ -12,7 +12,7 @@ const APP_CONFIG = {
   MIN_WITHDRAW: 0.1,
   REF_REWARD: 0.001,
   TASK_REWARD: 0.001,
-  WATCH_REWARD: 0.0005 // Watch Box အတွက် reward
+  WATCH_REWARD: 0.0005 
 };
 
 function App() {
@@ -29,8 +29,6 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   
   const [adminTask, setAdminTask] = useState({ name: '', link: '', type: 'bot' });
-  
-  // +Add Task States
   const [isAddingChannel, setIsAddingChannel] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelLink, setNewChannelLink] = useState('');
@@ -50,7 +48,6 @@ function App() {
       ]);
       const userData = await userRes.json();
       const tasksData = await tasksRes.json();
-      
       if (userData) {
         setBalance(Number(userData.balance || 0));
         setCompleted(userData.completed || []);
@@ -69,12 +66,15 @@ function App() {
     fetchData();
   }, [fetchData]);
 
+  // --- အဓိက Ads Logic ---
   const runWithAd = (onSuccess) => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
         .then(() => onSuccess())
-        .catch(() => alert("Watch the full ad to receive your reward!"));
-    } else { onSuccess(); }
+        .catch(() => alert("Watch the full ad to proceed!"));
+    } else {
+      onSuccess(); // Adsgram မရှိရင် တန်းသွားမယ်
+    }
   };
 
   // --- Watch Video Box Logic ---
@@ -90,18 +90,17 @@ function App() {
     });
   };
 
-  // --- Task logic: Ad -> Link -> Reward ---
+  // --- Task Logic: Ad အရင်တက် -> ပြီးမှ Link ဖွင့် -> ပြီးမှ TON ပေါင်း ---
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return;
     runWithAd(() => {
-      // ၁။ Link ကို အရင်ဖွင့်မယ်
+      // ၁။ Link ကို အရင်ဖွင့်ပေးမယ်
       if (tg && link.includes('t.me/')) {
         tg.openTelegramLink(link);
       } else {
         window.open(link, '_blank');
       }
-
-      // ၂။ ပြီးမှ TON ပေါင်းမယ်
+      // ၂။ ပြီးမှ TON ပေါင်းပေးမယ်
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
       setBalance(newBal);
@@ -116,16 +115,15 @@ function App() {
 
   const submitChannel = () => {
     if (!newChannelName.trim() || !newChannelLink.trim()) return alert("Name နဲ့ Link နှစ်ခုလုံး ထည့်ပေးပါဗျ။");
-    
-    const rawData = `Name: ${newChannelName.trim()} | Link: ${newChannelLink.trim()}`;
-    const encodedData = btoa(unescape(encodeURIComponent(rawData))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    
-    const botUrl = `${APP_CONFIG.HELP_BOT}?start=addchannel_${encodedData}`;
-    
-    if (tg) { tg.openTelegramLink(botUrl); } 
-    else { window.open(botUrl, '_blank'); }
-
-    setNewChannelName(''); setNewChannelLink(''); setIsAddingChannel(false);
+    // Channel add တာကိုလည်း Ad ပြမယ်
+    runWithAd(() => {
+      const rawData = `Name: ${newChannelName.trim()} | Link: ${newChannelLink.trim()}`;
+      const encodedData = btoa(unescape(encodeURIComponent(rawData))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const botUrl = `${APP_CONFIG.HELP_BOT}?start=addchannel_${encodedData}`;
+      if (tg) { tg.openTelegramLink(botUrl); } 
+      else { window.open(botUrl, '_blank'); }
+      setNewChannelName(''); setNewChannelLink(''); setIsAddingChannel(false);
+    });
   };
 
   const botTasks = [
@@ -176,7 +174,7 @@ function App() {
 
       {activeNav === 'earn' && (
         <>
-          {/* Watch Ad Box Section */}
+          {/* Watch Ad Box - Button နှိပ်ရင် Ad တက်မယ် */}
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
              <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video & Get 0.0005 TON</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={handleWatchAd}>WATCH VIDEO</button>
@@ -200,7 +198,7 @@ function App() {
             
             {activeTab === 'social' && (
               <>
-                <button onClick={() => setIsAddingChannel(!isAddingChannel)} style={{...styles.btn, background: '#24A1DE', marginBottom: '15px'}}>+ ADD YOUR CHANNEL</button>
+                <button onClick={() => runWithAd(() => setIsAddingChannel(!isAddingChannel))} style={{...styles.btn, background: '#24A1DE', marginBottom: '15px'}}>+ ADD YOUR CHANNEL</button>
                 {isAddingChannel && (
                   <div style={{paddingBottom:'15px', borderBottom: '2px solid #eee', marginBottom: '15px'}}>
                     <input style={styles.input} placeholder="Channel Name" value={newChannelName} onChange={(e) => setNewChannelName(e.target.value)} />
@@ -225,7 +223,7 @@ function App() {
                 })}>CLAIM REWARD</button>
               </div>
             )}
-            {/* Admin Panel Logic */}
+            
             {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
               <div>
                 <h3 style={{textAlign:'center', marginBottom:15}}>ADMIN PANEL</h3>
@@ -235,10 +233,12 @@ function App() {
                   <option value="bot">BOT TASK</option>
                   <option value="social">SOCIAL TASK</option>
                 </select>
-                <button style={{...styles.btn, background:'#10b981'}} onClick={async () => {
+                <button style={{...styles.btn, background:'#10b981'}} onClick={() => {
                   if (!adminTask.name || !adminTask.link) return alert("Fill Name and Link");
-                  await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method: 'POST', body: JSON.stringify({...adminTask, id: 'custom_'+Date.now()}) });
-                  alert("New task added!"); setAdminTask({name:'', link:'', type:'bot'}); fetchData();
+                  runWithAd(async () => {
+                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method: 'POST', body: JSON.stringify({...adminTask, id: 'custom_'+Date.now()}) });
+                    alert("New task added!"); setAdminTask({name:'', link:'', type:'bot'}); fetchData();
+                  });
                 }}>CONFIRM ADD TASK</button>
               </div>
             )}
@@ -246,13 +246,16 @@ function App() {
         </>
       )}
 
-      {/* Invite, Withdraw, Profile UI - အဟောင်းအတိုင်း မပြောင်းပါ */}
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3>Invite Friends</h3>
           <p style={{fontSize:'14px', color:'#666'}}>Get <b>{APP_CONFIG.REF_REWARD} TON</b> for every friend you invite!</p>
           <div style={{background:'#eee', padding:'10px', borderRadius:'10px', wordBreak:'break-all', fontSize:'12px', border:'1px dashed #000'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</div>
-          <button style={{...styles.btn, marginTop:'10px'}} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!"); }}>COPY LINK</button>
+          <button style={{...styles.btn, marginTop:'10px'}} onClick={() => runWithAd(() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!"); })}>COPY LINK</button>
+          <h4 style={{marginTop:'20px'}}>Invite History</h4>
+          {referrals.length === 0 ? <p style={{fontSize:'12px', color:'#999'}}>No referrals yet.</p> : 
+            referrals.map((r, i) => (<div key={i} style={styles.row}><span>User ID: {r.id}</span><span style={{color:'#10b981'}}>+0.001 TON</span></div>))
+          }
         </div>
       )}
 
@@ -265,8 +268,21 @@ function App() {
              const amt = Number(withdrawAmount);
              if (amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Min ${APP_CONFIG.MIN_WITHDRAW} TON`);
              if (amt > balance) return alert("Insufficient balance");
+             if (!withdrawAddress) return alert("Address required");
+             
+             const newBal = Number((balance - amt).toFixed(5));
+             const newEntry = { amount: amt, address: withdrawAddress, date: new Date().toLocaleString(), status: "Pending" };
+             const newHistory = [newEntry, ...withdrawHistory];
+             setBalance(newBal); setWithdrawHistory(newHistory);
+             fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+                method: 'PATCH',
+                body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
+             });
+             setWithdrawAmount(''); setWithdrawAddress('');
              alert("Withdrawal request sent!");
           })}>WITHDRAW NOW</button>
+          <h4 style={{marginTop:'25px'}}>Withdraw History</h4>
+          {withdrawHistory.map((h, i) => (<div key={i} style={{...styles.row, fontSize:'12px'}}><div><b>{h.amount} TON</b><br/><small>{h.date}</small></div><div style={{color: h.status === 'Pending' ? '#f59e0b' : '#10b981'}}>● {h.status}</div></div>))}
         </div>
       )}
 
@@ -276,10 +292,11 @@ function App() {
           <div style={styles.row}><span>Status:</span> <b style={{color:'#10b981'}}>Active</b></div>
           <div style={styles.row}><span>Your Balance:</span> <b>{balance.toFixed(5)} TON</b></div>
           <div style={styles.row}><span>User ID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
-          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => { if(tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT); }}>@EasyTonHelp_Bot</b></div>
+          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => runWithAd(() => { if(tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT); })}>@EasyTonHelp_Bot</b></div>
         </div>
       )}
 
+      {/* Navigation Footer - Navigation ခလုတ်နှိပ်ရင်လည်း Ad အရင်တက်မယ် */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => runWithAd(() => setActiveNav(n))} style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold', cursor:'pointer'}}>{n.toUpperCase()}</div>
