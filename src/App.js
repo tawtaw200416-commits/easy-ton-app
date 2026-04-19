@@ -28,10 +28,12 @@ function App() {
   const [rewardCode, setRewardCode] = useState('');
   const [showAddPromo, setShowAddPromo] = useState(false);
   const [promoForm, setPromoForm] = useState({ name: '', link: '' });
-  const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
   const [isAdLoading, setIsAdLoading] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
+
+  // Admin အတွက် Task အသစ်ထည့်ရန် State
+  const [adminTask, setAdminTask] = useState({ name: '', link: '', type: 'bot' });
 
   // LocalStorage Sync
   useEffect(() => {
@@ -41,7 +43,7 @@ function App() {
     localStorage.setItem('refs', JSON.stringify(referrals));
   }, [balance, completed, withdrawHistory, referrals]);
 
-  // အကောင့်ဟောင်း Data များ ပြန်ခေါ်ခြင်း
+  // Firebase မှ Data များ ဖတ်ယူခြင်း
   const fetchUserData = useCallback(async () => {
     try {
       const [userRes, tasksRes] = await Promise.all([
@@ -67,7 +69,7 @@ function App() {
     fetchUserData();
   }, [fetchUserData]);
 
-  // Adsgram logic: ကြော်ငြာအဆုံးထိကြည့်မှ Balance တိုးပေးရန်
+  // Adsgram logic
   const runWithRewardAd = () => {
     if (isAdLoading) return;
     if (window.Adsgram) {
@@ -75,10 +77,8 @@ function App() {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
         .then(() => { 
             setIsAdLoading(false); 
-            // ကြော်ငြာအောင်မြင်စွာ ကြည့်ပြီးမှ Balance တိုးပေးခြင်း
             const newBal = Number((balance + APP_CONFIG.VIDEO_REWARD).toFixed(5));
             setBalance(newBal);
-            // Firebase တွင်ချက်ချင်း သိမ်းဆည်းခြင်း
             fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
               method: 'PATCH',
               body: JSON.stringify({ balance: newBal })
@@ -87,18 +87,16 @@ function App() {
         })
         .catch((e) => { 
             setIsAdLoading(false); 
-            console.error(e);
             alert("You must watch the ad until the end to get TON."); 
         });
     } else { alert("Adsgram Not Connected!"); }
   };
 
-  // ခလုတ်နှိပ်တိုင်း ကြော်ငြာအရင်ပြရန် (Navigation အတွက်)
   const runWithNavAd = (onSuccess) => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
         .then(() => { onSuccess(); })
-        .catch(() => { onSuccess(); }); // Nav အတွက်ဆိုရင် Error တက်လည်း ပေးသွားစေချင်လို့ပါ
+        .catch(() => { onSuccess(); });
     } else { onSuccess(); }
   };
 
@@ -116,6 +114,26 @@ function App() {
       if (link) window.open(link, '_blank');
       alert(`Claimed! +${reward} TON`);
     });
+  };
+
+  // ADMIN အတွက် Task အသစ်ထည့်ရန် Logic
+  const handleAddAdminTask = async () => {
+    if (!adminTask.name || !adminTask.link) return alert("ကျေးဇူးပြု၍ Task အချက်အလက် အကုန်ဖြည့်ပါ။");
+    
+    const taskId = 'task_' + Date.now();
+    const newTaskObj = { ...adminTask, id: taskId };
+
+    try {
+      await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${taskId}.json`, {
+        method: 'PUT',
+        body: JSON.stringify(newTaskObj)
+      });
+      setCustomTasks([...customTasks, newTaskObj]);
+      setAdminTask({ name: '', link: '', type: 'bot' });
+      alert("Task အသစ်ကို အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။");
+    } catch (e) {
+      alert("Error: Server သို့ မပို့နိုင်ပါ။");
+    }
   };
 
   const handleWithdraw = () => {
@@ -145,7 +163,6 @@ function App() {
     });
   };
 
-  // List tasks logic ... (Bot tasks, Social tasks logic remained the same)
   const defaultBots = [
     { id: 'b_gt', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b_gm', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -174,7 +191,7 @@ function App() {
     btn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0' },
     navItem: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '12px', fontWeight: 'bold' }),
-    input: { width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #000', marginBottom: '10px' },
+    input: { width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eee' }
   };
 
@@ -191,7 +208,6 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={styles.card}>
-            {/* Reward တိုးပေးမည့် function ကို ခေါ်ထားပါသည် */}
             <button onClick={runWithRewardAd} style={{...styles.btn, background: '#ef4444'}}>📺 WATCH VIDEO (+{APP_CONFIG.VIDEO_REWARD} TON)</button>
           </div>
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -206,6 +222,7 @@ function App() {
             {activeTab === 'bot' && allBotTasks.filter(t => !completed.includes(t.id)).map(t => (
               <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '80px', padding: '8px'}}>START</button></div>
             ))}
+            
             {activeTab === 'social' && (
               <>
                 <button style={{...styles.btn, backgroundColor:'#facc15', color:'#000', border:'2px solid #000', marginBottom:'15px'}} onClick={() => setShowAddPromo(!showAddPromo)}>+ ADD TASK (PROMOTE)</button>
@@ -221,11 +238,27 @@ function App() {
                 ))}
               </>
             )}
+
             {activeTab === 'reward' && (
                 <div>
                     <input style={styles.input} placeholder="Enter Code (EASY3)" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
                     <button style={styles.btn} onClick={() => rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE ? handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001) : alert('Wrong Code!')}>CLAIM</button>
                 </div>
+            )}
+
+            {/* Admin Task Input Section - Admin တစ်ယောက်တည်းသာ မြင်ရမည် */}
+            {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
+              <div>
+                <h3 style={{marginTop:0}}>ADD GLOBAL TASK</h3>
+                <input style={styles.input} placeholder="Task Name (e.g. Join News)" value={adminTask.name} onChange={e => setAdminTask({...adminTask, name: e.target.value})} />
+                <input style={styles.input} placeholder="Task Link (https://...)" value={adminTask.link} onChange={e => setAdminTask({...adminTask, link: e.target.value})} />
+                <select style={{...styles.input, appearance:'auto'}} value={adminTask.type} onChange={e => setAdminTask({...adminTask, type: e.target.value})}>
+                  <option value="bot">BOT TASK</option>
+                  <option value="social">SOCIAL TASK</option>
+                </select>
+                <button style={{...styles.btn, backgroundColor:'#10b981'}} onClick={handleAddAdminTask}>ADD TASK NOW</button>
+                <p style={{fontSize:10, marginTop:10}}>*ဒီမှာထည့်လိုက်တဲ့ Task တွေဟာ User အားလုံးဆီမှာ သွားပေါ်မှာပါ။</p>
+              </div>
             )}
           </div>
         </>
@@ -239,10 +272,6 @@ function App() {
             https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}
           </div>
           <button style={styles.btn} onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert('Copied!');}}>COPY LINK</button>
-          <h4 style={{marginTop:'20px'}}>REFERRAL HISTORY</h4>
-          {referrals.length > 0 ? referrals.map((r, i) => (
-            <div key={i} style={styles.row}><span>User ID: {r.uid}</span> <span style={{color:'#10b981'}}>● Complete</span></div>
-          )) : <p style={{fontSize:'12px'}}>No referrals yet.</p>}
         </div>
       )}
 
