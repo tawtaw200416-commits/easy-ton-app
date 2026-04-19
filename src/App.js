@@ -74,7 +74,7 @@ function App() {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
         .then(() => onSuccess())
-        .catch(() => alert("ကြော်ငြာကို ဆုံးအောင်ကြည့်မှ reward ရပါမယ်ခင်ဗျာ။"));
+        .catch(() => alert("Watch the full ad to receive your reward!"));
     } else { onSuccess(); }
   };
 
@@ -96,7 +96,7 @@ function App() {
 
   // --- Admin Add Task Logic ---
   const handleAddAdminTask = async () => {
-    if (!adminTask.name || !adminTask.link) return alert("နာမည်နဲ့ Link ဖြည့်ပါဦး။");
+    if (!adminTask.name || !adminTask.link) return alert("Please fill Name and Link.");
     try {
       const response = await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, {
         method: 'POST',
@@ -106,7 +106,7 @@ function App() {
         })
       });
       if (response.ok) {
-        alert("Task အသစ်ထည့်သွင်းပြီးပါပြီ!");
+        alert("New task added successfully!");
         setAdminTask({ name: '', link: '', type: 'bot' });
         fetchData();
       }
@@ -116,8 +116,8 @@ function App() {
   const handleWithdraw = () => {
     const amt = Number(withdrawAmount);
     if (amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdraw is ${APP_CONFIG.MIN_WITHDRAW} TON`);
-    if (amt > balance) return alert("လက်ကျန်မလုံလောက်ပါ။");
-    if (!withdrawAddress) return alert("Wallet address ထည့်ပါ။");
+    if (amt > balance) return alert("Insufficient balance.");
+    if (!withdrawAddress) return alert("Please enter wallet address.");
 
     runWithAd(() => {
       const newBal = Number((balance - amt).toFixed(5));
@@ -133,12 +133,12 @@ function App() {
         method: 'PATCH',
         body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
       });
-      alert("ထုတ်ယူမှု တင်ပြပြီးပါပြီ။ ၂၄ နာရီအတွင်း စစ်ဆေးပေးပါမည်။");
+      alert("Withdrawal request sent! It will be reviewed within 24 hours.");
     });
   };
 
   const submitChannel = () => {
-    if (!channelInput.trim()) return alert("Link ဖြည့်ပါဦးဗျ။");
+    if (!channelInput.trim()) return alert("Please enter a link.");
     window.open(`${APP_CONFIG.HELP_BOT}?start=addchannel_${btoa(channelInput)}`, '_blank');
     setChannelInput('');
     setIsAddingChannel(false);
@@ -231,7 +231,7 @@ function App() {
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
                 <button style={styles.btn} onClick={() => runWithAd(() => {
-                  rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE ? handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001) : alert('Code မမှန်ပါ!');
+                  rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE ? handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001) : alert('Invalid Code!');
                 })}>CLAIM REWARD</button>
               </div>
             )}
