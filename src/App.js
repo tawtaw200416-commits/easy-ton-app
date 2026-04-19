@@ -4,102 +4,132 @@ const tg = window.Telegram?.WebApp;
 
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
-  MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "Guest",
-  ADSGRAM_BLOCK_ID: "27611", // Your verified Block ID
-  AD_REWARD: 0.0005
+  MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "Guest_ID",
+  // Block IDs နှစ်ခုလုံးကို ဒီမှာ ထည့်ထားပါတယ်
+  ADS_BLOCKS: ["27611", "27633"], 
+  AD_REWARD: 0.0005,
+  TASK_REWARD: 0.0005
 };
 
 function App() {
   const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_bal')) || 0);
-  const [isAdReady, setIsAdReady] = useState(false);
+  const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('comp_tasks')) || []);
   const [activeNav, setActiveNav] = useState('earn');
+  const [activeTab, setActiveTab] = useState('bot');
+  const [isAdLoading, setIsAdLoading] = useState(false);
 
   useEffect(() => {
-    if (tg) {
-      tg.ready();
-      tg.expand();
-    }
-
-    // Adsgram SDK အလုပ်လုပ်၊ မလုပ်ကို စက္ကန့်အနည်းငယ်ခြားပြီး စစ်ဆေးပေးခြင်း
-    const checkAdsgram = setInterval(() => {
-      if (window.Adsgram) {
-        setIsAdReady(true);
-        clearInterval(checkAdsgram);
-      }
-    }, 1000);
-
-    return () => clearInterval(checkAdsgram);
+    if (tg) { tg.ready(); tg.expand(); }
   }, []);
 
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
-  }, [balance]);
+    localStorage.setItem('comp_tasks', JSON.stringify(completed));
+  }, [balance, completed]);
 
-  // အသေချာဆုံး ကြော်ငြာပြသရန် Logic
-  const handleWatchAd = () => {
+  // --- ကြော်ငြာပြသပြီး Reward ပေးမည့် Main Function ---
+  const triggerAd = (callback) => {
+    if (isAdLoading) return;
+    
     if (window.Adsgram) {
-      const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-      
-      // Ad loading ဖြစ်နေစဉ် user ကို ခေတ္တစောင့်ခိုင်းရန် Alert ပြခြင်း
+      setIsAdLoading(true);
+      // Block ID နှစ်ခုထဲမှ တစ်ခုကို random ရွေးချယ်ခြင်း
+      const randomBlockId = APP_CONFIG.ADS_BLOCKS[Math.floor(Math.random() * APP_CONFIG.ADS_BLOCKS.length)];
+      const AdController = window.Adsgram.init({ blockId: randomBlockId });
+
       AdController.show()
-        .then((result) => {
-          // ကြော်ငြာကြည့်ပြီးမှ balance တိုးပေးမည်
-          setBalance(prev => Number((prev + APP_CONFIG.AD_REWARD).toFixed(5)));
-          tg.showAlert("Success! +0.0005 TON received.");
+        .then(() => {
+          setIsAdLoading(false);
+          if (callback) callback();
         })
-        .catch((error) => {
-          console.error("Adsgram error:", error);
-          tg.showAlert("Ad failed to show. Please try again in a few seconds.");
+        .catch((err) => {
+          setIsAdLoading(false);
+          console.error("Ad Error:", err);
+          alert("Ad failed to load. Please try again.");
         });
     } else {
-      tg.showAlert("Adsgram is still connecting. Please wait 3-5 seconds.");
+      alert("Adsgram not connected yet. Please wait a few seconds.");
     }
   };
 
+  // ခလုတ်နှိပ်တိုင်း အလုပ်လုပ်မည့် function
+  const handleEarnClick = () => {
+    triggerAd(() => {
+      setBalance(prev => Number((prev + APP_CONFIG.AD_REWARD).toFixed(5)));
+      alert("Reward Added! +0.0005 TON");
+    });
+  };
+
+  const handleTaskAction = (id, link) => {
+    window.open(link, '_blank');
+    // Task ပြီးမြောက်ဖို့ ကြော်ငြာအရင်ကြည့်ခိုင်းခြင်း
+    setTimeout(() => {
+      triggerAd(() => {
+        if (!completed.includes(id)) {
+          setBalance(prev => Number((prev + APP_CONFIG.TASK_REWARD).toFixed(5)));
+          setCompleted(prev => [...prev, id]);
+        }
+      });
+    }, 2000);
+  };
+
   const styles = {
-    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' },
-    balanceCard: { background: '#000', color: '#fff', padding: '30px', borderRadius: '25px', textAlign: 'center', marginBottom: '20px', border: '4px solid #fff' },
-    adBtn: (ready) => ({ 
-      width: '100%', padding: '16px', 
-      background: ready ? '#dc2626' : '#9ca3af', 
-      color: '#fff', border: 'none', borderRadius: '15px', fontWeight: 'bold', fontSize: '16px',
-      boxShadow: '0 4px 0 #000',
-      cursor: 'pointer'
-    })
+    main: { backgroundColor: '#facc15', color: '#000', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
+    headerCard: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '20px', border: '4px solid #fff' },
+    card: { backgroundColor: '#fff', padding: '18px', borderRadius: '20px', marginBottom: '12px', border: '2px solid #000' },
+    btn: (bg = '#000', col = '#fff') => ({ width: '100%', padding: '14px', backgroundColor: bg, color: col, border: 'none', borderRadius: '12px', fontWeight: '900', marginBottom: '10px' }),
+    navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px 0', borderTop: '4px solid #fff' },
+    navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '12px', fontWeight: 'bold' }),
+    row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #eee' }
   };
 
   return (
     <div style={styles.main}>
-      <div style={styles.balanceCard}>
+      <div style={styles.headerCard}>
         <small style={{ color: '#facc15' }}>TOTAL BALANCE</small>
-        <h1 style={{ fontSize: '38px', margin: '10px 0' }}>{balance.toFixed(5)} TON</h1>
-        <div style={{ fontSize: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px' }}>
-          <span style={{ color: isAdReady ? '#4ade80' : '#f87171' }}>●</span> 
-          {isAdReady ? "SYSTEM READY" : "CONNECTING ADS..."}
-        </div>
+        <h1 style={{ color: '#fff', fontSize: '38px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize: 16}}>TON</span></h1>
+        <div style={{color: '#4ade80', fontSize: 10}}>● {isAdLoading ? "LOADING AD..." : "SYSTEM READY"}</div>
       </div>
 
       {activeNav === 'earn' && (
-        <div style={{ marginTop: '20px' }}>
+        <>
+          {/* ကြော်ငြာကြည့်ရန် သီးသန့်ခလုတ်ကြီး */}
           <button 
-            onClick={handleWatchAd} 
-            style={styles.adBtn(isAdReady)}
+            disabled={isAdLoading}
+            onClick={handleEarnClick} 
+            style={styles.btn('#dc2626', '#fff')}
           >
-            📺 WATCH VIDEO (+0.0005 TON)
+            {isAdLoading ? "PLEASE WAIT..." : "📺 WATCH AD TO EARN"}
           </button>
-          
-          <p style={{ textAlign: 'center', fontSize: '12px', marginTop: '10px', fontWeight: 'bold' }}>
-            {isAdReady ? "Click to earn TON" : "Please wait while connecting to ad server..."}
-          </p>
-        </div>
+
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
+            {['bot', 'social'].map(t => (
+              <button key={t} onClick={() => setActiveTab(t)} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '2px solid #000', backgroundColor: activeTab === t ? '#000' : '#fff', color: activeTab === t ? '#fff' : '#000', fontWeight: 'bold' }}>{t.toUpperCase()}</button>
+            ))}
+          </div>
+
+          <div style={styles.card}>
+            {activeTab === 'bot' && [
+              { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot" },
+              { id: 'b2', name: "Golden Miner", link: "https://t.me/GoldenMinerBot" }
+            ].filter(t => !completed.includes(t.id)).map(t => (
+              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.btn(), width: '80px', marginBottom: 0}}>START</button></div>
+            ))}
+
+            {activeTab === 'social' && [
+              { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+              { id: 's4', name: "@M9460 Channel", link: "https://t.me/M9460" }
+            ].filter(t => !completed.includes(t.id)).map(t => (
+              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskAction(t.id, t.link)} style={{...styles.btn(), width: '80px', marginBottom: 0}}>JOIN</button></div>
+            ))}
+          </div>
+        </>
       )}
 
-      {/* Bottom Navigation */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#000', display: 'flex', padding: '15px 0', borderTop: '2px solid #fff' }}>
+      {/* Profile & Navigation (ဒီအတိုင်းထားပါသည်) */}
+      <div style={styles.navBar}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, textAlign: 'center', color: activeNav === n ? '#facc15' : '#fff', fontSize: '11px', fontWeight: 'bold' }}>
-            {n.toUpperCase()}
-          </div>
+          <div key={n} onClick={() => setActiveNav(n)} style={styles.navBtn(activeNav === n)}>{n.toUpperCase()}</div>
         ))}
       </div>
     </div>
