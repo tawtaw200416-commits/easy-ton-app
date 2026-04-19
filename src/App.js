@@ -2,105 +2,102 @@ import React, { useState, useEffect } from 'react';
 
 const tg = window.Telegram?.WebApp;
 
-// သင့်ရဲ့ Admin UID နဲ့ Adsgram Block ID တွေကို ဒီမှာ စစ်ဆေးပါ
 const CONFIG = {
   ADMIN_UID: "1793453606", 
   ADS_BLOCK_ID: "27611", 
-  REWARD_PER_AD: 0.0005,
-  TASK_REWARD: 0.001
+  REWARD_AD: 0.0005,
+  REWARD_TASK: 0.001
 };
 
 function App() {
-  const [balance, setBalance] = useState(() => Number(localStorage.getItem('user_balance')) || 0);
-  const [tasks, setTasks] = useState(() => JSON.parse(localStorage.getItem('active_tasks')) || []);
-  const [completedTasks, setCompletedTasks] = useState(() => JSON.parse(localStorage.getItem('done_tasks')) || []);
+  const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_bal')) || 0);
+  const [tasks, setTasks] = useState(() => JSON.parse(localStorage.getItem('sys_tasks')) || []);
+  const [done, setDone] = useState(() => JSON.parse(localStorage.getItem('done_list')) || []);
   
-  // Admin UID စစ်ဆေးခြင်း
   const isOwner = tg?.initDataUnsafe?.user?.id?.toString() === CONFIG.ADMIN_UID;
 
   useEffect(() => {
-    localStorage.setItem('user_balance', balance);
-    localStorage.setItem('active_tasks', JSON.stringify(tasks));
-    localStorage.setItem('done_tasks', JSON.stringify(completedTasks));
-  }, [balance, tasks, completedTasks]);
+    localStorage.setItem('ton_bal', balance);
+    localStorage.setItem('sys_tasks', JSON.stringify(tasks));
+    localStorage.setItem('done_list', JSON.stringify(done));
+  }, [balance, tasks, done]);
 
-  // --- ကြော်ငြာပြသရန် Function ---
-  const handleShowAd = () => {
+  // Adsgram Ad Handler with Fix
+  const showAd = () => {
     if (window.Adsgram) {
       const adController = window.Adsgram.init({ blockId: CONFIG.ADS_BLOCK_ID });
       adController.show()
         .then(() => {
-          setBalance(prev => Number((prev + CONFIG.REWARD_PER_AD).toFixed(5)));
-          tg.showAlert("ကြော်ငြာကြည့်ရှုမှု အောင်မြင်ပါသည်။");
+          setBalance(prev => Number((prev + CONFIG.REWARD_AD).toFixed(5)));
+          tg.showAlert("Reward added successfully!");
         })
         .catch(() => {
-          tg.showAlert("ကြော်ငြာပြသရန် အဆင်မပြေပါ။ ခဏနေမှ ထပ်ကြိုးစားပါ။");
+          tg.showAlert("Ad not available. Try again later.");
         });
     } else {
-      tg.showAlert("Adsgram နဲ့ ချိတ်ဆက်၍မရသေးပါ။");
+      tg.showAlert("Connection Error: Adsgram SDK not loaded.");
     }
   };
 
-  // --- Task အသစ်ထည့်ရန် (Admin Only) ---
-  const addNewTask = () => {
-    const name = prompt("Task အမည်ထည့်ပါ (ဥပမာ- Join Channel):");
-    const link = prompt("Link ထည့်ပါ:");
+  const addStaticTask = () => {
+    const name = prompt("Enter Task Name:");
+    const link = prompt("Enter Task Link:");
     if (name && link) {
       setTasks([...tasks, { id: Date.now(), name, link }]);
     }
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#facc15', minHeight: '100vh' }}>
+    <div style={{ padding: '15px', backgroundColor: '#facc15', minHeight: '100vh', fontFamily: 'sans-serif' }}>
       
       {/* Balance Card */}
-      <div style={{ background: '#111', color: '#fff', padding: '20px', borderRadius: '15px', textAlign: 'center' }}>
-        <p style={{ margin: 0, fontSize: '14px' }}>လက်ကျန်ငွေ</p>
-        <h2 style={{ fontSize: '30px', margin: '10px 0' }}>{balance.toFixed(5)} TON</h2>
-        <p style={{ color: '#22c55e', fontSize: '12px' }}>● အလုပ်လုပ်နေသည်</p>
+      <div style={{ background: '#000', color: '#fff', padding: '25px', borderRadius: '20px', textAlign: 'center' }}>
+        <p style={{ margin: 0, opacity: 0.7 }}>BALANCE</p>
+        <h1 style={{ fontSize: '32px', margin: '10px 0' }}>{balance.toFixed(5)} TON</h1>
+        <div style={{ fontSize: '10px', color: '#4ade80' }}>● SYSTEM ACTIVE</div>
       </div>
 
-      {/* Main Ad Button */}
+      {/* Ad Button */}
       <button 
-        onClick={handleShowAd}
-        style={{ width: '100%', padding: '15px', marginTop: '20px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '16px' }}
+        onClick={showAd}
+        style={{ width: '100%', padding: '15px', marginTop: '20px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold' }}
       >
-        📺 ဗီဒီယိုကြည့်ပြီး ငွေရှာမည် (+0.0005 TON)
+        WATCH VIDEO (+0.0005 TON)
       </button>
 
-      {/* Task List Section */}
-      <div style={{ marginTop: '25px' }}>
-        <h3 style={{ fontSize: '18px' }}>လုပ်ဆောင်ရန် Task များ</h3>
-        {tasks.length === 0 ? <p style={{ color: '#555' }}>Task များ မရှိသေးပါ။</p> : (
-          tasks.map(task => (
-            <div key={task.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '15px', borderRadius: '10px', marginBottom: '10px' }}>
-              <span>{task.name}</span>
+      {/* Tasks Section */}
+      <div style={{ marginTop: '30px' }}>
+        <h3 style={{ fontSize: '16px', color: '#333' }}>AVAILABLE TASKS</h3>
+        {tasks.length === 0 ? <p style={{ color: '#666' }}>No tasks available yet.</p> : (
+          tasks.map(t => (
+            <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+              <span style={{ fontWeight: '500' }}>{t.name}</span>
               <button 
-                disabled={completedTasks.includes(task.id)}
+                disabled={done.includes(t.id)}
                 onClick={() => {
-                  window.open(task.link, '_blank');
-                  if (!completedTasks.includes(task.id)) {
-                    setBalance(prev => Number((prev + CONFIG.TASK_REWARD).toFixed(5)));
-                    setCompletedTasks([...completedTasks, task.id]);
+                  window.open(t.link, '_blank');
+                  if (!done.includes(t.id)) {
+                    setBalance(prev => Number((prev + CONFIG.REWARD_TASK).toFixed(5)));
+                    setDone([...done, t.id]);
                   }
                 }}
-                style={{ background: completedTasks.includes(task.id) ? '#ccc' : '#000', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '5px' }}
+                style={{ background: done.includes(t.id) ? '#999' : '#000', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '8px' }}
               >
-                {completedTasks.includes(task.id) ? "ပြီးစီး" : "လုပ်ဆောင်မည်"}
+                {done.includes(t.id) ? "DONE" : "START"}
               </button>
             </div>
           ))
         )}
       </div>
 
-      {/* Admin Panel (Owner သာ မြင်ရမည်) */}
+      {/* Admin Control */}
       {isOwner && (
-        <div style={{ marginTop: '30px', borderTop: '2px solid #000', paddingTop: '10px' }}>
+        <div style={{ marginTop: '40px', borderTop: '1px solid #000', paddingTop: '15px' }}>
           <button 
-            onClick={addNewTask}
-            style={{ width: '100%', padding: '10px', background: '#000', color: '#fff', borderRadius: '10px' }}
+            onClick={addStaticTask}
+            style={{ width: '100%', padding: '12px', background: '#000', color: '#fff', borderRadius: '10px', fontSize: '13px' }}
           >
-            + Task အသစ်ထည့်မည် (Admin Only)
+            + ADD SYSTEM TASK (ADMIN)
           </button>
         </div>
       )}
