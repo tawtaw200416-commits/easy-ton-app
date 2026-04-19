@@ -160,7 +160,7 @@ function App() {
     });
   };
 
-  // Default Tasks
+  // Default Tasks (Bot တွေ ထပ်တိုးချင်ရင် ဒီမှာ တိုးလို့ရပါတယ်)
   const defaultBots = [
     { id: 'b_gt', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b_wt', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" }
@@ -211,9 +211,9 @@ function App() {
 
             {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
               <div>
-                <h3 style={{marginTop:0}}>ADD GLOBAL TASK</h3>
-                <input style={styles.input} placeholder="Task Name" value={adminTask.name} onChange={e => setAdminTask({...adminTask, name: e.target.value})} />
-                <input style={styles.input} placeholder="Task Link" value={adminTask.link} onChange={e => setAdminTask({...adminTask, link: e.target.value})} />
+                <h3 style={{marginTop:0, fontSize: '16px'}}>ADD GLOBAL TASK (ADMIN)</h3>
+                <input style={styles.input} placeholder="Task Name (e.g. Join Channel)" value={adminTask.name} onChange={e => setAdminTask({...adminTask, name: e.target.value})} />
+                <input style={styles.input} placeholder="Link (https://...)" value={adminTask.link} onChange={e => setAdminTask({...adminTask, link: e.target.value})} />
                 <select style={{...styles.input, appearance:'auto'}} value={adminTask.type} onChange={e => setAdminTask({...adminTask, type: e.target.value})}>
                   <option value="bot">BOT TASK</option>
                   <option value="social">SOCIAL TASK</option>
@@ -251,6 +251,7 @@ function App() {
         </div>
       )}
 
+      {/* Profile, Withdraw စတာတွေက အရင်အတိုင်း ထားပေးထားပါတယ် */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => runWithNavAd(() => setActiveNav(n))} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
