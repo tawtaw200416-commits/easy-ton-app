@@ -12,7 +12,8 @@ const APP_CONFIG = {
   HELP_BOT: "https://t.me/EasyTonHelp_Bot",
   REWARD_CODE: "EASY3",
   REWARD_AMT: 0.001,
-  VIDEO_REWARD: 0.0005 // 0.0005 သို့ ပြောင်းထားသည်
+  VIDEO_REWARD: 0.0005,
+  MIN_WITHDRAW: 0.1
 };
 
 function App() {
@@ -29,6 +30,8 @@ function App() {
   const [promoForm, setPromoForm] = useState({ name: '', link: '' });
   const [newTask, setNewTask] = useState({ name: '', link: '', type: 'bot' });
   const [isAdLoading, setIsAdLoading] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawAddress, setWithdrawAddress] = useState('');
 
   // Data Persistence
   useEffect(() => {
@@ -88,6 +91,33 @@ function App() {
       });
       if (link) window.open(link, '_blank');
       alert(`Claimed! +${reward} TON`);
+    });
+  };
+
+  const handleWithdraw = () => {
+    const amt = Number(withdrawAmount);
+    if (amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum Withdraw is ${APP_CONFIG.MIN_WITHDRAW} TON`);
+    if (amt > balance) return alert("Insufficient Balance!");
+    if (!withdrawAddress) return alert("Enter Wallet Address!");
+
+    runWithAd(() => {
+      const newBal = Number((balance - amt).toFixed(5));
+      const newHistory = [{
+        amount: amt,
+        address: withdrawAddress,
+        status: 'Pending',
+        date: new Date().toLocaleString()
+      }, ...withdrawHistory];
+
+      setBalance(newBal);
+      setWithdrawHistory(newHistory);
+      setWithdrawAmount('');
+
+      fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+        method: 'PATCH',
+        body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
+      });
+      alert("Withdraw Request Sent! It will be success within 24 hours.");
     });
   };
 
@@ -189,6 +219,50 @@ function App() {
             )}
           </div>
         </>
+      )}
+
+      {activeNav === 'invite' && (
+        <div style={styles.card}>
+          <h3>INVITE FRIENDS</h3>
+          <p style={{fontSize:'14px', color:'#666'}}>Get <b>0.001 TON</b> for every friend who completes tasks!</p>
+          <div style={{background:'#eee', padding:'15px', borderRadius:'10px', wordBreak:'break-all', marginBottom:'10px', border:'1px dashed #000'}}>
+            https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}
+          </div>
+          <button style={styles.btn} onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert('Copied!');}}>COPY LINK</button>
+          
+          <h4 style={{marginTop:'20px'}}>REFERRAL HISTORY</h4>
+          {referrals.length > 0 ? referrals.map((r, i) => (
+            <div key={i} style={styles.row}><span>User ID: {r.uid}</span> <span style={{color:'#10b981'}}>● Complete</span></div>
+          )) : <p style={{fontSize:'12px'}}>No referrals yet.</p>}
+        </div>
+      )}
+
+      {activeNav === 'withdraw' && (
+        <div style={styles.card}>
+          <h3>WITHDRAW TON</h3>
+          <p style={{fontSize:'12px'}}>Min: 0.1 TON | 24 Hours Processing</p>
+          <input style={styles.input} type="number" placeholder="Amount (e.g. 0.1)" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} placeholder="Wallet Address (TON)" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+          <button style={{...styles.btn, background:'#3b82f6'}} onClick={handleWithdraw}>WITHDRAW NOW</button>
+
+          <h4 style={{marginTop:'25px'}}>WITHDRAW HISTORY</h4>
+          {withdrawHistory.map((h, i) => (
+            <div key={i} style={{...styles.row, fontSize:'13px'}}>
+              <div><b>{h.amount} TON</b><br/><small>{h.date}</small></div>
+              <div style={{color: h.status === 'Pending' ? '#f59e0b' : '#10b981'}}>● {h.status}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h3>MY PROFILE</h3>
+          <div style={styles.row}><span>User ID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={styles.row}><span>Balance:</span> <b>{balance.toFixed(5)} TON</b></div>
+          <div style={styles.row}><span>Active Status:</span> <b style={{color:'#10b981'}}>ONLINE</b></div>
+          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => window.open(APP_CONFIG.HELP_BOT)}>@EasyTonHelp_Bot</b></div>
+        </div>
       )}
 
       <div style={styles.nav}>
