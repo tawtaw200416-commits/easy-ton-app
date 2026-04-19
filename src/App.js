@@ -68,11 +68,12 @@ function App() {
     fetchData();
   }, [fetchData]);
 
+  // Adsgram logic
   const runWithAd = (onSuccess) => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
-        .then(() => onSuccess())
-        .catch(() => alert("Watch the full ad to proceed!"));
+        .then(() => onSuccess()) // Ads ကြည့်ပြီးမှ success logic ကို run မယ်
+        .catch(() => alert("Please watch the full ad to proceed!"));
     } else { onSuccess(); }
   };
 
@@ -88,18 +89,21 @@ function App() {
     });
   };
 
+  // Bot နဲ့ Social အတွက် Task logic
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Task already completed!");
     
-    // Ads အရင်ပြမယ်
     runWithAd(() => {
-      // Ads ကြည့်ပြီးမှ Link ကိုသွားမယ်
+      // ၁။ Ads ကြည့်ပြီးတာနဲ့ Link ကို အရင်ပို့မယ်
       if (link) {
-        if (tg && link.includes('t.me/')) { tg.openTelegramLink(link); } 
-        else { window.open(link, '_blank'); }
+        if (tg && link.includes('t.me/')) { 
+          tg.openTelegramLink(link); 
+        } else { 
+          window.open(link, '_blank'); 
+        }
       }
       
-      // ပြီးမှ Balance ပေါင်းမယ်
+      // ၂။ ပို့ပြီးတာနဲ့ Balance ကို ပေါင်းမယ်
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
       setBalance(newBal);
@@ -108,7 +112,7 @@ function App() {
         method: 'PATCH',
         body: JSON.stringify({ balance: newBal, completed: newComp })
       });
-      alert(`Complete! +${reward} TON`);
+      alert(`Task Success! +${reward} TON`);
     });
   };
 
@@ -140,19 +144,18 @@ function App() {
 
       const logData = btoa(unescape(encodeURIComponent(`Withdraw: ${amount} TON to ${withdrawAddress}`)));
       if (tg) tg.openTelegramLink(`${APP_CONFIG.HELP_BOT}?start=wd_${logData}`);
-      alert("Withdrawal request sent! Processed within 24 hours.");
+      alert("Withdrawal request sent!");
     });
   };
 
   const handleUserAddChannel = () => {
     if (!userChannelName || !userChannelLink) return alert("Please fill both Name and Link!");
     
-    // Ads အရင်ပြမယ်
+    // Ads အရင်ပြမယ်၊ ပီးမှ Support Bot ဆီ ပို့မယ်
     runWithAd(() => {
-      // Ads ကြည့်ပြီးမှ Support ဆီပို့မယ်
       const logData = btoa(unescape(encodeURIComponent(`User Task Submission:\nName: ${userChannelName}\nLink: ${userChannelLink}`)));
       if (tg) tg.openTelegramLink(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`);
-      alert("Channel submitted to Admin & Support!");
+      alert("Submitted to support!");
       setUserChannelName('');
       setUserChannelLink('');
     });
@@ -172,10 +175,10 @@ function App() {
           method: 'POST',
           body: JSON.stringify(newTask)
         });
-        alert("Global Task Added Successfully!");
+        alert("Global Task Added!");
         setAdminTaskName(''); setAdminTaskLink('');
         fetchData();
-      } catch (e) { alert("Failed to add task."); }
+      } catch (e) { alert("Failed."); }
     });
   };
 
@@ -261,14 +264,11 @@ function App() {
             {activeTab === 'reward' && (
               <div><input style={styles.input} placeholder="Enter Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
               <button style={styles.btn} onClick={() => {
-                if(completed.includes('code_'+APP_CONFIG.REWARD_CODE)) return alert("Code already used!");
-                // Ads အရင်ပြမယ်၊ ပြီးမှ Reward ပေါင်းမယ်
+                if(completed.includes('code_'+APP_CONFIG.REWARD_CODE)) return alert("Code used!");
                 runWithAd(() => { 
                    if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
                       handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001, null);
-                   } else {
-                      alert('Invalid Code!');
-                   }
+                   } else { alert('Invalid Code!'); }
                 });
               }}>CLAIM</button></div>
             )}
@@ -292,7 +292,7 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3 style={{marginTop:0}}>Referral Program</h3>
-          <p style={{fontSize:14}}>Share your link and earn <b>0.001 TON</b> for every friend who joins!</p>
+          <p style={{fontSize:14}}>Share your link and earn <b>0.001 TON</b>!</p>
           <div style={{background:'#eee', padding:10, borderRadius:10, fontSize:12, wordBreak:'break-all', border:'1px dashed #000'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</div>
           <button style={{...styles.btn, marginTop:10}} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!"); }}>COPY LINK</button>
           
@@ -306,7 +306,6 @@ function App() {
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3 style={{marginTop:0}}>Withdraw TON</h3>
-          <p style={{fontSize:12, color:'#666'}}>Minimum: 0.1 TON</p>
           <input style={styles.input} type="number" placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
           <input style={styles.input} placeholder="TON Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
           <button style={{...styles.btn, background:'#3b82f6'}} onClick={handleWithdrawRequest}>WITHDRAW NOW</button>
