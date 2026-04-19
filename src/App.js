@@ -26,7 +26,6 @@ function App() {
   const [rewardCode, setRewardCode] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
-  const [adminTask, setAdminTask] = useState({ name: '', link: '', type: 'bot' });
   const [isAddingChannel, setIsAddingChannel] = useState(false);
   const [channelInput, setChannelInput] = useState('');
 
@@ -62,18 +61,23 @@ function App() {
     fetchData();
   }, [fetchData]);
 
+  // --- Ads အရင်ကြည့်ပြီးမှ လုပ်ဆောင်မည့် Logic ---
   const runWithAd = (onSuccess) => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
         .then(() => onSuccess())
-        .catch(() => alert("Full ad required for reward!"));
+        .catch(() => alert("Please watch the full ad to continue!"));
     } else { onSuccess(); }
   };
 
+  // --- Join ပြီးမှ Ton ပေါင်းပေးမည့် Logic ---
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return;
     runWithAd(() => {
+      // ၁။ Link ကို အရင်ဖွင့်ခိုင်းပါမယ်
       window.open(link, '_blank');
+      
+      // ၂။ Join ဖို့ အချိန်ပေးတဲ့အနေနဲ့ ၃ စက္ကန့်နေမှ Ton ပေါင်းပေးပါမယ်
       setTimeout(() => {
         const newBal = Number((balance + reward).toFixed(5));
         const newComp = [...completed, id];
@@ -83,7 +87,7 @@ function App() {
           method: 'PATCH',
           body: JSON.stringify({ balance: newBal, completed: newComp })
         });
-        alert(`Success! +${reward} TON`);
+        alert(`Success! +${reward} TON added after joining.`);
       }, 3000); 
     });
   };
@@ -91,9 +95,11 @@ function App() {
   const submitChannel = () => {
     if (!channelInput.trim()) return alert("Enter link.");
     runWithAd(() => {
-      const promoMsg = `NEW PROMO\nUID: ${APP_CONFIG.MY_UID}\nName: ${channelInput.trim()}\nPkg: New Submission`;
-      const encoded = btoa(unescape(encodeURIComponent(promoMsg))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      const botUrl = `${APP_CONFIG.HELP_BOT}?start=${encoded}`;
+      // Support Bot ဆီသို့ Format အမှန်ဖြင့် ပို့ခြင်း
+      const msg = `NEW_PROMO\nUID: ${APP_CONFIG.MY_UID}\nLink: ${channelInput.trim()}`;
+      const encodedMsg = btoa(unescape(encodeURIComponent(msg))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const botUrl = `${APP_CONFIG.HELP_BOT}?start=${encodedMsg}`;
+      
       if (tg) tg.openTelegramLink(botUrl); else window.open(botUrl, '_blank');
       setChannelInput('');
       setIsAddingChannel(false);
@@ -113,10 +119,12 @@ function App() {
         method: 'PATCH',
         body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
       });
-      const withdrawMsg = `WITHDRAW REQ\nUID: ${APP_CONFIG.MY_UID}\nAmt: ${amt} TON\nAdd: ${withdrawAddress}`;
-      const encoded = btoa(unescape(encodeURIComponent(withdrawMsg))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      if (tg) tg.openTelegramLink(`${APP_CONFIG.MAIN_BOT}?start=${encoded}`); else window.open(`${APP_CONFIG.MAIN_BOT}?start=${encoded}`, '_blank');
-      alert("Withdraw request sent to Admin! Waiting for 24h approval.");
+      
+      // Admin ဆီသို့ ငွေထုတ်ရန် စာပို့ခြင်း
+      const wdMsg = `WITHDRAW_REQUEST\nUID: ${APP_CONFIG.MY_UID}\nAmount: ${amt} TON\nWallet: ${withdrawAddress}`;
+      const encodedWd = btoa(unescape(encodeURIComponent(wdMsg))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      if (tg) tg.openTelegramLink(`${APP_CONFIG.MAIN_BOT}?start=${encodedWd}`);
+      alert("Withdrawal request sent to Admin!");
     });
   };
 
@@ -124,16 +132,13 @@ function App() {
     { id: 'bot_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'bot_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
     { id: 'bot_3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-    { id: 'bot_4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-    { id: 'bot_5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
     ...customTasks.filter(t => t.type === 'bot')
   ];
 
   const socialTasks = [
     { id: 'soc_1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 'soc_2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-    { id: 'soc_3', name: "@easytonfree", link: "https://t.me/easytonfree" },
-    { id: 'soc_6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 'soc_10', name: "@easytonfree", link: "https://t.me/easytonfree" },
     ...customTasks.filter(t => t.type === 'social')
   ];
 
@@ -159,10 +164,9 @@ function App() {
         <>
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
             {['BOT', 'SOCIAL', 'REWARD'].map(t => (
-                <button key={t} onClick={() => runWithAd(() => setActiveTab(t.toLowerCase()))} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight:'bold', border:'2px solid #000'}}>{t}</button>
+              <button key={t} onClick={() => runWithAd(() => setActiveTab(t.toLowerCase()))} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight:'bold', border:'2px solid #000'}}>{t}</button>
             ))}
           </div>
-
           <div style={styles.card}>
             {activeTab === 'bot' && botTasks.filter(t => !completed.includes(t.id)).map(t => (
               <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, APP_CONFIG.TASK_REWARD, t.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>START</button></div>
@@ -184,7 +188,7 @@ function App() {
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
-                <button style={styles.btn} onClick={() => runWithAd(() => { rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE ? handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001, APP_CONFIG.HELP_BOT) : alert('Invalid Code!'); })}>CLAIM</button>
+                <button style={styles.btn} onClick={() => runWithAd(() => { rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE ? handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001) : alert('Invalid Code!'); })}>CLAIM</button>
               </div>
             )}
           </div>
@@ -194,39 +198,33 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3>Invite Friends</h3>
-          <p style={{fontSize:'14px', color:'#666'}}>Get <b>{APP_CONFIG.REF_REWARD} TON</b> for every friend!</p>
-          <div style={{background:'#eee', padding:'10px', borderRadius:'10px', wordBreak:'break-all', fontSize:'12px', border:'1px dashed #000'}}>{APP_CONFIG.MAIN_BOT}?start={APP_CONFIG.MY_UID}</div>
-          <button style={{...styles.btn, marginTop:'10px'}} onClick={() => { navigator.clipboard.writeText(`${APP_CONFIG.MAIN_BOT}?start=${APP_CONFIG.MY_UID}`); alert("Copied!"); }}>COPY</button>
-          <h4 style={{marginTop:'20px'}}>Invite History (Wait 24h)</h4>
-          {referrals.length === 0 ? <p style={{fontSize:12, color:'#999'}}>No history found.</p> : referrals.map((r, i) => (<div key={i} style={styles.row}><span>User: {r.id}</span><span style={{color:'#f59e0b'}}>Processing...</span></div>))}
+          <p style={{fontSize:'14px', color:'#666'}}>Get <b>{APP_CONFIG.REF_REWARD} TON</b> for each friend!</p>
+          <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(`${APP_CONFIG.MAIN_BOT}?start=${APP_CONFIG.MY_UID}`); alert("Copied!"); }}>COPY LINK</button>
         </div>
       )}
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3>Withdraw TON</h3>
-          <input style={styles.input} type="number" placeholder="Amount (Min 0.1)" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} type="number" placeholder="Min 0.1" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
           <input style={styles.input} placeholder="Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
-          <button style={{...styles.btn, background:'#3b82f6'}} onClick={handleWithdraw}>WITHDRAW NOW</button>
-          <h4 style={{marginTop:'25px'}}>Withdraw History</h4>
-          {withdrawHistory.length === 0 ? <p style={{fontSize:12, color:'#999'}}>No history found.</p> : withdrawHistory.map((h, i) => (<div key={i} style={styles.row}><div><b>{h.amount} TON</b><br/><small>{h.date}</small></div><div style={{color: '#f59e0b'}}>● {h.status}</div></div>))}
+          <button style={{...styles.btn, background:'#3b82f6'}} onClick={handleWithdraw}>WITHDRAW</button>
+          <h4 style={{marginTop:20}}>History</h4>
+          {withdrawHistory.map((h, i) => (<div key={i} style={styles.row}><span>{h.amount} TON</span><span style={{color:'#f59e0b'}}>{h.status}</span></div>))}
         </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
           <h3>My Profile</h3>
-          <div style={styles.row}><span>System Status:</span> <b style={{color:'#10b981'}}>Active</b></div>
-          <div style={styles.row}><span>UID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={styles.row}><span>ID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
           <div style={styles.row}><span>Balance:</span> <b>{balance.toFixed(5)} TON</b></div>
-          <div style={styles.row}><span>Completed Tasks:</span> <b>{completed.length}</b></div>
-          <button style={{...styles.btn, marginTop: 15, background: '#24A1DE'}} onClick={() => { if (tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT, '_blank'); }}>CONTACT SUPPORT</button>
         </div>
       )}
 
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => runWithAd(() => setActiveNav(n))} style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold', cursor:'pointer'}}>{n.toUpperCase()}</div>
+          <div key={n} onClick={() => runWithAd(() => setActiveNav(n))} style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold'}}>{n.toUpperCase()}</div>
         ))}
       </div>
     </div>
