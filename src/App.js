@@ -23,9 +23,12 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
+  const [rewardCode, setRewardCode] = useState('');
   const [isAdLoading, setIsAdLoading] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawAddress, setWithdrawAddress] = useState('');
 
-  // LocalStorage အမြဲ Update ဖြစ်နေအောင် သိမ်းတာ
+  // Local Storage and Firebase Sync
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
@@ -33,7 +36,6 @@ function App() {
     localStorage.setItem('refs', JSON.stringify(referrals));
   }, [balance, completed, withdrawHistory, referrals]);
 
-  // Firebase ကနေ Data ပြန်ခေါ်တာ (History မပျောက်အောင်)
   const fetchUserData = useCallback(async () => {
     try {
       const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
@@ -47,7 +49,7 @@ function App() {
       const tasksRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`);
       const tasksData = await tasksRes.json();
       if (tasksData) setCustomTasks(Object.values(tasksData));
-    } catch (e) { console.error("Data Sync Error:", e); }
+    } catch (e) { console.error("Sync Error:", e); }
     setLoading(false);
   }, []);
 
@@ -56,7 +58,7 @@ function App() {
     fetchUserData();
   }, [fetchUserData]);
 
-  // ကြော်ငြာကြည့်ခိုင်းတဲ့ Logic (အင်္ဂလိပ်စာသားဖြင့်)
+  // Adsgram Logic
   const runWithAd = (onSuccess) => {
     if (isAdLoading) return;
     if (window.Adsgram) {
@@ -68,23 +70,19 @@ function App() {
         })
         .catch(() => { 
             setIsAdLoading(false); 
-            alert("You must watch the ad until the end to get TON."); // ပြောင်းခိုင်းထားတဲ့ English စာ
+            alert("Please watch the ad until the end to get TON.");
         });
     } else {
-      alert("Adsgram Not Connected!");
+      alert("Adsgram script not found!");
     }
   };
 
-  // ခလုတ်တိုင်းမှာ ကြော်ငြာအရင်ပြမယ့် Navigation Function
   const handleNavClick = (nav) => {
-    runWithAd(() => {
-      setActiveNav(nav);
-    });
+    runWithAd(() => setActiveNav(nav));
   };
 
-  // Reward ပေးတဲ့အခါ Adsgram အောင်မြင်မှ ပေးတာ
   const handleClaim = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Task Already Done!");
+    if (completed.includes(id)) return alert("Already completed!");
     runWithAd(() => {
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
@@ -95,54 +93,85 @@ function App() {
         body: JSON.stringify({ balance: newBal, completed: newComp })
       });
       if (link) window.open(link, '_blank');
+      alert(`Claimed +${reward} TON!`);
     });
   };
 
   const styles = {
-    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '120px' },
-    header: { textAlign: 'center', background: '#000', padding: '20px', borderRadius: '20px', color: '#fff', marginBottom: '20px' },
-    card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000' },
-    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', background: '#000', padding: '15px 0' },
-    navBtn: (active) => ({ flex: 1, color: active ? '#facc15' : '#fff', textAlign: 'center', fontWeight: 'bold', fontSize: '12px' })
+    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
+    header: { textAlign: 'center', background: 'linear-gradient(135deg, #000, #1e293b)', padding: '25px', borderRadius: '25px', marginBottom: '20px', border: '4px solid #fff' },
+    card: { backgroundColor: '#fff', padding: '18px', borderRadius: '20px', marginBottom: '12px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
+    btn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' },
+    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px 0', borderTop: '4px solid #fff' },
+    navItem: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '12px', fontWeight: 'bold' }),
+    input: { width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #000', marginBottom: '10px' }
   };
-
-  if (loading) return <div style={{textAlign:'center', padding: '50px'}}>Loading Your Data...</div>;
 
   return (
     <div style={styles.main}>
       <div style={styles.header}>
-        <small>CURRENT BALANCE</small>
-        <h1 style={{fontSize: '35px'}}>{balance.toFixed(5)} TON</h1>
-        <div style={{color: '#10b981'}}>● ACTIVE STATUS</div>
+        <small style={{ color: '#facc15' }}>CURRENT BALANCE</small>
+        <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:16, color:'#facc15'}}>TON</span></h1>
+        <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● ACTIVE STATUS</div>
       </div>
 
       {activeNav === 'earn' && (
+        <>
+          <div style={styles.card}>
+            <button onClick={() => runWithAd(() => setBalance(prev => Number((prev + 0.0002).toFixed(5))))} style={{...styles.btn, background: '#ef4444'}}>📺 WATCH VIDEO (+0.0002 TON)</button>
+          </div>
+          <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
+            {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
+              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight:'bold', border:'2px solid #000'}}>{t}</button>
+            ))}
+          </div>
+          <div style={styles.card}>
+            {activeTab === 'bot' && <p>Bot tasks here...</p>}
+            {activeTab === 'reward' && (
+                <div>
+                    <input style={styles.input} placeholder="Enter Code (EASY3)" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
+                    <button style={styles.btn} onClick={() => rewardCode.toUpperCase() === 'EASY3' ? handleClaim('easy3_code', 0.001) : alert('Wrong Code!')}>CLAIM</button>
+                </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h3 style={{marginTop:0}}>EARN TON</h3>
-          {/* Default Task List များ... */}
-          <button onClick={() => handleClaim('video_1', 0.0002)} style={{width:'100%', padding:'10px', background:'#ef4444', color:'#fff', borderRadius:'10px', border:'none', fontWeight:'bold'}}>WATCH AD VIDEO (+0.0002)</button>
+          <h3>REFERRALS</h3>
+          <p>Get 0.001 TON for every friend!</p>
+          <div style={{background: '#eee', padding: '10px', borderRadius: '10px', wordBreak: 'break-all'}}>
+            https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}
+          </div>
+          <button style={{...styles.btn, marginTop: '10px'}} onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert('Copied!');}}>COPY LINK</button>
         </div>
       )}
 
-      {/* History တွေကို ဒီ Withdraw Nav အောက်မှာ ပြန်ထည့်ထားပါတယ် */}
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h3>WITHDRAW HISTORY</h3>
-          {withdrawHistory.length > 0 ? withdrawHistory.map((h, i) => (
-            <div key={i} style={{display:'flex', justifyContent:'space-between', borderBottom:'1px solid #eee', padding:'10px 0'}}>
-              <span>{h.amount} TON</span>
-              <span style={{color: h.status === 'Pending' ? '#f59e0b' : '#10b981'}}>{h.status}</span>
-            </div>
-          )) : <p>No history found.</p>}
+          <h3>WITHDRAW</h3>
+          <input style={styles.input} placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} placeholder="Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+          <button style={styles.btn}>WITHDRAW</button>
+          <h4 style={{marginTop:'20px'}}>HISTORY</h4>
+          {withdrawHistory.map((h, i) => <div key={i}>{h.amount} TON - {h.status}</div>)}
         </div>
       )}
 
-      {/* ခလုတ်တိုင်းကို handleNavClick သုံးပြီး ကြော်ငြာအရင်တက်အောင် လုပ်ထားပါတယ် */}
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h3>PROFILE</h3>
+          <p>User ID: {APP_CONFIG.MY_UID}</p>
+          <p>Balance: {balance.toFixed(5)} TON</p>
+        </div>
+      )}
+
       <div style={styles.nav}>
-        <div onClick={() => handleNavClick('earn')} style={styles.navBtn(activeNav === 'earn')}>EARN</div>
-        <div onClick={() => handleNavClick('invite')} style={styles.navBtn(activeNav === 'invite')}>INVITE</div>
-        <div onClick={() => handleNavClick('withdraw')} style={styles.navBtn(activeNav === 'withdraw')}>WITHDRAW</div>
-        <div onClick={() => handleNavClick('profile')} style={styles.navBtn(activeNav === 'profile')}>PROFILE</div>
+        <div onClick={() => handleNavClick('earn')} style={styles.navItem(activeNav === 'earn')}>EARN</div>
+        <div onClick={() => handleNavClick('invite')} style={styles.navItem(activeNav === 'invite')}>INVITE</div>
+        <div onClick={() => handleNavClick('withdraw')} style={styles.navItem(activeNav === 'withdraw')}>WITHDRAW</div>
+        <div onClick={() => handleNavClick('profile')} style={styles.navItem(activeNav === 'profile')}>PROFILE</div>
       </div>
     </div>
   );
