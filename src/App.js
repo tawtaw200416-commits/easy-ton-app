@@ -27,7 +27,10 @@ function App() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   
+  // Admin Task Input States
   const [adminTask, setAdminTask] = useState({ name: '', link: '', type: 'bot' });
+  
+  // States for Add Channel
   const [isAddingChannel, setIsAddingChannel] = useState(false);
   const [channelInput, setChannelInput] = useState('');
 
@@ -66,15 +69,12 @@ function App() {
     fetchData();
   }, [fetchData]);
 
-  // --- Ads Logic: ကြော်ငြာမလာရင်လည်း ပျက်မသွားအောင် ပြင်ထားပါတယ် ---
+  // --- Ads Logic with Callback ---
   const runWithAd = (onSuccess) => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
         .then(() => onSuccess())
-        .catch(() => {
-          // ကြော်ငြာ error တက်ရင်လည်း ပျက်မသွားဘဲ အလုပ်လုပ်အောင် onSuccess() ကို ဒီမှာပါ ထည့်ထားပါတယ်
-          onSuccess();
-        });
+        .catch(() => alert("Watch the full ad to receive your reward!"));
     } else { onSuccess(); }
   };
 
@@ -89,20 +89,21 @@ function App() {
         method: 'PATCH',
         body: JSON.stringify({ balance: newBal, completed: newComp })
       });
-      if (link) {
-        if (tg) tg.openTelegramLink(link);
-        else window.open(link, '_blank');
-      }
+      if (link) window.open(link, '_blank');
       alert(`Success! +${reward} TON`);
     });
   };
 
+  // --- Admin Add Task Logic ---
   const handleAddAdminTask = async () => {
     if (!adminTask.name || !adminTask.link) return alert("Please fill Name and Link.");
     try {
       const response = await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, {
         method: 'POST',
-        body: JSON.stringify({ ...adminTask, id: 'custom_' + Date.now() })
+        body: JSON.stringify({
+          ...adminTask,
+          id: 'custom_' + Date.now()
+        })
       });
       if (response.ok) {
         alert("New task added successfully!");
@@ -136,13 +137,15 @@ function App() {
     });
   };
 
-  // --- Bot ဆီကို စာသားသေချာရောက်အောင် ပြင်ဆင်ထားသော Function ---
+  // --- ပြင်ဆင်ပေးထားသည့် အပိုင်း (Add link logic) ---
   const submitChannel = () => {
     if (!channelInput.trim()) return alert("Please enter a link.");
     
-    // Telegram search param မှာ ပြဿနာမတက်အောင် URL safe string ဖြစ်အောင် encode လုပ်ခြင်း
-    const botMsg = channelInput.trim();
-    const encodedData = btoa(unescape(encodeURIComponent(botMsg))).replace(/=/g, "");
+    // Telegram search parameter ထဲမှာ error မတက်အောင် encode လုပ်ခြင်း
+    const rawData = channelInput.trim();
+    const encodedData = btoa(unescape(encodeURIComponent(rawData))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    
+    // Telegram Native link သုံးပြီး Bot ဆီ စာသားပို့ခြင်း
     const botUrl = `${APP_CONFIG.HELP_BOT}?start=addchannel_${encodedData}`;
     
     if (tg) {
@@ -150,11 +153,12 @@ function App() {
     } else {
       window.open(botUrl, '_blank');
     }
-    
+
     setChannelInput('');
     setIsAddingChannel(false);
   };
 
+  // Task Lists
   const botTasks = [
     { id: 'bot_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'bot_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -188,7 +192,7 @@ function App() {
     header: { textAlign: 'center', background: 'linear-gradient(135deg, #000, #1e293b)', padding: '25px', borderRadius: '25px', marginBottom: '20px', border: '4px solid #fff' },
     card: { backgroundColor: '#fff', padding: '18px', borderRadius: '20px', marginBottom: '12px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' },
-    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0', zIndex: 100 },
+    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0' },
     input: { width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #eee' }
   };
@@ -206,7 +210,7 @@ function App() {
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
               (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && (
-                <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight:'bold', border:'2px solid #000'}}>{t}</button>
+                <button key={t} onClick={() => runWithAd(() => setActiveTab(t.toLowerCase()))} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight:'bold', border:'2px solid #000'}}>{t}</button>
               )
             ))}
           </div>
@@ -240,9 +244,9 @@ function App() {
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
-                <button style={styles.btn} onClick={() => {
+                <button style={styles.btn} onClick={() => runWithAd(() => {
                   rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE ? handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001) : alert('Invalid Code!');
-                }}>CLAIM REWARD</button>
+                })}>CLAIM REWARD</button>
               </div>
             )}
 
@@ -301,7 +305,7 @@ function App() {
 
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => setActiveNav(n)} style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold', cursor:'pointer'}}>{n.toUpperCase()}</div>
+          <div key={n} onClick={() => runWithAd(() => setActiveNav(n))} style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold', cursor:'pointer'}}>{n.toUpperCase()}</div>
         ))}
       </div>
     </div>
