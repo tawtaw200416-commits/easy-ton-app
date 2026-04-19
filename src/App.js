@@ -10,7 +10,7 @@ const APP_CONFIG = {
   ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_CHAT_ID: "5020977059",
   HELP_BOT: "https://t.me/EasyTonHelp_Bot",
-  REWARD_CODE: "EASY3", // Updated to EASY3 as requested
+  REWARD_CODE: "EASY3", // Updated to EASY3
   REWARD_AMT: 0.001
 };
 
@@ -53,7 +53,7 @@ function App() {
     });
   };
 
-  // Improved Ad logic with English text
+  // Improved Ad logic with English Alert
   const runTaskWithAd = (onSuccess) => {
     if (isAdLoading) return;
     if (window.Adsgram) {
@@ -65,13 +65,18 @@ function App() {
         })
         .catch((err) => { 
             setIsAdLoading(false); 
-            console.error("Ad error:", err);
-            // Changed message to English as requested
-            alert("Please watch the ad until the end to get TON.");
+            console.error("Ad error or skipped:", err);
+            // English language update
+            alert("Please watch the ad fully to receive your TON reward.");
         });
     } else {
-      alert("Adsgram not connected. Please try again.");
+      alert("Adsgram Not Connected! Check your connection.");
     }
+  };
+
+  const handleNavChange = (newNav) => {
+    if (newNav === activeNav) return;
+    setActiveNav(newNav);
   };
 
   useEffect(() => {
@@ -85,23 +90,25 @@ function App() {
         const userData = await userRes.json();
         const tasksData = await tasksRes.json();
         if (userData) {
-          // Old account data remains safe
-          setBalance(Number(userData.balance || 0));
+          setBalance(userData.balance || 0);
           setCompleted(userData.completed || []);
           setWithdrawHistory(userData.withdrawHistory || []);
           setReferrals(userData.referrals || []);
         }
-        if (tasksData) setCustomTasks(Object.values(tasksData));
-      } catch (e) { console.error(e); }
+        if (tasksData) {
+            // Task values extract fix to ensure they don't disappear
+            setCustomTasks(Object.keys(tasksData).map(key => ({...tasksData[key], id: key})));
+        }
+      } catch (e) { console.error("Sync Error:", e); }
       setLoading(false);
     };
     initApp();
   }, []);
 
   const handleTaskReward = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Task already completed!");
+    if (completed.includes(id)) return alert("Already completed!");
     
-    // Ads appear FIRST for any task click
+    // Ad triggers first for ALL tasks
     runTaskWithAd(() => {
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
@@ -109,7 +116,7 @@ function App() {
       setCompleted(newComp);
       syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal, completed: newComp });
       if (link) window.open(link, '_blank');
-      alert(`Success! +${reward} TON earned.`);
+      alert(`Claimed! +${reward} TON`);
     });
   };
 
@@ -121,7 +128,7 @@ function App() {
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0', zIndex: 100 },
     navItem: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '11px', fontWeight: 'bold', cursor:'pointer' }),
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eee' },
-    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box', backgroundColor:'#fff' }
+    input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box', backgroundColor:'#fff' },
   };
 
   const defaultBots = [
@@ -160,7 +167,7 @@ function App() {
                const newBal = Number((balance + 0.0002).toFixed(5));
                setBalance(newBal);
                syncToFirebase(`users/${APP_CONFIG.MY_UID}`, { balance: newBal });
-               alert("Watched! +0.0002 TON");
+               alert("Video Reward Claimed! +0.0002 TON");
             })} style={{...styles.btn, backgroundColor:'#ef4444'}}>📺 WATCH VIDEO (+0.0002 TON)</button>
           </div>
 
@@ -184,6 +191,7 @@ function App() {
                   <div style={{marginBottom:'20px'}}>
                     <input style={styles.input} placeholder="Channel Link" onChange={e => setPromoForm({...promoForm, name: e.target.value})} />
                     <input style={styles.input} placeholder="Your Contact (Telegram)" onChange={e => setPromoForm({...promoForm, link: e.target.value})} />
+                    
                     <button style={{...styles.btn, backgroundColor:'#3b82f6'}} onClick={() => {
                         sendAdminNotify(`📢 NEW PROMO\nUID: ${APP_CONFIG.MY_UID}\nLink: ${promoForm.name}`);
                         window.open(APP_CONFIG.HELP_BOT);
@@ -199,10 +207,10 @@ function App() {
             {activeTab === 'reward' && (
               <div style={{textAlign:'center'}}>
                 {completed.includes('code_'+APP_CONFIG.REWARD_CODE) ? (
-                    <p style={{color:'#10b981', fontWeight:'bold'}}>✅ Code EASY3 Claimed!</p>
+                    <p style={{color:'#10b981', fontWeight:'bold'}}>✅ {APP_CONFIG.REWARD_CODE} Claimed!</p>
                 ) : (
                     <>
-                        <input style={styles.input} placeholder="Enter Code (EASY3)" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
+                        <input style={styles.input} placeholder={`Enter Code (${APP_CONFIG.REWARD_CODE})`} value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
                         <button style={styles.btn} onClick={() => {
                         if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
                             handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, APP_CONFIG.REWARD_AMT, null);
@@ -232,10 +240,9 @@ function App() {
         </>
       )}
 
-      {/* Other sections (invite, withdraw, profile) code continues... */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => setActiveNav(n)} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
+          <div key={n} onClick={() => handleNavChange(n)} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
         ))}
       </div>
     </div>
@@ -243,3 +250,4 @@ function App() {
 }
 
 export default App;
+
