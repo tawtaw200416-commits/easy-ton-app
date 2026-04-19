@@ -7,7 +7,7 @@ const APP_CONFIG = {
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606",
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
-  HELP_BOT: "https://t.me/EasyTonHelp_Bot",
+  HELP_BOT: "https://t.me/EasyTonFree_Bot", // ဤနေရာတွင် ဒုတိယပုံထဲမှ Bot Link သို့ ပြောင်းထားပါသည်
   REWARD_CODE: "EASY3",
   MIN_WITHDRAW: 0.1,
   REF_REWARD: 0.001,
@@ -27,10 +27,7 @@ function App() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   
-  // Admin Task Input States
   const [adminTask, setAdminTask] = useState({ name: '', link: '', type: 'bot' });
-  
-  // States for Add Channel
   const [isAddingChannel, setIsAddingChannel] = useState(false);
   const [channelInput, setChannelInput] = useState('');
 
@@ -69,7 +66,6 @@ function App() {
     fetchData();
   }, [fetchData]);
 
-  // --- Ads Logic with Callback ---
   const runWithAd = (onSuccess) => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
@@ -94,16 +90,12 @@ function App() {
     });
   };
 
-  // --- Admin Add Task Logic ---
   const handleAddAdminTask = async () => {
     if (!adminTask.name || !adminTask.link) return alert("Please fill Name and Link.");
     try {
       const response = await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, {
         method: 'POST',
-        body: JSON.stringify({
-          ...adminTask,
-          id: 'custom_' + Date.now()
-        })
+        body: JSON.stringify({ ...adminTask, id: 'custom_' + Date.now() })
       });
       if (response.ok) {
         alert("New task added successfully!");
@@ -137,15 +129,15 @@ function App() {
     });
   };
 
-  // --- ပြင်ဆင်ပေးထားသည့် အပိုင်း (Add link logic) ---
+  // --- SUBMIT နှိပ်လျှင် ဒုတိယပုံထဲမှ BOT ဆီသို့ ဒေတာပို့ရန် ပြင်ဆင်ထားသည့်အပိုင်း ---
   const submitChannel = () => {
     if (!channelInput.trim()) return alert("Please enter a link.");
     
-    // Telegram search parameter ထဲမှာ error မတက်အောင် encode လုပ်ခြင်း
+    // Bot ဆီသို့ link ပို့ရန်အတွက် format လုပ်ခြင်း
     const rawData = channelInput.trim();
     const encodedData = btoa(unescape(encodeURIComponent(rawData))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     
-    // Telegram Native link သုံးပြီး Bot ဆီ စာသားပို့ခြင်း
+    // ဒုတိယပုံထဲမှ EasyTonFree_Bot သို့ ချိတ်ဆက်ခြင်း
     const botUrl = `${APP_CONFIG.HELP_BOT}?start=addchannel_${encodedData}`;
     
     if (tg) {
@@ -158,7 +150,6 @@ function App() {
     setIsAddingChannel(false);
   };
 
-  // Task Lists
   const botTasks = [
     { id: 'bot_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'bot_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -299,7 +290,7 @@ function App() {
           <div style={styles.row}><span>Status:</span> <b style={{color:'#10b981'}}>Active</b></div>
           <div style={styles.row}><span>Your Balance:</span> <b>{balance.toFixed(5)} TON</b></div>
           <div style={styles.row}><span>User ID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
-          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => { if(tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT); }}>@EasyTonHelp_Bot</b></div>
+          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => { if(tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT); }}>@EasyTonFree_Bot</b></div>
         </div>
       )}
 
