@@ -42,7 +42,6 @@ function App() {
     localStorage.setItem('adm_tasks_list', JSON.stringify(adminTasks));
   }, [balance, completed, withdrawHistory, inviteHistory, adminTasks]);
 
-  // General Ad Trigger for any navigation or tab switch
   const triggerAdOnly = (callback) => {
     if (isAdLoading) return;
     const randomBlockId = APP_CONFIG.ADS_BLOCKS[Math.floor(Math.random() * APP_CONFIG.ADS_BLOCKS.length)];
@@ -56,7 +55,6 @@ function App() {
     }
   };
 
-  // Task Ad Trigger with Reward
   const handleActionWithAds = (reward, taskId = null, link = null, callback = null) => {
     if (isAdLoading) return;
     const randomBlockId = APP_CONFIG.ADS_BLOCKS[Math.floor(Math.random() * APP_CONFIG.ADS_BLOCKS.length)];
