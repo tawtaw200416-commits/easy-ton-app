@@ -27,13 +27,12 @@ function App() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   
-  // Admin Task Input States
   const [adminTask, setAdminTask] = useState({ name: '', link: '', type: 'bot' });
   
-  // States for +Add Task (User)
+  // +Add Task States
   const [isAddingChannel, setIsAddingChannel] = useState(false);
-  const [userNameInput, setUserNameInput] = useState(''); // Name အတွက်
-  const [userLinkInput, setUserLinkInput] = useState(''); // Link အတွက်
+  const [userChannelName, setUserChannelName] = useState('');
+  const [userChannelLink, setUserChannelLink] = useState('');
 
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
@@ -58,8 +57,7 @@ function App() {
         setReferrals(userData.referrals || []);
       }
       if (tasksData) {
-        const tList = Object.keys(tasksData).map(key => ({ ...tasksData[key], fbKey: key }));
-        setCustomTasks(tList);
+        setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], fbKey: key })));
       }
     } catch (e) { console.error("Sync Error:", e); }
     setLoading(false);
@@ -73,57 +71,51 @@ function App() {
   const runWithAd = (onSuccess) => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
-        .then(() => onSuccess())
-        .catch(() => alert("Watch the full ad to receive your reward!"));
-    } else { onSuccess(); }
+        .then(() => { if (onSuccess) onSuccess(); })
+        .catch(() => alert("Ads မပြီးသေးပါဘူး Bro၊ TON ရဖို့ အဆုံးထိကြည့်ပေးပါ။"));
+    } else { if (onSuccess) onSuccess(); }
   };
 
-  // --- Bro လိုချင်တဲ့ Ads -> Link -> Reward Flow ---
+  // --- Bro လိုချင်တဲ့ logic (Ads -> Link -> Reward) ---
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return;
     
     runWithAd(() => {
-      // ၁။ ကြော်ငြာကြည့်ပြီးရင် Link ကို အရင်ဖွင့်ပေးမယ်
+      // ၁။ Link ကို အရင်ဖွင့်ပေးမယ်
       if (tg) {
         tg.openTelegramLink(link);
       } else {
         window.open(link, '_blank');
       }
 
-      // ၂။ ဖွင့်ပြီးမှ TON ပေါင်းပေးမယ်
-      const newBal = Number((balance + reward).toFixed(5));
-      const newComp = [...completed, id];
-      setBalance(newBal);
-      setCompleted(newComp);
-      
-      fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-        method: 'PATCH',
-        body: JSON.stringify({ balance: newBal, completed: newComp })
-      });
-      
-      alert(`Success! +${reward} TON`);
+      // ၂။ ဖွင့်ပြီးမှ Balance ပေါင်းမယ်
+      setTimeout(() => {
+        const newBal = Number((balance + reward).toFixed(5));
+        const newComp = [...completed, id];
+        setBalance(newBal);
+        setCompleted(newComp);
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+          method: 'PATCH',
+          body: JSON.stringify({ balance: newBal, completed: newComp })
+        });
+        alert(`Success! +${reward} TON ပေါင်းပြီးပါပြီ`);
+      }, 1000);
     });
   };
 
-  // --- +Add Task Submit (Admin/Support ဆီကို တန်းရောက်အောင်) ---
+  // User ဆီက +Add Task Logic
   const submitUserTask = () => {
-    if (!userNameInput.trim() || !userLinkInput.trim()) return alert("Name နဲ့ Link နှစ်ခုလုံးဖြည့်ပေးပါဗျ။");
+    if (!userChannelName.trim() || !userChannelLink.trim()) return alert("Name နဲ့ Link နှစ်ခုလုံး ထည့်ပေးပါဗျ။");
     
-    // Data ကို encode လုပ်ပြီး Bot ဆီပို့မယ်
-    const rawData = `Name: ${userNameInput.trim()} | Link: ${userLinkInput.trim()}`;
+    const rawData = `Name: ${userChannelName} | Link: ${userChannelLink}`;
     const encodedData = btoa(unescape(encodeURIComponent(rawData))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     
     const botUrl = `${APP_CONFIG.HELP_BOT}?start=addtask_${encodedData}`;
     
-    if (tg) {
-      tg.openTelegramLink(botUrl);
-    } else {
-      window.open(botUrl, '_blank');
-    }
+    if (tg) { tg.openTelegramLink(botUrl); } 
+    else { window.open(botUrl, '_blank'); }
 
-    setUserNameInput('');
-    setUserLinkInput('');
-    setIsAddingChannel(false);
+    setUserChannelName(''); setUserChannelLink(''); setIsAddingChannel(false);
   };
 
   const botTasks = [
@@ -160,16 +152,14 @@ function App() {
     card: { backgroundColor: '#fff', padding: '18px', borderRadius: '20px', marginBottom: '12px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0' },
-    input: { width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
-    row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #eee' }
+    input: { width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' }
   };
 
   return (
     <div style={styles.main}>
       <div style={styles.header}>
-        <small style={{ color: '#facc15', letterSpacing: '1px' }}>YOUR BALANCE</small>
+        <small style={{ color: '#facc15' }}>YOUR BALANCE</small>
         <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:16, color:'#facc15'}}>TON</span></h1>
-        <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● SYSTEM ACTIVE</div>
       </div>
 
       {activeNav === 'earn' && (
@@ -184,7 +174,7 @@ function App() {
 
           <div style={styles.card}>
             {activeTab === 'bot' && botTasks.filter(t => !completed.includes(t.id)).map(t => (
-              <div key={t.id} style={styles.row}>
+              <div key={t.id} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid #eee'}}>
                 <b>{t.name}</b>
                 <button onClick={() => handleTaskReward(t.id, APP_CONFIG.TASK_REWARD, t.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>START</button>
               </div>
@@ -192,21 +182,16 @@ function App() {
             
             {activeTab === 'social' && (
               <>
-                {/* +Add Task UI for Users */}
-                <button onClick={() => setIsAddingChannel(!isAddingChannel)} style={{...styles.btn, background: '#24A1DE', marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}}>
-                   <span>+ ADD TASK</span>
-                </button>
-
+                <button onClick={() => setIsAddingChannel(!isAddingChannel)} style={{...styles.btn, background: '#24A1DE', marginBottom: '15px'}}>+ ADD TASK (Name & Link)</button>
                 {isAddingChannel && (
-                  <div style={{padding: '15px', border: '2px dashed #24A1DE', borderRadius: '12px', marginBottom: '15px'}}>
-                    <input style={styles.input} placeholder="Channel Name ရိုက်ထည့်ပါ" value={userNameInput} onChange={(e) => setUserNameInput(e.target.value)} />
-                    <input style={styles.input} placeholder="Channel Link (https://t.me/...)" value={userLinkInput} onChange={(e) => setUserLinkInput(e.target.value)} />
+                  <div style={{background: '#f8f9fa', padding: '10px', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ddd'}}>
+                    <input style={styles.input} placeholder="Channel Name ရိုက်ပါ" value={userChannelName} onChange={(e) => setUserChannelName(e.target.value)} />
+                    <input style={styles.input} placeholder="Channel Link (https://t.me/...)" value={userChannelLink} onChange={(e) => setUserChannelLink(e.target.value)} />
                     <button style={{...styles.btn, background:'#10b981'}} onClick={submitUserTask}>SUBMIT TO SUPPORT</button>
                   </div>
                 )}
-
                 {socialTasks.filter(t => !completed.includes(t.id)).map(t => (
-                  <div key={t.id} style={styles.row}>
+                  <div key={t.id} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid #eee'}}>
                     <b>{t.name}</b>
                     <button onClick={() => handleTaskReward(t.id, APP_CONFIG.TASK_REWARD, t.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>JOIN</button>
                   </div>
@@ -214,7 +199,6 @@ function App() {
               </>
             )}
 
-            {/* Reward Tab */}
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
@@ -223,42 +207,38 @@ function App() {
                 })}>CLAIM REWARD</button>
               </div>
             )}
-
-            {/* Admin Tab */}
-            {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
-              <div>
-                <h3 style={{textAlign:'center', marginBottom:15}}>ADMIN PANEL</h3>
-                <label>Task Name:</label>
-                <input style={styles.input} placeholder="e.g. Join My Channel" value={adminTask.name} onChange={e => setAdminTask({...adminTask, name: e.target.value})} />
-                <label>Link:</label>
-                <input style={styles.input} placeholder="https://t.me/..." value={adminTask.link} onChange={e => setAdminTask({...adminTask, link: e.target.value})} />
-                <label>Type:</label>
-                <select style={{...styles.input, appearance:'none'}} value={adminTask.type} onChange={e => setAdminTask({...adminTask, type: e.target.value})}>
-                  <option value="bot">BOT TASK</option>
-                  <option value="social">SOCIAL TASK</option>
-                </select>
-                <button style={{...styles.btn, background:'#10b981'}} onClick={async () => {
-                  if (!adminTask.name || !adminTask.link) return alert("Please fill Name and Link.");
-                  try {
-                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, {
-                      method: 'POST',
-                      body: JSON.stringify({ ...adminTask, id: 'custom_' + Date.now() })
-                    });
-                    alert("New task added successfully!");
-                    setAdminTask({ name: '', link: '', type: 'bot' });
-                    fetchData();
-                  } catch (e) { alert("Error adding task!"); }
-                }}>CONFIRM ADD TASK</button>
-              </div>
-            )}
           </div>
         </>
       )}
 
-      {/* Footer Navigation */}
+      {activeNav === 'invite' && (
+        <div style={styles.card}>
+          <h3>Invite Friends</h3>
+          <p>Get {APP_CONFIG.REF_REWARD} TON for each friend!</p>
+          <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!"); }}>COPY LINK</button>
+        </div>
+      )}
+
+      {activeNav === 'withdraw' && (
+        <div style={styles.card}>
+          <h3>Withdraw</h3>
+          <input style={styles.input} placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} placeholder="Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+          <button style={{...styles.btn, background:'#3b82f6'}} onClick={() => runWithAd(handleWithdraw)}>WITHDRAW NOW</button>
+        </div>
+      )}
+
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h3>My Profile</h3>
+          <p>User ID: {APP_CONFIG.MY_UID}</p>
+          <p>Balance: {balance.toFixed(5)} TON</p>
+        </div>
+      )}
+
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => runWithAd(() => setActiveNav(n))} style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold', cursor:'pointer'}}>{n.toUpperCase()}</div>
+          <div key={n} onClick={() => runWithAd(() => setActiveNav(n))} style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', cursor:'pointer'}}>{n.toUpperCase()}</div>
         ))}
       </div>
     </div>
