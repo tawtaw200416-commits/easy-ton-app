@@ -28,9 +28,13 @@ function App() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   
-  // --- Admin & User Submit States ---
-  const [adminTask, setAdminTask] = useState({ name: '', link: '', type: 'bot' });
-  const [userSubmit, setUserSubmit] = useState({ name: '', link: '' });
+  // --- New States for Add Task ---
+  const [adminTaskName, setAdminTaskName] = useState('');
+  const [adminTaskLink, setAdminTaskLink] = useState('');
+  const [adminTaskType, setAdminTaskType] = useState('bot');
+
+  const [userChannelName, setUserChannelName] = useState('');
+  const [userChannelLink, setUserChannelLink] = useState('');
 
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
@@ -73,10 +77,24 @@ function App() {
     } else { onSuccess(); }
   };
 
-  const handleTaskReward = (id, reward, link) => {
-    if (completed.includes(id)) return;
+  const handleWatchAd = () => {
     runWithAd(() => {
-      if (tg && link.includes('t.me/')) { tg.openTelegramLink(link); } else { window.open(link, '_blank'); }
+      const newBal = Number((balance + APP_CONFIG.WATCH_REWARD).toFixed(5));
+      setBalance(newBal);
+      fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+        method: 'PATCH',
+        body: JSON.stringify({ balance: newBal })
+      });
+      alert(`Success! +${APP_CONFIG.WATCH_REWARD} TON`);
+    });
+  };
+
+  const handleTaskReward = (id, reward, link) => {
+    if (completed.includes(id)) return alert("Task already completed!");
+    runWithAd(() => {
+      if (tg && link && link.includes('t.me/')) { tg.openTelegramLink(link); } 
+      else if (link) { window.open(link, '_blank'); }
+      
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
       setBalance(newBal);
@@ -89,30 +107,69 @@ function App() {
     });
   };
 
-  // --- Admin Task Add Logic ---
-  const adminAddTask = async () => {
-    if (!adminTask.name || !adminTask.link) return alert("Please fill all Admin fields");
-    runWithAd(async () => {
-      try {
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, {
-          method: 'POST',
-          body: JSON.stringify({ ...adminTask, id: 'custom_' + Date.now() })
-        });
-        alert("Task added successfully to Global List!");
-        setAdminTask({ name: '', link: '', type: 'bot' });
-        fetchData();
-      } catch (e) { alert("Error adding task"); }
+  const handleWithdrawRequest = () => {
+    const amount = Number(withdrawAmount);
+    if (amount < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdraw is ${APP_CONFIG.MIN_WITHDRAW} TON`);
+    if (amount > balance) return alert("Insufficient balance!");
+    if (!withdrawAddress || withdrawAddress.length < 10) return alert("Please enter a valid TON wallet address.");
+
+    runWithAd(() => {
+      const newBal = Number((balance - amount).toFixed(5));
+      const requestData = {
+        amount,
+        address: withdrawAddress,
+        date: new Date().toLocaleString(),
+        status: "Pending"
+      };
+      
+      const newHistory = [requestData, ...withdrawHistory];
+      setBalance(newBal);
+      setWithdrawHistory(newHistory);
+      setWithdrawAmount('');
+      setWithdrawAddress('');
+
+      fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+        method: 'PATCH',
+        body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
+      });
+
+      const logData = btoa(unescape(encodeURIComponent(`Withdraw: ${amount} TON to ${withdrawAddress}`)));
+      if (tg) tg.openTelegramLink(`${APP_CONFIG.HELP_BOT}?start=wd_${logData}`);
+      alert("Withdrawal request sent! Processed within 24 hours.");
     });
   };
 
-  // --- User Channel Submit Logic ---
-  const userSubmitChannel = () => {
-    if (!userSubmit.name || !userSubmit.link) return alert("Please fill Name and Link");
+  // --- User Add Channel Function ---
+  const handleUserAddChannel = () => {
+    if (!userChannelName || !userChannelLink) return alert("Please fill both Name and Link!");
     runWithAd(() => {
-      const logData = btoa(unescape(encodeURIComponent(`New Channel Submit: Name: ${userSubmit.name}, Link: ${userSubmit.link}`)));
-      if (tg) tg.openTelegramLink(`${APP_CONFIG.HELP_BOT}?start=submit_${logData}`);
-      alert("Submission sent to Support/Admin!");
-      setUserSubmit({ name: '', link: '' });
+      const logData = btoa(unescape(encodeURIComponent(`User Task Submission:\nName: ${userChannelName}\nLink: ${userChannelLink}`)));
+      if (tg) tg.openTelegramLink(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`);
+      alert("Channel submitted to Admin & Support!");
+      setUserChannelName('');
+      setUserChannelLink('');
+    });
+  };
+
+  // --- Admin Function to Add Global Task ---
+  const handleAdminAddTask = async () => {
+    if (!adminTaskName || !adminTaskLink) return alert("Please fill Admin fields!");
+    runWithAd(async () => {
+      const newTask = {
+        id: 'task_' + Date.now(),
+        name: adminTaskName,
+        link: adminTaskLink,
+        type: adminTaskType
+      };
+      try {
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, {
+          method: 'POST',
+          body: JSON.stringify(newTask)
+        });
+        alert("Global Task Added Successfully!");
+        setAdminTaskName(''); setAdminTaskLink('');
+        fetchData();
+      } catch (e) { alert("Failed to add task."); }
     });
   };
 
@@ -131,6 +188,16 @@ function App() {
     { id: 's_2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
     { id: 's_3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
     { id: 's_4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 's_5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 's_6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 's_7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 's_8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+    { id: 's_9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
+    { id: 's_10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+    { id: 's_11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
+    { id: 's_12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
+    { id: 's_13', name: "@zrbtua", link: "https://t.me/zrbtua" },
+    { id: 's_14', name: "@perviu1million", link: "https://t.me/perviu1million" },
     ...customTasks.filter(t => t.type === 'social')
   ];
 
@@ -140,7 +207,7 @@ function App() {
     card: { backgroundColor: '#fff', padding: '18px', borderRadius: '20px', marginBottom: '12px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0' },
-    input: { width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box', fontSize: '14px' },
+    input: { width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #eee' }
   };
 
@@ -153,6 +220,11 @@ function App() {
 
       {activeNav === 'earn' && (
         <>
+          <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video & Get 0.0005 TON</p>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={handleWatchAd}>WATCH VIDEO</button>
+          </div>
+
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
                (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && (
@@ -168,11 +240,11 @@ function App() {
             
             {activeTab === 'social' && (
               <>
-                <div style={{paddingBottom: 15, borderBottom: '2px solid #000', marginBottom: 15}}>
-                  <h4 style={{margin: '0 0 10px 0'}}>+ Add Your Channel</h4>
-                  <input style={styles.input} placeholder="Channel Name" value={userSubmit.name} onChange={e => setUserSubmit({...userSubmit, name: e.target.value})} />
-                  <input style={styles.input} placeholder="Link (https://t.me/...)" value={userSubmit.link} onChange={e => setUserSubmit({...userSubmit, link: e.target.value})} />
-                  <button style={{...styles.btn, background: '#10b981'}} onClick={userSubmitChannel}>SUBMIT TO ADMIN</button>
+                <div style={{paddingBottom: 15, borderBottom: '2px solid #eee', marginBottom: 15}}>
+                   <h4 style={{marginTop:0}}>+ Add Your Channel Task</h4>
+                   <input style={styles.input} placeholder="Channel Name" value={userChannelName} onChange={e => setUserChannelName(e.target.value)} />
+                   <input style={styles.input} placeholder="Channel Link" value={userChannelLink} onChange={e => setUserChannelLink(e.target.value)} />
+                   <button style={{...styles.btn, background: '#24A1DE'}} onClick={handleUserAddChannel}>SUBMIT TO SUPPORT</button>
                 </div>
                 {socialTasks.filter(t => !completed.includes(t.id)).map(t => (
                   <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, APP_CONFIG.TASK_REWARD, t.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>JOIN</button></div>
@@ -180,28 +252,74 @@ function App() {
               </>
             )}
 
-            {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
-              <div>
-                <h3 style={{margin: '0 0 15px 0', textAlign: 'center'}}>ADMIN PANEL</h3>
-                <input style={styles.input} placeholder="Task Name" value={adminTask.name} onChange={e => setAdminTask({...adminTask, name: e.target.value})} />
-                <input style={styles.input} placeholder="Link" value={adminTask.link} onChange={e => setAdminTask({...adminTask, link: e.target.value})} />
-                <select style={styles.input} value={adminTask.type} onChange={e => setAdminTask({...adminTask, type: e.target.value})}>
-                   <option value="bot">BOT TASK</option>
-                   <option value="social">SOCIAL TASK</option>
-                </select>
-                <button style={{...styles.btn, background: '#3b82f6'}} onClick={adminAddTask}>CONFIRM ADD TASK</button>
-              </div>
-            )}
-
             {activeTab === 'reward' && (
               <div><input style={styles.input} placeholder="Enter Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
-              <button style={styles.btn} onClick={() => runWithAd(() => { rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE ? handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001) : alert('Invalid Code!'); })}>CLAIM</button></div>
+              <button style={styles.btn} onClick={() => {
+                if(completed.includes('code_'+APP_CONFIG.REWARD_CODE)) return alert("Code already used!");
+                runWithAd(() => { rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE ? handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001) : alert('Invalid Code!'); });
+              }}>CLAIM</button></div>
+            )}
+
+            {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
+              <div>
+                 <h4 style={{marginTop:0}}>Admin: Add Global Task</h4>
+                 <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
+                 <input style={styles.input} placeholder="Task Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
+                 <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
+                    <option value="bot">BOT</option>
+                    <option value="social">SOCIAL</option>
+                 </select>
+                 <button style={{...styles.btn, background: '#10b981'}} onClick={handleAdminAddTask}>ADD GLOBAL TASK</button>
+              </div>
             )}
           </div>
         </>
       )}
 
-      {/* Footer Navigation */}
+      {activeNav === 'invite' && (
+        <div style={styles.card}>
+          <h3 style={{marginTop:0}}>Referral Program</h3>
+          <p style={{fontSize:14}}>Share your link and earn <b>0.001 TON</b> for every friend who joins!</p>
+          <div style={{background:'#eee', padding:10, borderRadius:10, fontSize:12, wordBreak:'break-all', border:'1px dashed #000'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</div>
+          <button style={{...styles.btn, marginTop:10}} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!"); }}>COPY LINK</button>
+          
+          <h4 style={{marginBottom:10, marginTop:25}}>Invite History</h4>
+          {referrals.length === 0 ? <p style={{color:'#999', fontSize:12}}>No friends invited yet.</p> : 
+            referrals.map((r, i) => (<div key={i} style={styles.row}><span>User ID: {r.id}</span><span style={{color:'#10b981'}}>Complete +0.001 TON</span></div>))
+          }
+        </div>
+      )}
+
+      {activeNav === 'withdraw' && (
+        <div style={styles.card}>
+          <h3 style={{marginTop:0}}>Withdraw TON</h3>
+          <p style={{fontSize:12, color:'#666'}}>Minimum: 0.1 TON</p>
+          <input style={styles.input} type="number" placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} placeholder="TON Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+          <button style={{...styles.btn, background:'#3b82f6'}} onClick={handleWithdrawRequest}>WITHDRAW NOW</button>
+          
+          <h4 style={{marginTop:25, marginBottom:10}}>Withdraw History</h4>
+          {withdrawHistory.length === 0 ? <p style={{color:'#999', fontSize:12}}>No history.</p> : 
+            withdrawHistory.map((h, i) => (
+              <div key={i} style={{...styles.row, fontSize:12}}>
+                <div><b>{h.amount} TON</b><br/><small>{h.date}</small></div>
+                <div style={{color: '#f59e0b'}}>● {h.status}</div>
+              </div>
+            ))
+          }
+        </div>
+      )}
+
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h3 style={{marginTop:0}}>My Profile</h3>
+          <div style={styles.row}><span>Status:</span> <b style={{color:'#10b981'}}>Active</b></div>
+          <div style={styles.row}><span>Balance:</span> <b>{balance.toFixed(5)} TON</b></div>
+          <div style={styles.row}><span>User ID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => { if(tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT); }}>@EasyTonHelp_Bot</b></div>
+        </div>
+      )}
+
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => runWithAd(() => setActiveNav(n))} style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold', cursor:'pointer'}}>{n.toUpperCase()}</div>
