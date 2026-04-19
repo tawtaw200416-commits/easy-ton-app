@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 const tg = window.Telegram?.WebApp;
 
 const APP_CONFIG = {
-  ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
-  MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "Guest_ID",
+  // Bro ရဲ့ ID (သို့) Wallet နဲ့ စစ်ဖို့ပါ (အခု User ID "1793453606" ကို Admin အဖြစ် သတ်မှတ်ထားပေးတယ်)
+  ADMIN_UID: "1793453606", 
   ADS_BLOCKS: ["27611", "27633"], 
   TASK_REWARD: 0.001,
   VIDEO_REWARD: 0.0005,
@@ -13,6 +13,8 @@ const APP_CONFIG = {
   REWARD_CODE: "EASY3",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot"
 };
+
+const USER_UID = tg?.initDataUnsafe?.user?.id?.toString() || "Guest_ID";
 
 function App() {
   const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_bal')) || 0);
@@ -33,6 +35,7 @@ function App() {
 
   useEffect(() => { if (tg) { tg.ready(); tg.expand(); } }, []);
 
+  // Sync with LocalStorage
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
@@ -41,7 +44,20 @@ function App() {
     localStorage.setItem('adm_tasks_list', JSON.stringify(adminTasks));
   }, [balance, completed, withdrawHistory, inviteHistory, adminTasks]);
 
-  // --- Ads Logic (နှိပ်လိုက်တိုင်း ကြော်ငြာအရင်လာမည်) ---
+  // Withdraw Status Auto-Update (Pending to Success after 24h)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = Date.now();
+      setWithdrawHistory(prev => prev.map(h => {
+        if (h.status === 'Pending' && now - h.time >= 86400000) {
+          return { ...h, status: 'Success' };
+        }
+        return h;
+      }));
+    }, 60000); // 1 min တိုင်း စစ်မယ်
+    return () => clearInterval(timer);
+  }, []);
+
   const handleActionWithAds = (reward, taskId = null, link = null, callback = null) => {
     if (isAdLoading) return;
     const randomBlockId = APP_CONFIG.ADS_BLOCKS[Math.floor(Math.random() * APP_CONFIG.ADS_BLOCKS.length)];
@@ -49,53 +65,53 @@ function App() {
     if (window.Adsgram) {
       setIsAdLoading(true);
       const AdController = window.Adsgram.init({ blockId: randomBlockId });
-      
-      AdController.show()
-        .then(() => {
+      AdController.show().then(() => {
           setIsAdLoading(false);
-          if (reward > 0) {
-            setBalance(prev => Number((prev + reward).toFixed(5)));
-          }
+          if (reward > 0) setBalance(prev => Number((prev + reward).toFixed(5)));
           if (taskId) setCompleted(prev => [...prev, taskId]);
           if (link) window.open(link, '_blank');
-          if (callback) callback(); // Tab ပြောင်းတာမျိုးအတွက်
-        })
-        .catch(() => {
+          if (callback) callback();
+      }).catch(() => {
           setIsAdLoading(false);
-          alert("Ad skipped or failed. No reward."); // English လို ပြောင်းထားသည်
-          if (callback) callback(); // Error တက်ရင်လည်း Tab ကတော့ ပြောင်းပေးလိုက်မယ်
-        });
+          alert("Ad skipped or failed. No reward.");
+          if (callback) callback();
+      });
     } else {
       if (link) window.open(link, '_blank');
       if (callback) callback();
     }
   };
 
+  const handleWithdraw = () => {
+    const amt = parseFloat(withdrawAmount);
+    if (amt >= 0.1 && amt <= balance) {
+      const newEntry = { id: Date.now(), amount: amt, status: 'Pending', time: Date.now() };
+      setBalance(prev => Number((prev - amt).toFixed(5))); // Balance ချက်ချင်းနှုတ်
+      setWithdrawHistory(prev => [newEntry, ...prev]);
+      setWithdrawAmount('');
+      alert("Withdraw Request Sent! Status will update in 24h.");
+    } else { alert("Min 0.1 TON or Insufficient Balance."); }
+  };
+
   const handleSaveTask = () => {
     if (newChannelName && newChannelLink) {
-      const newTask = {
-        id: 'custom_' + Date.now(),
-        name: newChannelName,
-        link: newChannelLink.startsWith('http') ? newChannelLink : `https://${newChannelLink}`
-      };
+      const newTask = { id: 'custom_' + Date.now(), name: newChannelName, link: newChannelLink.startsWith('http') ? newChannelLink : `https://${newChannelLink}` };
       setAdminTasks(prev => [newTask, ...prev]);
-      setNewChannelName('');
-      setNewChannelLink('');
-      setShowAddTask(false);
-      alert("Task Added Successfully!");
+      setNewChannelName(''); setNewChannelLink(''); setShowAddTask(false);
+      alert("Admin Task Added!");
     }
   };
 
   const styles = {
     main: { backgroundColor: '#facc15', color: '#000', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
     balanceCard: { background: 'linear-gradient(135deg, #000, #1e293b)', padding: '30px', borderRadius: '25px', textAlign: 'center', marginBottom: '20px', border: '4px solid #fff', color: '#fff' },
-    videoBtn: { background: '#ef4444', color: '#fff', width: '100%', padding: '18px', borderRadius: '15px', border: '3px solid #000', fontWeight: 'bold', fontSize: '16px', marginBottom: '15px', cursor: 'pointer' },
     card: { backgroundColor: '#fff', padding: '18px', borderRadius: '25px', marginBottom: '12px', border: '3px solid #000' },
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #eee' },
     input: { width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
     navBar: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0' },
     navBtn: (active) => ({ flex: 1, textAlign: 'center', color: active ? '#facc15' : '#fff', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }),
-    blackBtn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }
+    blackBtn: { width: '100%', padding: '14px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' },
+    badge: (status) => ({ backgroundColor: status === 'Pending' ? '#f59e0b' : '#22c55e', color: '#fff', padding: '4px 8px', borderRadius: '8px', fontSize: '10px' })
   };
 
   return (
@@ -103,10 +119,10 @@ function App() {
       <div style={styles.balanceCard}>
         <small style={{ color: '#facc15' }}>CURRENT BALANCE</small>
         <h1 style={{ fontSize: '45px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:'18px'}}>TON</span></h1>
-        <small>● ACTIVE ACCOUNT</small>
+        <small>● {USER_UID === APP_CONFIG.ADMIN_UID ? "ADMIN ACCOUNT" : "ACTIVE USER"}</small>
       </div>
 
-      <button style={styles.videoBtn} onClick={() => handleActionWithAds(APP_CONFIG.VIDEO_REWARD)}>
+      <button style={{...styles.blackBtn, background: '#ef4444', height: '60px', marginBottom: '15px'}} onClick={() => handleActionWithAds(APP_CONFIG.VIDEO_REWARD)}>
         📺 WATCH VIDEO (+{APP_CONFIG.VIDEO_REWARD} TON)
       </button>
 
@@ -119,9 +135,12 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            <button onClick={() => setShowAddTask(!showAddTask)} style={{...styles.blackBtn, background:'#facc15', color:'#000', marginBottom:'15px', border:'2px solid #000'}}>
-               {showAddTask ? "CLOSE PANEL" : "+ ADD TASK (ADMIN)"}
-            </button>
+            {/* Admin Only ပေါ်မည့် ခလုတ် */}
+            {USER_UID === APP_CONFIG.ADMIN_UID && (
+              <button onClick={() => setShowAddTask(!showAddTask)} style={{...styles.blackBtn, background:'#facc15', color:'#000', marginBottom:'15px', border:'2px solid #000'}}>
+                 {showAddTask ? "CLOSE ADMIN PANEL" : "+ ADD TASK (ADMIN ONLY)"}
+              </button>
+            )}
             
             {showAddTask ? (
               <div>
@@ -177,12 +196,15 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center'}}>INVITE & EARN</h2>
-          <p style={{textAlign:'center', fontWeight:'bold'}}>1 Referral = 0.001 TON</p>
-          <div style={{background:'#f1f5f9', padding:'15px', borderRadius:'15px', border:'1px dashed #000'}}>
+          <div style={{background:'#f1f5f9', padding:'15px', borderRadius:'15px', border:'1px dashed #000', marginBottom:'15px'}}>
              <small>REFERRAL LINK:</small>
-             <p style={{fontSize:11, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
-             <button style={styles.blackBtn} onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!");}}>COPY LINK</button>
+             <p style={{fontSize:11, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={USER_UID}</p>
+             <button style={styles.blackBtn} onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${USER_UID}`); alert("Copied!");}}>COPY LINK</button>
           </div>
+          <h4>INVITE HISTORY</h4>
+          {inviteHistory.length === 0 ? <p>No referrals yet.</p> : inviteHistory.map(inv => (
+            <div key={inv.id} style={styles.row}><span>User ID: {inv.uid}</span><b style={{color:'green'}}>+{APP_CONFIG.REFER_REWARD} TON</b></div>
+          ))}
         </div>
       )}
 
@@ -190,23 +212,23 @@ function App() {
         <div style={styles.card}>
           <h3>WITHDRAW</h3>
           <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={(e)=>setWithdrawAmount(e.target.value)} />
-          <button style={styles.blackBtn} onClick={() => handleActionWithAds(0, null, null, () => {
-             const amt = parseFloat(withdrawAmount);
-             if (amt >= 0.1 && amt <= balance) {
-               setBalance(prev => Number((prev - amt).toFixed(5)));
-               setWithdrawHistory(prev => [{id: Date.now(), amount: amt, status: 'Pending'}, ...prev]);
-               setWithdrawAmount('');
-               alert("Withdraw Request Sent!");
-             } else { alert("Insufficient Balance or Min 0.1 TON"); }
-          })}>WITHDRAW NOW</button>
+          <button style={styles.blackBtn} onClick={() => handleActionWithAds(0, null, null, handleWithdraw)}>WITHDRAW NOW</button>
+          
+          <h4 style={{marginTop: '20px'}}>WITHDRAW HISTORY</h4>
+          {withdrawHistory.map(h => (
+            <div key={h.id} style={styles.row}>
+              <span>{h.amount} TON</span>
+              <span style={styles.badge(h.status)}>{h.status}</span>
+            </div>
+          ))}
         </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
           <h2 style={{textAlign:'center'}}>PROFILE</h2>
-          <div style={styles.row}><span>UID:</span><b>{APP_CONFIG.MY_UID}</b></div>
-          <div style={styles.row}><span>Status:</span><b style={{color:'green'}}>VERIFIED</b></div>
+          <div style={styles.row}><span>User UID:</span><b>{USER_UID}</b></div>
+          <div style={styles.row}><span>Account Status:</span><b style={{color:'green'}}>VERIFIED</b></div>
           <button style={{...styles.blackBtn, marginTop: '10px'}} onClick={()=>window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
         </div>
       )}
