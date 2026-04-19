@@ -42,7 +42,21 @@ function App() {
     localStorage.setItem('adm_tasks_list', JSON.stringify(adminTasks));
   }, [balance, completed, withdrawHistory, inviteHistory, adminTasks]);
 
-  // Force Ad for every action
+  // General Ad Trigger for any navigation or tab switch
+  const triggerAdOnly = (callback) => {
+    if (isAdLoading) return;
+    const randomBlockId = APP_CONFIG.ADS_BLOCKS[Math.floor(Math.random() * APP_CONFIG.ADS_BLOCKS.length)];
+    if (window.Adsgram) {
+      setIsAdLoading(true);
+      window.Adsgram.init({ blockId: randomBlockId }).show()
+        .then(() => { setIsAdLoading(false); if (callback) callback(); })
+        .catch(() => { setIsAdLoading(false); if (callback) callback(); });
+    } else {
+      if (callback) callback();
+    }
+  };
+
+  // Task Ad Trigger with Reward
   const handleActionWithAds = (reward, taskId = null, link = null, callback = null) => {
     if (isAdLoading) return;
     const randomBlockId = APP_CONFIG.ADS_BLOCKS[Math.floor(Math.random() * APP_CONFIG.ADS_BLOCKS.length)];
@@ -57,15 +71,40 @@ function App() {
           if (callback) callback();
       }).catch(() => {
           setIsAdLoading(false);
-          // If ad fails, we still allow the link to open but can choose to withhold reward
           if (link) window.open(link, '_blank');
           if (callback) callback();
       });
     } else {
-      alert("Adsgram not connected yet. Please wait.");
       if (link) window.open(link, '_blank');
+      if (callback) callback();
     }
   };
+
+  const botTasks = [
+    { id: 'b_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'b_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'b_3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'b_4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'b_5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b_6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
+  ];
+
+  const socialTasksList = [
+    { id: 's_1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 's_2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 's_3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 's_4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 's_5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 's_6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 's_7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 's_8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+    { id: 's_9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
+    { id: 's_10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+    { id: 's_11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
+    { id: 's_12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
+    { id: 's_13', name: "@zrbtua", link: "https://t.me/zrbtua" },
+    { id: 's_14', name: "@perviu1million", link: "https://t.me/perviu1million" }
+  ];
 
   const deleteAdminTask = (id) => {
     setAdminTasks(prev => prev.filter(t => t.id !== id));
@@ -84,32 +123,6 @@ function App() {
     badge: (status) => ({ backgroundColor: status === 'Pending' ? '#f59e0b' : '#22c55e', color: '#fff', padding: '4px 8px', borderRadius: '8px', fontSize: '10px' })
   };
 
-  const botTasks = [
-    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-    { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-    { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
-    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
-  ];
-
-  const socialTasksList = [
-    { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-    { id: 's3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
-    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
-    { id: 's5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
-    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
-    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
-    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
-    { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
-    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-    { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
-    { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
-    { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
-    { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
-  ];
-
   return (
     <div style={styles.main}>
       <div style={styles.balanceCard}>
@@ -123,7 +136,7 @@ function App() {
           {USER_UID === APP_CONFIG.ADMIN_UID && (
             <div style={{...styles.card, borderColor: '#ef4444'}}>
               <h4 style={{margin: '0 0 10px 0', color: '#ef4444'}}>ADMIN CONTROL PANEL</h4>
-              <button style={styles.blackBtn} onClick={() => setShowAdminPanel(!showAdminPanel)}>
+              <button style={styles.blackBtn} onClick={() => triggerAdOnly(() => setShowAdminPanel(!showAdminPanel))}>
                 {showAdminPanel ? "CLOSE PANEL" : "MANAGE CUSTOM TASKS"}
               </button>
               {showAdminPanel && (
@@ -155,7 +168,7 @@ function App() {
 
           <div style={{display:'flex', gap:'5px', marginBottom:'15px'}}>
             {['bot', 'social', 'reward'].map(t => (
-              <button key={t} onClick={() => setActiveTab(t)} style={{flex:1, padding:'10px', background:activeTab===t?'#000':'#fff', color:activeTab===t?'#fff':'#000', border:'2px solid #000', borderRadius:'12px', fontWeight:'bold'}}>{t.toUpperCase()}</button>
+              <button key={t} onClick={() => triggerAdOnly(() => setActiveTab(t))} style={{flex:1, padding:'10px', background:activeTab===t?'#000':'#fff', color:activeTab===t?'#fff':'#000', border:'2px solid #000', borderRadius:'12px', fontWeight:'bold'}}>{t.toUpperCase()}</button>
             ))}
           </div>
 
@@ -174,7 +187,11 @@ function App() {
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Code" value={rewardInput} onChange={(e)=>setRewardInput(e.target.value)} />
-                <button style={styles.blackBtn} onClick={() => rewardInput===APP_CONFIG.REWARD_CODE ? handleActionWithAds(APP_CONFIG.CODE_REWARD_AMOUNT, 'code_claimed') : alert("Wrong Code")}>CLAIM</button>
+                <button style={styles.blackBtn} onClick={() => triggerAdOnly(() => {
+                   if(rewardInput===APP_CONFIG.REWARD_CODE) {
+                      handleActionWithAds(APP_CONFIG.CODE_REWARD_AMOUNT, 'code_claimed');
+                   } else { alert("Wrong Code"); }
+                })}>CLAIM</button>
               </div>
             )}
           </div>
@@ -188,7 +205,7 @@ function App() {
           <div style={{background:'#f1f5f9', padding:'15px', borderRadius:'15px', border:'1px dashed #000', marginBottom:'15px'}}>
              <small>LINK:</small>
              <p style={{fontSize:11, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={USER_UID}</p>
-             <button style={styles.blackBtn} onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${USER_UID}`); alert("Copied!");}}>COPY LINK</button>
+             <button style={styles.blackBtn} onClick={() => triggerAdOnly(() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${USER_UID}`); alert("Copied!");})}>COPY LINK</button>
           </div>
           <h4 style={{marginTop: '20px'}}>INVITE HISTORY</h4>
           {inviteHistory.length > 0 ? inviteHistory.map(inv => (
@@ -222,13 +239,13 @@ function App() {
           <h2 style={{textAlign:'center'}}>PROFILE</h2>
           <div style={styles.row}><span>UID:</span><b>{USER_UID}</b></div>
           <div style={styles.row}><span>STATUS:</span><b style={{color: '#22c55e'}}>ACTIVE</b></div>
-          <button style={{...styles.blackBtn, marginTop: '10px'}} onClick={()=>window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
+          <button style={{...styles.blackBtn, marginTop: '10px'}} onClick={()=>triggerAdOnly(() => window.open(APP_CONFIG.SUPPORT_BOT))}>SUPPORT</button>
         </div>
       )}
 
       <div style={styles.navBar}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => setActiveNav(n)} style={styles.navBtn(activeNav === n)}>{n.toUpperCase()}</div>
+          <div key={n} onClick={() => triggerAdOnly(() => setActiveNav(n))} style={styles.navBtn(activeNav === n)}>{n.toUpperCase()}</div>
         ))}
       </div>
     </div>
