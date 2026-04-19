@@ -26,12 +26,14 @@ function App() {
   const [rewardCode, setRewardCode] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
-  const [adminTask, setAdminTask] = useState({ name: '', link: '', type: 'bot' });
-  const [isAddingChannel, setIsAddingChannel] = useState(false);
   
-  // User Channel Input States
-  const [userChannelName, setUserChannelName] = useState('');
-  const [userChannelLink, setUserChannelLink] = useState('');
+  // Admin Task Input States
+  const [adminTask, setAdminTask] = useState({ name: '', link: '', type: 'bot' });
+  
+  // States for +Add Task (User)
+  const [isAddingChannel, setIsAddingChannel] = useState(false);
+  const [userNameInput, setUserNameInput] = useState(''); // Name အတွက်
+  const [userLinkInput, setUserLinkInput] = useState(''); // Link အတွက်
 
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
@@ -56,7 +58,8 @@ function App() {
         setReferrals(userData.referrals || []);
       }
       if (tasksData) {
-        setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], fbKey: key })));
+        const tList = Object.keys(tasksData).map(key => ({ ...tasksData[key], fbKey: key }));
+        setCustomTasks(tList);
       }
     } catch (e) { console.error("Sync Error:", e); }
     setLoading(false);
@@ -75,47 +78,52 @@ function App() {
     } else { onSuccess(); }
   };
 
-  // --- Bro လိုချင်တဲ့ Ads -> Open Link -> Reward Logic ---
+  // --- Bro လိုချင်တဲ့ Ads -> Link -> Reward Flow ---
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return;
     
     runWithAd(() => {
-      // ၁။ Ads ကြည့်ပြီးရင် Link ကို အရင်ဖွင့်ပေးမယ်
-      if (tg && link.includes('t.me/')) {
+      // ၁။ ကြော်ငြာကြည့်ပြီးရင် Link ကို အရင်ဖွင့်ပေးမယ်
+      if (tg) {
         tg.openTelegramLink(link);
       } else {
         window.open(link, '_blank');
       }
 
-      // ၂။ ပွင့်သွားပြီဆိုတာနဲ့ TON ပေါင်းပေးမယ်
-      setTimeout(() => {
-        const newBal = Number((balance + reward).toFixed(5));
-        const newComp = [...completed, id];
-        setBalance(newBal);
-        setCompleted(newComp);
-        
-        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-          method: 'PATCH',
-          body: JSON.stringify({ balance: newBal, completed: newComp })
-        });
-        alert(`Success! +${reward} TON`);
-      }, 1500); // delay အနည်းငယ်ထားပြီး balance ပေါင်းပေးခြင်း
+      // ၂။ ဖွင့်ပြီးမှ TON ပေါင်းပေးမယ်
+      const newBal = Number((balance + reward).toFixed(5));
+      const newComp = [...completed, id];
+      setBalance(newBal);
+      setCompleted(newComp);
+      
+      fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+        method: 'PATCH',
+        body: JSON.stringify({ balance: newBal, completed: newComp })
+      });
+      
+      alert(`Success! +${reward} TON`);
     });
   };
 
-  // --- Add Channel Logic with Name and Link ---
-  const submitUserChannel = () => {
-    if (!userChannelName.trim() || !userChannelLink.trim()) return alert("Please fill both Name and Link.");
+  // --- +Add Task Submit (Admin/Support ဆီကို တန်းရောက်အောင်) ---
+  const submitUserTask = () => {
+    if (!userNameInput.trim() || !userLinkInput.trim()) return alert("Name နဲ့ Link နှစ်ခုလုံးဖြည့်ပေးပါဗျ။");
     
-    const combinedData = `Name: ${userChannelName.trim()} | Link: ${userChannelLink.trim()}`;
-    const encodedData = btoa(unescape(encodeURIComponent(combinedData))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    // Data ကို encode လုပ်ပြီး Bot ဆီပို့မယ်
+    const rawData = `Name: ${userNameInput.trim()} | Link: ${userLinkInput.trim()}`;
+    const encodedData = btoa(unescape(encodeURIComponent(rawData))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     
-    const botUrl = `${APP_CONFIG.HELP_BOT}?start=addchannel_${encodedData}`;
+    const botUrl = `${APP_CONFIG.HELP_BOT}?start=addtask_${encodedData}`;
     
-    if (tg) { tg.openTelegramLink(botUrl); } 
-    else { window.open(botUrl, '_blank'); }
+    if (tg) {
+      tg.openTelegramLink(botUrl);
+    } else {
+      window.open(botUrl, '_blank');
+    }
 
-    setUserChannelName(''); setUserChannelLink(''); setIsAddingChannel(false);
+    setUserNameInput('');
+    setUserLinkInput('');
+    setIsAddingChannel(false);
   };
 
   const botTasks = [
@@ -159,7 +167,7 @@ function App() {
   return (
     <div style={styles.main}>
       <div style={styles.header}>
-        <small style={{ color: '#facc15' }}>YOUR BALANCE</small>
+        <small style={{ color: '#facc15', letterSpacing: '1px' }}>YOUR BALANCE</small>
         <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:16, color:'#facc15'}}>TON</span></h1>
         <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● SYSTEM ACTIVE</div>
       </div>
@@ -184,14 +192,19 @@ function App() {
             
             {activeTab === 'social' && (
               <>
-                <button onClick={() => setIsAddingChannel(!isAddingChannel)} style={{...styles.btn, background: '#24A1DE', marginBottom: '15px'}}>+ ADD YOUR CHANNEL</button>
+                {/* +Add Task UI for Users */}
+                <button onClick={() => setIsAddingChannel(!isAddingChannel)} style={{...styles.btn, background: '#24A1DE', marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}}>
+                   <span>+ ADD TASK</span>
+                </button>
+
                 {isAddingChannel && (
-                  <div style={{paddingBottom:'15px'}}>
-                    <input style={styles.input} placeholder="Channel/Bot Name" value={userChannelName} onChange={(e) => setUserChannelName(e.target.value)} />
-                    <input style={styles.input} placeholder="Channel Link (https://t.me/...)" value={userChannelLink} onChange={(e) => setUserChannelLink(e.target.value)} />
-                    <button style={{...styles.btn, background:'#10b981'}} onClick={submitUserChannel}>SUBMIT TO SUPPORT</button>
+                  <div style={{padding: '15px', border: '2px dashed #24A1DE', borderRadius: '12px', marginBottom: '15px'}}>
+                    <input style={styles.input} placeholder="Channel Name ရိုက်ထည့်ပါ" value={userNameInput} onChange={(e) => setUserNameInput(e.target.value)} />
+                    <input style={styles.input} placeholder="Channel Link (https://t.me/...)" value={userLinkInput} onChange={(e) => setUserLinkInput(e.target.value)} />
+                    <button style={{...styles.btn, background:'#10b981'}} onClick={submitUserTask}>SUBMIT TO SUPPORT</button>
                   </div>
                 )}
+
                 {socialTasks.filter(t => !completed.includes(t.id)).map(t => (
                   <div key={t.id} style={styles.row}>
                     <b>{t.name}</b>
@@ -200,7 +213,8 @@ function App() {
                 ))}
               </>
             )}
-            {/* ... Other Tabs (REWARD, ADMIN) ... */}
+
+            {/* Reward Tab */}
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
@@ -209,19 +223,31 @@ function App() {
                 })}>CLAIM REWARD</button>
               </div>
             )}
+
+            {/* Admin Tab */}
             {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
               <div>
                 <h3 style={{textAlign:'center', marginBottom:15}}>ADMIN PANEL</h3>
-                <input style={styles.input} placeholder="Task Name" value={adminTask.name} onChange={e => setAdminTask({...adminTask, name: e.target.value})} />
-                <input style={styles.input} placeholder="Task Link" value={adminTask.link} onChange={e => setAdminTask({...adminTask, link: e.target.value})} />
-                <select style={styles.input} value={adminTask.type} onChange={e => setAdminTask({...adminTask, type: e.target.value})}>
+                <label>Task Name:</label>
+                <input style={styles.input} placeholder="e.g. Join My Channel" value={adminTask.name} onChange={e => setAdminTask({...adminTask, name: e.target.value})} />
+                <label>Link:</label>
+                <input style={styles.input} placeholder="https://t.me/..." value={adminTask.link} onChange={e => setAdminTask({...adminTask, link: e.target.value})} />
+                <label>Type:</label>
+                <select style={{...styles.input, appearance:'none'}} value={adminTask.type} onChange={e => setAdminTask({...adminTask, type: e.target.value})}>
                   <option value="bot">BOT TASK</option>
                   <option value="social">SOCIAL TASK</option>
                 </select>
                 <button style={{...styles.btn, background:'#10b981'}} onClick={async () => {
-                   if (!adminTask.name || !adminTask.link) return alert("Fill Name and Link");
-                   await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method: 'POST', body: JSON.stringify({...adminTask, id: 'custom_'+Date.now()}) });
-                   alert("Task Added!"); fetchData();
+                  if (!adminTask.name || !adminTask.link) return alert("Please fill Name and Link.");
+                  try {
+                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, {
+                      method: 'POST',
+                      body: JSON.stringify({ ...adminTask, id: 'custom_' + Date.now() })
+                    });
+                    alert("New task added successfully!");
+                    setAdminTask({ name: '', link: '', type: 'bot' });
+                    fetchData();
+                  } catch (e) { alert("Error adding task!"); }
                 }}>CONFIRM ADD TASK</button>
               </div>
             )}
@@ -229,7 +255,7 @@ function App() {
         </>
       )}
 
-      {/* Navigation Buttons */}
+      {/* Footer Navigation */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div key={n} onClick={() => runWithAd(() => setActiveNav(n))} style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold', cursor:'pointer'}}>{n.toUpperCase()}</div>
