@@ -10,7 +10,7 @@ const APP_CONFIG = {
   ADMIN_BOT_TOKEN: "8732500858:AAFenYSvS3hZ9gB2o0lYYv9fv85KCNWguzk",
   ADMIN_CHAT_ID: "5020977059",
   HELP_BOT: "https://t.me/EasyTonHelp_Bot",
-  REWARD_CODE: "EASY2",
+  REWARD_CODE: "EASY3",
   REWARD_AMT: 0.001
 };
 
@@ -53,29 +53,30 @@ function App() {
     });
   };
 
-  const runTaskWithAd = (callback) => {
+  // ကြော်ငြာပြီးအောင်ကြည့်မှ Reward ပေးမည့် Logic
+  const runTaskWithAd = (onSuccess) => {
     if (isAdLoading) return;
     if (window.Adsgram) {
       setIsAdLoading(true);
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
         .then(() => { 
             setIsAdLoading(false); 
-            if (callback) callback(); 
+            if (onSuccess) onSuccess(); // အောင်မြင်စွာကြည့်ပြီးမှ Reward ပေးရန်
         })
         .catch((err) => { 
             setIsAdLoading(false); 
-            if (callback) callback(); 
+            console.error("Ad error or skipped:", err);
+            alert("ကြော်ငြာဆုံးအောင်ကြည့်မှ TON ရပါမည်။");
         });
     } else {
-      if (callback) callback();
+      // Adsgram script မရှိပါက reward မပေးပါ
+      alert("Adsgram Not Connected!");
     }
   };
 
   const handleNavChange = (newNav) => {
     if (newNav === activeNav) return;
-    runTaskWithAd(() => {
-        setActiveNav(newNav);
-    });
+    setActiveNav(newNav);
   };
 
   useEffect(() => {
@@ -184,13 +185,11 @@ function App() {
                 <button style={{...styles.btn, backgroundColor:'#facc15', color:'#000', border:'2px solid #000', marginBottom:'15px'}} onClick={() => setShowAddPromo(!showAddPromo)}>+ ADD TASK (PROMOTE)</button>
                 {showAddPromo && (
                   <div style={{marginBottom:'20px'}}>
-                    <input style={styles.input} placeholder="Channel Name" onChange={e => setPromoForm({...promoForm, name: e.target.value})} />
-                    <input style={styles.input} placeholder="Channel Link" onChange={e => setPromoForm({...promoForm, link: e.target.value})} />
+                    <input style={styles.input} placeholder="Channel Link" onChange={e => setPromoForm({...promoForm, name: e.target.value})} />
+                    <input style={styles.input} placeholder="Your Contact (Telegram)" onChange={e => setPromoForm({...promoForm, link: e.target.value})} />
                     
-                    {/* View Package select box နှင့် Admin Wallet address box များကို ဖယ်ရှားလိုက်ပါသည် */}
-
                     <button style={{...styles.btn, backgroundColor:'#3b82f6'}} onClick={() => {
-                        sendAdminNotify(`📢 NEW PROMO\nUID: ${APP_CONFIG.MY_UID}\nName: ${promoForm.name}`);
+                        sendAdminNotify(`📢 NEW PROMO\nUID: ${APP_CONFIG.MY_UID}\nLink: ${promoForm.name}`);
                         window.open(APP_CONFIG.HELP_BOT);
                     }}>SEND PROOF</button>
                   </div>
