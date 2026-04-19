@@ -28,7 +28,6 @@ function App() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   
-  // --- New States for Add Task ---
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
   const [adminTaskType, setAdminTaskType] = useState('bot');
@@ -91,10 +90,16 @@ function App() {
 
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Task already completed!");
+    
+    // Ads အရင်ပြမယ်
     runWithAd(() => {
-      if (tg && link && link.includes('t.me/')) { tg.openTelegramLink(link); } 
-      else if (link) { window.open(link, '_blank'); }
+      // Ads ကြည့်ပြီးမှ Link ကိုသွားမယ်
+      if (link) {
+        if (tg && link.includes('t.me/')) { tg.openTelegramLink(link); } 
+        else { window.open(link, '_blank'); }
+      }
       
+      // ပြီးမှ Balance ပေါင်းမယ်
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
       setBalance(newBal);
@@ -139,10 +144,12 @@ function App() {
     });
   };
 
-  // --- User Add Channel Function ---
   const handleUserAddChannel = () => {
     if (!userChannelName || !userChannelLink) return alert("Please fill both Name and Link!");
+    
+    // Ads အရင်ပြမယ်
     runWithAd(() => {
+      // Ads ကြည့်ပြီးမှ Support ဆီပို့မယ်
       const logData = btoa(unescape(encodeURIComponent(`User Task Submission:\nName: ${userChannelName}\nLink: ${userChannelLink}`)));
       if (tg) tg.openTelegramLink(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`);
       alert("Channel submitted to Admin & Support!");
@@ -151,7 +158,6 @@ function App() {
     });
   };
 
-  // --- Admin Function to Add Global Task ---
   const handleAdminAddTask = async () => {
     if (!adminTaskName || !adminTaskLink) return alert("Please fill Admin fields!");
     runWithAd(async () => {
@@ -256,7 +262,14 @@ function App() {
               <div><input style={styles.input} placeholder="Enter Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
               <button style={styles.btn} onClick={() => {
                 if(completed.includes('code_'+APP_CONFIG.REWARD_CODE)) return alert("Code already used!");
-                runWithAd(() => { rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE ? handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001) : alert('Invalid Code!'); });
+                // Ads အရင်ပြမယ်၊ ပြီးမှ Reward ပေါင်းမယ်
+                runWithAd(() => { 
+                   if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
+                      handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001, null);
+                   } else {
+                      alert('Invalid Code!');
+                   }
+                });
               }}>CLAIM</button></div>
             )}
 
@@ -316,7 +329,7 @@ function App() {
           <div style={styles.row}><span>Status:</span> <b style={{color:'#10b981'}}>Active</b></div>
           <div style={styles.row}><span>Balance:</span> <b>{balance.toFixed(5)} TON</b></div>
           <div style={styles.row}><span>User ID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
-          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => { if(tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT); }}>@EasyTonHelp_Bot</b></div>
+          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => runWithAd(() => { if(tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT); })}>@EasyTonHelp_Bot</b></div>
         </div>
       )}
 
