@@ -27,10 +27,11 @@ function App() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [adminTask, setAdminTask] = useState({ name: '', link: '', type: 'bot' });
-  const [showAddChannel, setShowAddChannel] = useState(false);
-  const [newChannelLink, setNewChannelLink] = useState('');
+  
+  // New States for Add Channel
+  const [isAddingChannel, setIsAddingChannel] = useState(false);
+  const [channelInput, setChannelInput] = useState('');
 
-  // LocalStorage Sync
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
@@ -114,11 +115,13 @@ function App() {
     });
   };
 
-  const handleAddChannelRequest = () => {
-    if (!newChannelLink) return alert("Please enter your channel link!");
-    window.open(`${APP_CONFIG.HELP_BOT}?start=add_${btoa(newChannelLink)}`);
-    setNewChannelLink('');
-    setShowAddChannel(false);
+  // Submit Channel Link to Support Bot
+  const submitChannel = () => {
+    if (!channelInput.trim()) return alert("Link ဖြည့်ပါဦးဗျ။");
+    const msg = `New Channel Request: ${channelInput}`;
+    window.open(`${APP_CONFIG.HELP_BOT}?start=addchannel_${btoa(channelInput)}`, '_blank');
+    setChannelInput('');
+    setIsAddingChannel(false);
   };
 
   const botTasks = [
@@ -132,20 +135,20 @@ function App() {
   ];
 
   const socialTasks = [
-    { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-    { id: 's3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
-    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
-    { id: 's5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
-    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
-    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
-    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
-    { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
-    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-    { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
-    { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
-    { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
-    { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" },
+    { id: 'soc_1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 'soc_2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 'soc_3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 'soc_4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 'soc_5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 'soc_6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 'soc_7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 'soc_8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+    { id: 'soc_9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
+    { id: 'soc_10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+    { id: 'soc_11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
+    { id: 'soc_12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
+    { id: 'soc_13', name: "@zrbtua", link: "https://t.me/zrbtua" },
+    { id: 'soc_14', name: "@perviu1million", link: "https://t.me/perviu1million" },
     ...customTasks.filter(t => t.type === 'social')
   ];
 
@@ -162,7 +165,7 @@ function App() {
   return (
     <div style={styles.main}>
       <div style={styles.header}>
-        <small style={{ color: '#facc15' }}>YOUR BALANCE</small>
+        <small style={{ color: '#facc15', letterSpacing: '1px' }}>YOUR BALANCE</small>
         <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:16, color:'#facc15'}}>TON</span></h1>
         <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● SYSTEM ACTIVE</div>
       </div>
@@ -179,20 +182,28 @@ function App() {
 
           <div style={styles.card}>
             {activeTab === 'bot' && botTasks.filter(t => !completed.includes(t.id)).map(t => (
-              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, APP_CONFIG.TASK_REWARD, t.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>START</button></div>
+              <div key={t.id} style={styles.row}>
+                <b>{t.name}</b>
+                <button onClick={() => handleTaskReward(t.id, APP_CONFIG.TASK_REWARD, t.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>START</button>
+              </div>
             ))}
             
             {activeTab === 'social' && (
               <>
-                <button onClick={() => setShowAddChannel(!showAddChannel)} style={{...styles.btn, background: '#24A1DE', marginBottom: '15px'}}>+ ADD YOUR CHANNEL</button>
-                {showAddChannel && (
-                  <div style={{marginBottom: '15px'}}>
-                    <input style={styles.input} placeholder="Paste Channel Link Here" value={newChannelLink} onChange={(e) => setNewChannelLink(e.target.value)} />
-                    <button style={{...styles.btn, background: '#10b981', padding: '10px'}} onClick={handleAddChannelRequest}>SEND TO SUPPORT</button>
+                <button onClick={() => setIsAddingChannel(!isAddingChannel)} style={{...styles.btn, background: '#24A1DE', marginBottom: '15px'}}>+ ADD YOUR CHANNEL</button>
+                
+                {isAddingChannel && (
+                  <div style={{paddingBottom:'15px'}}>
+                    <input style={styles.input} placeholder="Channel Link or Name" value={channelInput} onChange={(e) => setChannelInput(e.target.value)} />
+                    <button style={{...styles.btn, background:'#10b981'}} onClick={submitChannel}>SUBMIT TO SUPPORT</button>
                   </div>
                 )}
+
                 {socialTasks.filter(t => !completed.includes(t.id)).map(t => (
-                  <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, APP_CONFIG.TASK_REWARD, t.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>JOIN</button></div>
+                  <div key={t.id} style={styles.row}>
+                    <b>{t.name}</b>
+                    <button onClick={() => handleTaskReward(t.id, APP_CONFIG.TASK_REWARD, t.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>JOIN</button>
+                  </div>
                 ))}
               </>
             )}
@@ -210,11 +221,13 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3>Invite Friends</h3>
-          <p style={{fontSize:'14px'}}>Get <b>{APP_CONFIG.REF_REWARD} TON</b> for every friend you invite!</p>
+          <p style={{fontSize:'14px', color:'#666'}}>Get <b>{APP_CONFIG.REF_REWARD} TON</b> for every friend you invite!</p>
           <div style={{background:'#eee', padding:'10px', borderRadius:'10px', wordBreak:'break-all', fontSize:'12px', border:'1px dashed #000'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</div>
           <button style={{...styles.btn, marginTop:'10px'}} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!"); }}>COPY LINK</button>
           <h4 style={{marginTop:'20px'}}>Invite History</h4>
-          {referrals.length === 0 ? <p style={{fontSize:'12px', color:'#999'}}>No referrals yet.</p> : referrals.map((r, i) => (<div key={i} style={styles.row}><span>User ID: {r.id}</span><span style={{color:'#10b981'}}>+0.001 TON</span></div>))}
+          {referrals.length === 0 ? <p style={{fontSize:'12px', color:'#999'}}>No referrals yet.</p> : 
+            referrals.map((r, i) => (<div key={i} style={styles.row}><span>User ID: {r.id}</span><span style={{color:'#10b981'}}>+0.001 TON</span></div>))
+          }
         </div>
       )}
 
