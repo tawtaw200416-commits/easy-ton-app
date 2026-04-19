@@ -17,7 +17,7 @@ const APP_CONFIG = {
 };
 
 function App() {
-  const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_bal')) || 0);
+  const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_bal')) || 0.0000);
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('comp_tasks')) || []);
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || []);
   const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem('refs')) || []);
@@ -26,12 +26,14 @@ function App() {
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [rewardCode, setRewardCode] = useState('');
+  const [showAddPromo, setShowAddPromo] = useState(false);
+  const [promoForm, setPromoForm] = useState({ name: '', link: '' });
   const [isAdLoading, setIsAdLoading] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [adminTask, setAdminTask] = useState({ name: '', link: '', type: 'bot' });
 
-  // LocalStorage Sync
+  // LocalStorage Sync (Data မပျောက်စေရန်)
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
@@ -39,7 +41,7 @@ function App() {
     localStorage.setItem('refs', JSON.stringify(referrals));
   }, [balance, completed, withdrawHistory, referrals]);
 
-  // Firebase မှ Data ဖတ်ယူခြင်း (Referral History ပါအောင် ပြင်ထားသည်)
+  // Firebase Data Fetching
   const fetchUserData = useCallback(async () => {
     try {
       const [userRes, tasksRes] = await Promise.all([
@@ -54,18 +56,28 @@ function App() {
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
         
-        // Referral Data ကို Array format ပြောင်းခြင်း
+        // Referral History ကို Object ကနေ Array ပြောင်းပြီး မှန်ကန်စွာ ပြသခြင်း
         if (userData.referrals) {
-          const refArray = Object.keys(userData.referrals).map(key => ({
-            id: key,
-            ...userData.referrals[key]
-          }));
-          setReferrals(refArray);
+          const refList = typeof userData.referrals === 'object' && !Array.isArray(userData.referrals)
+            ? Object.keys(userData.referrals).map(key => ({ id: key, ...userData.referrals[key] }))
+            : userData.referrals;
+          setReferrals(refList);
         }
       }
-      if (tasksData) setCustomTasks(Object.values(tasksData));
-    } catch (e) { console.error("Sync Error:", e); }
-    setLoading(false);
+
+      if (tasksData) {
+        // Global Task များကို Array Format ပြောင်းလဲခြင်း
+        const loadedTasks = Object.keys(tasksData).map(key => ({
+          ...tasksData[key],
+          id: key
+        }));
+        setCustomTasks(loadedTasks);
+      }
+    } catch (e) { 
+      console.error("Sync Error:", e); 
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -81,47 +93,74 @@ function App() {
     } else { onSuccess(); }
   };
 
-  // Task လုပ်ပြီးရင် Balance နဲ့ Task စာရင်း Firebase မှာ Update လုပ်ခြင်း
-  const handleTaskReward = async (id, reward, link) => {
+  // Task လုပ်ပြီး Rewards ရယူခြင်း
+  const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
-    
     runWithNavAd(async () => {
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
+      setBalance(newBal);
+      setCompleted(newComp);
       
-      try {
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-          method: 'PATCH',
-          body: JSON.stringify({ balance: newBal, completed: newComp })
-        });
-        setBalance(newBal);
-        setCompleted(newComp);
-        if (link) window.open(link, '_blank');
-        alert(`Claimed! +${reward} TON`);
-      } catch (e) { alert("Error updating reward."); }
+      await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+        method: 'PATCH',
+        body: JSON.stringify({ balance: newBal, completed: newComp })
+      });
+
+      if (link) window.open(link, '_blank');
+      alert(`Claimed! +${reward} TON`);
     });
   };
 
-  // Admin ကိုယ်တိုင် Global Task အသစ်တိုးခြင်း
+  // Admin မှ Task အသစ်ထည့်ခြင်း (UI တွင် ချက်ချင်းပေါ်စေရန် ပြင်ဆင်ထားသည်)
   const handleAddAdminTask = async () => {
     if (!adminTask.name || !adminTask.link) return alert("အချက်အလက် အကုန်ဖြည့်ပါ။");
     const taskId = 'task_' + Date.now();
     const newTaskObj = { ...adminTask, id: taskId };
     
     try {
-      const response = await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${taskId}.json`, {
+      await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${taskId}.json`, {
         method: 'PUT',
         body: JSON.stringify(newTaskObj)
       });
       
-      if(response.ok) {
-        setCustomTasks(prev => [...prev, newTaskObj]); // UI မှာ ချက်ချင်းတိုးအောင်လုပ်
-        setAdminTask({ name: '', link: '', type: 'bot' });
-        alert("Global Task အသစ် ထည့်ပြီးပါပြီ။");
-      }
-    } catch (e) { alert("Server Error!"); }
+      // UI တွင် ချက်ချင်း Update ဖြစ်စေရန်
+      setCustomTasks(prev => [...prev, newTaskObj]);
+      setAdminTask({ name: '', link: '', type: 'bot' });
+      alert("Task အသစ်ကို အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။");
+    } catch (e) { 
+      alert("Error: Server သို့ မပို့နိုင်ပါ။"); 
+    }
   };
 
+  const handleWithdraw = () => {
+    const amt = Number(withdrawAmount);
+    if (amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum Withdraw is ${APP_CONFIG.MIN_WITHDRAW} TON`);
+    if (amt > balance) return alert("Insufficient Balance!");
+    if (!withdrawAddress) return alert("Enter Wallet Address!");
+
+    runWithNavAd(async () => {
+      const newBal = Number((balance - amt).toFixed(5));
+      const newHistory = [{
+        amount: amt,
+        address: withdrawAddress,
+        status: 'Pending',
+        date: new Date().toLocaleString()
+      }, ...withdrawHistory];
+
+      setBalance(newBal);
+      setWithdrawHistory(newHistory);
+      setWithdrawAmount('');
+
+      await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+        method: 'PATCH',
+        body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
+      });
+      alert("Withdraw Request Sent!");
+    });
+  };
+
+  // Default Tasks
   const defaultBots = [
     { id: 'b_gt', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b_wt', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" }
@@ -141,14 +180,14 @@ function App() {
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eee' }
   };
 
-  if (loading) return <div style={{textAlign:'center', marginTop:'50px'}}>SYNCING...</div>;
+  if (loading) return <div style={{textAlign:'center', marginTop:'50px', fontWeight:'bold'}}>SYNCING DATA...</div>;
 
   return (
     <div style={styles.main}>
       <div style={styles.header}>
-        <small style={{ color: '#facc15' }}>MY BALANCE</small>
-        <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:16}}>TON</span></h1>
-        <div style={{fontSize:10, color:'#10b981'}}>● SERVER CONNECTED</div>
+        <small style={{ color: '#facc15' }}>CURRENT BALANCE</small>
+        <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:16, color:'#facc15'}}>TON</span></h1>
+        <div style={{fontSize:10, color:'#10b981', fontWeight:'bold'}}>● ACTIVE STATUS</div>
       </div>
 
       {activeNav === 'earn' && (
@@ -172,9 +211,10 @@ function App() {
 
             {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
               <div>
+                <h3 style={{marginTop:0}}>ADD GLOBAL TASK</h3>
                 <input style={styles.input} placeholder="Task Name" value={adminTask.name} onChange={e => setAdminTask({...adminTask, name: e.target.value})} />
                 <input style={styles.input} placeholder="Task Link" value={adminTask.link} onChange={e => setAdminTask({...adminTask, link: e.target.value})} />
-                <select style={styles.input} value={adminTask.type} onChange={e => setAdminTask({...adminTask, type: e.target.value})}>
+                <select style={{...styles.input, appearance:'auto'}} value={adminTask.type} onChange={e => setAdminTask({...adminTask, type: e.target.value})}>
                   <option value="bot">BOT TASK</option>
                   <option value="social">SOCIAL TASK</option>
                 </select>
@@ -187,22 +227,33 @@ function App() {
 
       {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h3>INVITE HISTORY</h3>
-          <p style={{fontSize:12, marginBottom:15}}>Referral Link: <br/>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</p>
-          <button style={{...styles.btn, marginBottom:20}} onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert('Link Copied!');}}>COPY LINK</button>
+          <h3>INVITE FRIENDS</h3>
+          <p style={{fontSize:'14px', color:'#666'}}>Get <b>0.001 TON</b> for each friend!</p>
+          <div style={{background:'#eee', padding:'15px', borderRadius:'10px', wordBreak:'break-all', marginBottom:'10px', border:'1px dashed #000', fontSize: '13px'}}>
+            https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}
+          </div>
+          <button style={{...styles.btn, marginBottom: '20px'}} onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert('Copied!');}}>COPY LINK</button>
           
-          {referrals.length > 0 ? referrals.map((ref, idx) => (
-            <div key={idx} style={styles.row}>
-              <span>ID: <b>{ref.id}</b></span>
-              <span style={{color:'#10b981', fontWeight:'bold'}}>● COMPLETED</span>
-            </div>
-          )) : <p style={{textAlign:'center', fontSize:12, color:'#999'}}>No referrals yet.</p>}
+          <h4>INVITE HISTORY ({referrals.length})</h4>
+          {referrals.length > 0 ? (
+            referrals.map((ref, idx) => (
+              <div key={idx} style={styles.row}>
+                <div style={{fontSize:'13px'}}>
+                  <b>ID: {ref.uid || ref.id}</b>
+                  <br/><small style={{color:'#666'}}>{ref.date || "Just now"}</small>
+                </div>
+                <div style={{color:'#10b981', fontWeight:'bold', fontSize:'12px'}}>● COMPLETE</div>
+              </div>
+            ))
+          ) : (
+            <p style={{textAlign:'center', fontSize:'12px', color:'#999'}}>No referrals yet.</p>
+          )}
         </div>
       )}
 
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => setActiveNav(n)} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
+          <div key={n} onClick={() => runWithNavAd(() => setActiveNav(n))} style={styles.navItem(activeNav === n)}>{n.toUpperCase()}</div>
         ))}
       </div>
     </div>
