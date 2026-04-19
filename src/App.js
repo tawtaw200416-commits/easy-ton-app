@@ -31,7 +31,6 @@ function App() {
   const [rewardInput, setRewardInput] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isAdLoading, setIsAdLoading] = useState(false);
-  const [testReferralId, setTestReferralId] = useState('');
 
   useEffect(() => { if (tg) { tg.ready(); tg.expand(); } }, []);
 
@@ -43,9 +42,11 @@ function App() {
     localStorage.setItem('adm_tasks_list', JSON.stringify(adminTasks));
   }, [balance, completed, withdrawHistory, inviteHistory, adminTasks]);
 
+  // Force Ad for every action
   const handleActionWithAds = (reward, taskId = null, link = null, callback = null) => {
     if (isAdLoading) return;
     const randomBlockId = APP_CONFIG.ADS_BLOCKS[Math.floor(Math.random() * APP_CONFIG.ADS_BLOCKS.length)];
+    
     if (window.Adsgram) {
       setIsAdLoading(true);
       window.Adsgram.init({ blockId: randomBlockId }).show().then(() => {
@@ -56,21 +57,13 @@ function App() {
           if (callback) callback();
       }).catch(() => {
           setIsAdLoading(false);
-          alert("Ad failed. No reward.");
+          // If ad fails, we still allow the link to open but can choose to withhold reward
+          if (link) window.open(link, '_blank');
           if (callback) callback();
       });
     } else {
+      alert("Adsgram not connected yet. Please wait.");
       if (link) window.open(link, '_blank');
-      if (callback) callback();
-    }
-  };
-
-  const handleAddReferral = () => {
-    if (testReferralId.trim() !== "") {
-      setBalance(prev => Number((prev + APP_CONFIG.REFER_REWARD).toFixed(5)));
-      setInviteHistory(prev => [{ id: Date.now(), uid: testReferralId }, ...prev]);
-      setTestReferralId('');
-      alert("Referral Reward Added! +0.001 TON");
     }
   };
 
@@ -91,12 +84,38 @@ function App() {
     badge: (status) => ({ backgroundColor: status === 'Pending' ? '#f59e0b' : '#22c55e', color: '#fff', padding: '4px 8px', borderRadius: '8px', fontSize: '10px' })
   };
 
+  const botTasks = [
+    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
+  ];
+
+  const socialTasksList = [
+    { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 's3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 's5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+    { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
+    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+    { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
+    { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
+    { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
+    { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
+  ];
+
   return (
     <div style={styles.main}>
       <div style={styles.balanceCard}>
         <small style={{ color: '#facc15' }}>CURRENT BALANCE</small>
         <h1 style={{ fontSize: '45px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:'18px'}}>TON</span></h1>
-        <small>UID: {USER_UID}</small>
+        <div style={{color: '#22c55e', fontSize: '12px', fontWeight: 'bold'}}>● ACTIVE STATUS</div>
       </div>
 
       {activeNav === 'earn' && (
@@ -141,40 +160,20 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && [
-              { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-              { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-              { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-              { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-              { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
-              { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
-            ].filter(t => !completed.includes(t.id)).map(t => (
+            {activeTab === 'bot' && botTasks.filter(t => !completed.includes(t.id)).map(t => (
               <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleActionWithAds(APP_CONFIG.TASK_REWARD, t.id, t.link)} style={{...styles.blackBtn, width:'80px'}}>START</button></div>
             ))}
 
             {activeTab === 'social' && [
               ...adminTasks,
-              { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-              { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-              { id: 's3', name: "@cryptogold_online", link: "https://t.me/cryptogold_online_official" },
-              { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
-              { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
-              { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
-              { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
-              { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
-              { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
-              { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-              { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
-              { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
-              { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
-              { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
+              ...socialTasksList
             ].filter(t => !completed.includes(t.id)).map(t => (
               <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleActionWithAds(APP_CONFIG.TASK_REWARD, t.id, t.link)} style={{...styles.blackBtn, width:'80px'}}>JOIN</button></div>
             ))}
             
             {activeTab === 'reward' && (
               <div>
-                <input style={styles.input} placeholder="Enter EASY3 Code" value={rewardInput} onChange={(e)=>setRewardInput(e.target.value)} />
+                <input style={styles.input} placeholder="Enter Code" value={rewardInput} onChange={(e)=>setRewardInput(e.target.value)} />
                 <button style={styles.blackBtn} onClick={() => rewardInput===APP_CONFIG.REWARD_CODE ? handleActionWithAds(APP_CONFIG.CODE_REWARD_AMOUNT, 'code_claimed') : alert("Wrong Code")}>CLAIM</button>
               </div>
             )}
@@ -191,15 +190,10 @@ function App() {
              <p style={{fontSize:11, wordBreak:'break-all'}}>https://t.me/EasyTONFree_Bot?start={USER_UID}</p>
              <button style={styles.blackBtn} onClick={() => {navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${USER_UID}`); alert("Copied!");}}>COPY LINK</button>
           </div>
-          <div style={{marginTop: '20px'}}>
-            <small>TEST REFERRAL:</small>
-            <input style={styles.input} placeholder="Friend's UID" value={testReferralId} onChange={(e)=>setTestReferralId(e.target.value)} />
-            <button style={{...styles.blackBtn, background:'#22c55e'}} onClick={handleAddReferral}>ADD REFERRAL</button>
-          </div>
           <h4 style={{marginTop: '20px'}}>INVITE HISTORY</h4>
-          {inviteHistory.map(inv => (
+          {inviteHistory.length > 0 ? inviteHistory.map(inv => (
             <div key={inv.id} style={styles.row}><span>User: {inv.uid}</span><b style={{color:'green'}}>+0.001 TON</b></div>
-          ))}
+          )) : <p style={{textAlign:'center', color:'#666'}}>No referrals yet.</p>}
         </div>
       )}
 
@@ -214,7 +208,7 @@ function App() {
               setWithdrawHistory(prev => [{ id: Date.now(), amount: amt, status: 'Pending', time: Date.now() }, ...prev]);
               setWithdrawAmount('');
               alert("Withdraw Success!");
-            } else { alert("Insufficient Balance!"); }
+            } else { alert("Insufficient Balance or Min 0.1 TON!"); }
           })}>WITHDRAW NOW</button>
           <h4 style={{marginTop: '20px'}}>HISTORY</h4>
           {withdrawHistory.map(h => (
@@ -227,6 +221,7 @@ function App() {
         <div style={styles.card}>
           <h2 style={{textAlign:'center'}}>PROFILE</h2>
           <div style={styles.row}><span>UID:</span><b>{USER_UID}</b></div>
+          <div style={styles.row}><span>STATUS:</span><b style={{color: '#22c55e'}}>ACTIVE</b></div>
           <button style={{...styles.blackBtn, marginTop: '10px'}} onClick={()=>window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
         </div>
       )}
