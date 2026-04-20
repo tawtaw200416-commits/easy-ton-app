@@ -73,7 +73,10 @@ function App() {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
         .then(() => onSuccess())
-        .catch(() => alert("Please watch the full ad to proceed!"));
+        .catch(() => {
+            alert("Please watch the full ad to proceed!");
+            // Bro တို့ user တွေ error တက်ရင်လဲ page ရွေ့ပေးချင်ရင်တော့ onSuccess() ကို ဒီမှာပါ ထည့်ပေးနိုင်ပါတယ်
+        });
     } else { onSuccess(); }
   };
 
@@ -89,11 +92,10 @@ function App() {
     });
   };
 
-  // Bot နဲ့ Social အတွက် Task logic (ဒီနေရာကို သေချာပြင်ထားပါတယ်)
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Task already completed!");
     
-    // ၁။ Link ကို runWithAd ရဲ့ အပြင်မှာ အရင်ထားလိုက်ပါတယ် (နှိပ်တာနဲ့ Link အရင်ပွင့်မယ်)
+    // ၁။ Link အရင်ပွင့်မယ်
     if (link) {
       if (tg && link.includes('t.me/')) { 
         tg.openTelegramLink(link); 
@@ -102,26 +104,8 @@ function App() {
       }
     }
 
-    // ၂။ Link ပွင့်သွားတာနဲ့ နောက်ကွယ်မှာ Adsgram ကို run ပါမယ်
-    if (window.Adsgram) {
-      window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
-        .then(() => {
-          // ၃။ Ads ကြည့်ပြီးမှ Balance ကို ပေါင်းမယ့် logic ပါ
-          const newBal = Number((balance + reward).toFixed(5));
-          const newComp = [...completed, id];
-          setBalance(newBal);
-          setCompleted(newComp);
-          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-            method: 'PATCH',
-            body: JSON.stringify({ balance: newBal, completed: newComp })
-          });
-          alert(`Task Success! +${reward} TON`);
-        })
-        .catch(() => {
-          alert("Please watch the full ad to proceed!");
-        });
-    } else {
-      // Adsgram မရှိရင်လဲ ပိုက်ဆံပေါင်းပေးမယ်
+    // ၂။ ကြော်ငြာပြမယ်၊ ပြီးမှ balance ပေါင်းမယ်
+    runWithAd(() => {
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
       setBalance(newBal);
@@ -131,7 +115,7 @@ function App() {
         body: JSON.stringify({ balance: newBal, completed: newComp })
       });
       alert(`Task Success! +${reward} TON`);
-    }
+    });
   };
 
   const handleWithdrawRequest = () => {
@@ -237,7 +221,13 @@ function App() {
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
                (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && (
-                <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight:'bold', border:'2px solid #000'}}>{t}</button>
+                <button 
+                  key={t} 
+                  onClick={() => runWithAd(() => setActiveTab(t.toLowerCase()))} 
+                  style={{ flex: 1, padding: '10px', borderRadius: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight:'bold', border:'2px solid #000'}}
+                >
+                  {t}
+                </button>
                )
             ))}
           </div>
@@ -332,7 +322,13 @@ function App() {
 
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => setActiveNav(n)} style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold', cursor:'pointer'}}>{n.toUpperCase()}</div>
+          <div 
+            key={n} 
+            onClick={() => runWithAd(() => setActiveNav(n))} 
+            style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold', cursor:'pointer'}}
+          >
+            {n.toUpperCase()}
+          </div>
         ))}
       </div>
     </div>
