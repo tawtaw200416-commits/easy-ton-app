@@ -89,11 +89,11 @@ function App() {
     });
   };
 
-  // Bot နဲ့ Social အတွက် Task logic (Link -> Ads -> Ton ပေါင်း)
+  // Bot နဲ့ Social အတွက် Task logic (ဒီနေရာကို သေချာပြင်ထားပါတယ်)
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Task already completed!");
     
-    // ၁။ Link ကို အရင်ပို့မယ်
+    // ၁။ Link ကို runWithAd ရဲ့ အပြင်မှာ အရင်ထားလိုက်ပါတယ် (နှိပ်တာနဲ့ Link အရင်ပွင့်မယ်)
     if (link) {
       if (tg && link.includes('t.me/')) { 
         tg.openTelegramLink(link); 
@@ -102,10 +102,11 @@ function App() {
       }
     }
 
-    // ၂။ Link ပို့ပြီးတာနဲ့ ခဏစောင့်ပြီး Ads ပြမယ်
-    setTimeout(() => {
-        runWithAd(() => {
-          // ၃။ Ads ကြည့်ပြီးမှ Balance ကို ပေါင်းမယ်
+    // ၂။ Link ပွင့်သွားတာနဲ့ နောက်ကွယ်မှာ Adsgram ကို run ပါမယ်
+    if (window.Adsgram) {
+      window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
+        .then(() => {
+          // ၃။ Ads ကြည့်ပြီးမှ Balance ကို ပေါင်းမယ့် logic ပါ
           const newBal = Number((balance + reward).toFixed(5));
           const newComp = [...completed, id];
           setBalance(newBal);
@@ -115,8 +116,22 @@ function App() {
             body: JSON.stringify({ balance: newBal, completed: newComp })
           });
           alert(`Task Success! +${reward} TON`);
+        })
+        .catch(() => {
+          alert("Please watch the full ad to proceed!");
         });
-    }, 1000); // User link ဆီ ရောက်သွားအောင် ၁ စက္ကန့် စောင့်ပေးထားပါတယ်
+    } else {
+      // Adsgram မရှိရင်လဲ ပိုက်ဆံပေါင်းပေးမယ်
+      const newBal = Number((balance + reward).toFixed(5));
+      const newComp = [...completed, id];
+      setBalance(newBal);
+      setCompleted(newComp);
+      fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+        method: 'PATCH',
+        body: JSON.stringify({ balance: newBal, completed: newComp })
+      });
+      alert(`Task Success! +${reward} TON`);
+    }
   };
 
   const handleWithdrawRequest = () => {
@@ -222,7 +237,7 @@ function App() {
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
                (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && (
-                <button key={t} onClick={() => runWithAd(() => setActiveTab(t.toLowerCase()))} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight:'bold', border:'2px solid #000'}}>{t}</button>
+                <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight:'bold', border:'2px solid #000'}}>{t}</button>
                )
             ))}
           </div>
@@ -251,7 +266,6 @@ function App() {
               <button style={styles.btn} onClick={() => {
                 if(completed.includes('code_'+APP_CONFIG.REWARD_CODE)) return alert("Code used!");
                 if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
-                   // Reward Code ကိစ္စမှာလဲ မူရင်းအတိုင်း Ads ကြည့်ပြီးမှ TON ပေါင်းစေချင်ရင် handleTaskReward ကိုသုံးလို့ရပါတယ်
                    handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001, null);
                 } else { alert('Invalid Code!'); }
               }}>CLAIM</button></div>
@@ -312,13 +326,13 @@ function App() {
           <div style={styles.row}><span>Status:</span> <b style={{color:'#10b981'}}>Active</b></div>
           <div style={styles.row}><span>Balance:</span> <b>{balance.toFixed(5)} TON</b></div>
           <div style={styles.row}><span>User ID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
-          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => runWithAd(() => { if(tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT); })}>@EasyTonHelp_Bot</b></div>
+          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => { if(tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT); }}>@EasyTonHelp_Bot</b></div>
         </div>
       )}
 
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <div key={n} onClick={() => runWithAd(() => setActiveNav(n))} style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold', cursor:'pointer'}}>{n.toUpperCase()}</div>
+          <div key={n} onClick={() => setActiveNav(n)} style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold', cursor:'pointer'}}>{n.toUpperCase()}</div>
         ))}
       </div>
     </div>
