@@ -72,7 +72,7 @@ function App() {
   const runWithAd = (onSuccess) => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
-        .then(() => onSuccess()) // Ads ကြည့်ပြီးမှ success logic ကို run မယ်
+        .then(() => onSuccess()) 
         .catch(() => alert("Please watch the full ad to proceed!"));
     } else { onSuccess(); }
   };
@@ -94,7 +94,7 @@ function App() {
     if (completed.includes(id)) return alert("Task already completed!");
     
     runWithAd(() => {
-      // ၁။ Ads ကြည့်ပြီးတာနဲ့ Link ကို အရင်ပို့မယ်
+      // ၁။ Ads ကြည့်ပြီးမှ Link ကိုသွားမယ်
       if (link) {
         if (tg && link.includes('t.me/')) { 
           tg.openTelegramLink(link); 
@@ -103,7 +103,7 @@ function App() {
         }
       }
       
-      // ၂။ ပို့ပြီးတာနဲ့ Balance ကို ပေါင်းမယ်
+      // ၂။ ပြီးမှ Ton ပေါင်းမယ်
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
       setBalance(newBal);
@@ -151,7 +151,6 @@ function App() {
   const handleUserAddChannel = () => {
     if (!userChannelName || !userChannelLink) return alert("Please fill both Name and Link!");
     
-    // Ads အရင်ပြမယ်၊ ပီးမှ Support Bot ဆီ ပို့မယ်
     runWithAd(() => {
       const logData = btoa(unescape(encodeURIComponent(`User Task Submission:\nName: ${userChannelName}\nLink: ${userChannelLink}`)));
       if (tg) tg.openTelegramLink(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`);
@@ -264,12 +263,24 @@ function App() {
             {activeTab === 'reward' && (
               <div><input style={styles.input} placeholder="Enter Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
               <button style={styles.btn} onClick={() => {
-                if(completed.includes('code_'+APP_CONFIG.REWARD_CODE)) return alert("Code used!");
-                runWithAd(() => { 
-                   if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
-                      handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001, null);
-                   } else { alert('Invalid Code!'); }
-                });
+                // Code တစ်ခါသုံး Logic
+                if(completed.includes('code_'+APP_CONFIG.REWARD_CODE)) return alert("Reward code already used!");
+                
+                if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
+                   // Claim ကို Ads မထည့်ဘဲ တိုက်ရိုက် Reward ပေးမယ် (Bro တောင်းဆိုချက်အရ)
+                   const newBal = Number((balance + 0.001).toFixed(5));
+                   const newComp = [...completed, 'code_'+APP_CONFIG.REWARD_CODE];
+                   setBalance(newBal);
+                   setCompleted(newComp);
+                   fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+                     method: 'PATCH',
+                     body: JSON.stringify({ balance: newBal, completed: newComp })
+                   });
+                   alert('Success! +0.001 TON Added');
+                   setRewardCode('');
+                } else { 
+                   alert('Invalid Code!'); 
+                }
               }}>CLAIM</button></div>
             )}
 
@@ -342,3 +353,4 @@ function App() {
 }
 
 export default App;
+
