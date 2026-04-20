@@ -75,7 +75,6 @@ function App() {
         .then(() => onSuccess())
         .catch(() => {
             alert("Please watch the full ad to proceed!");
-            // Bro တို့ user တွေ error တက်ရင်လဲ page ရွေ့ပေးချင်ရင်တော့ onSuccess() ကို ဒီမှာပါ ထည့်ပေးနိုင်ပါတယ်
         });
     } else { onSuccess(); }
   };
@@ -94,8 +93,6 @@ function App() {
 
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Task already completed!");
-    
-    // ၁။ Link အရင်ပွင့်မယ်
     if (link) {
       if (tg && link.includes('t.me/')) { 
         tg.openTelegramLink(link); 
@@ -103,8 +100,6 @@ function App() {
         window.open(link, '_blank'); 
       }
     }
-
-    // ၂။ ကြော်ငြာပြမယ်၊ ပြီးမှ balance ပေါင်းမယ်
     runWithAd(() => {
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
@@ -142,15 +137,26 @@ function App() {
     });
   };
 
+  // +++ ဒီနေရာကို Bro လိုချင်တဲ့ Sequence အတိုင်း ပြင်ထားပါတယ် +++
   const handleUserAddChannel = () => {
     if (!userChannelName || !userChannelLink) return alert("Please fill both Name and Link!");
-    runWithAd(() => {
-      const logData = btoa(unescape(encodeURIComponent(`User Task Submission:\nName: ${userChannelName}\nLink: ${userChannelLink}`)));
-      if (tg) tg.openTelegramLink(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`);
-      alert("Submitted to support!");
-      setUserChannelName('');
-      setUserChannelLink('');
-    });
+    
+    // ၁။ Support Bot ဆီ အရင်ပို့မယ်
+    const logData = btoa(unescape(encodeURIComponent(`User Task Submission:\nName: ${userChannelName}\nLink: ${userChannelLink}`)));
+    if (tg) {
+      tg.openTelegramLink(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`);
+    } else {
+      window.open(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`, '_blank');
+    }
+
+    // ၂။ ပြီးမှ ကြော်ငြာပြမယ်
+    setTimeout(() => {
+      runWithAd(() => {
+        alert("Submitted to support!");
+        setUserChannelName('');
+        setUserChannelLink('');
+      });
+    }, 1000); // User bot ထဲရောက်သွားချိန်မှာ Ads logic စဖို့ ခဏစောင့်ပေးတာပါ
   };
 
   const handleAdminAddTask = async () => {
