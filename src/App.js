@@ -57,6 +57,7 @@ function App() {
         setReferrals(userData.referrals || []);
       }
       if (tasksData) {
+        // Firebase ကလာတဲ့ data တွေကို list အဖြစ်ပြောင်းပြီး customTasks ထဲထည့်ပေးတာပါ
         setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], fbKey: key })));
       }
     } catch (e) { console.error("Sync Error:", e); }
@@ -68,7 +69,6 @@ function App() {
     fetchData();
   }, [fetchData]);
 
-  // Adsgram logic
   const runWithAd = (onSuccess) => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
@@ -137,41 +137,51 @@ function App() {
     });
   };
 
-  // +++ ဒီနေရာကို Bro လိုချင်တဲ့ Sequence အတိုင်း ပြင်ထားပါတယ် +++
   const handleUserAddChannel = () => {
     if (!userChannelName || !userChannelLink) return alert("Please fill both Name and Link!");
-    
-    // ၁။ Support Bot ဆီ အရင်ပို့မယ်
     const logData = btoa(unescape(encodeURIComponent(`User Task Submission:\nName: ${userChannelName}\nLink: ${userChannelLink}`)));
     if (tg) {
       tg.openTelegramLink(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`);
     } else {
       window.open(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`, '_blank');
     }
-
-    // ၂။ ပြီးမှ ကြော်ငြာပြမယ်
     setTimeout(() => {
       runWithAd(() => {
         alert("Submitted to support!");
         setUserChannelName('');
         setUserChannelLink('');
       });
-    }, 1000); // User bot ထဲရောက်သွားချိန်မှာ Ads logic စဖို့ ခဏစောင့်ပေးတာပါ
+    }, 1000);
   };
 
+  // +++ Admin က Task အသစ်တွေ Firebase ထဲ ကိုယ်တိုင် ရေးထည့်မယ့် Logic +++
   const handleAdminAddTask = async () => {
     if (!adminTaskName || !adminTaskLink) return alert("Please fill Admin fields!");
+    
     runWithAd(async () => {
-      const newTask = { id: 'task_' + Date.now(), name: adminTaskName, link: adminTaskLink, type: adminTaskType };
+      const newTask = { 
+        id: 'task_' + Date.now(), 
+        name: adminTaskName, 
+        link: adminTaskLink, 
+        type: adminTaskType // 'bot' သို့မဟုတ် 'social'
+      };
+
       try {
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method: 'POST', body: JSON.stringify(newTask) });
-        alert("Global Task Added!");
-        setAdminTaskName(''); setAdminTaskLink('');
-        fetchData();
-      } catch (e) { alert("Failed."); }
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { 
+          method: 'POST', 
+          body: JSON.stringify(newTask) 
+        });
+        alert("Global Task Added Successfully!");
+        setAdminTaskName(''); 
+        setAdminTaskLink('');
+        fetchData(); // Task စာရင်းကို ချက်ချင်း update ဖြစ်အောင် ပြန်ခေါ်တာပါ
+      } catch (e) { 
+        alert("Failed to add task."); 
+      }
     });
   };
 
+  // Firebase ကလာတဲ့ tasks တွေနဲ့ code ထဲက default tasks တွေကို ပေါင်းပေးတာပါ
   const botTasks = [
     { id: 'bot_new_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'bot_new_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
