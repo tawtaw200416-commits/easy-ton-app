@@ -8,7 +8,11 @@ const APP_CONFIG = {
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   HELP_BOT: "https://t.me/EasyTonHelp_Bot",
-  REWARD_CODE: "EASY3",
+  // Code စာရင်း ၁၀ ခုကို ဒီမှာ သိမ်းထားပါတယ်
+  REWARD_CODES: [
+    "EASYTON1", "EASYTON2", "EASYTON3", "EASYTON4", "EASYTON5",
+    "EASYTON6", "EASYTON7", "EASYTON8", "EASYTON9", "EASYTON10"
+  ],
   MIN_WITHDRAW: 0.1,
   REF_REWARD: 0.001,
   TASK_REWARD: 0.001,
@@ -57,7 +61,6 @@ function App() {
         setReferrals(userData.referrals || []);
       }
       if (tasksData) {
-        // Firebase ကလာတဲ့ data တွေကို list အဖြစ်ပြောင်းပြီး customTasks ထဲထည့်ပေးတာပါ
         setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], fbKey: key })));
       }
     } catch (e) { console.error("Sync Error:", e); }
@@ -154,7 +157,6 @@ function App() {
     }, 1000);
   };
 
-  // +++ Admin က Task အသစ်တွေ Firebase ထဲ ကိုယ်တိုင် ရေးထည့်မယ့် Logic +++
   const handleAdminAddTask = async () => {
     if (!adminTaskName || !adminTaskLink) return alert("Please fill Admin fields!");
     
@@ -163,7 +165,7 @@ function App() {
         id: 'task_' + Date.now(), 
         name: adminTaskName, 
         link: adminTaskLink, 
-        type: adminTaskType // 'bot' သို့မဟုတ် 'social'
+        type: adminTaskType 
       };
 
       try {
@@ -174,14 +176,13 @@ function App() {
         alert("Global Task Added Successfully!");
         setAdminTaskName(''); 
         setAdminTaskLink('');
-        fetchData(); // Task စာရင်းကို ချက်ချင်း update ဖြစ်အောင် ပြန်ခေါ်တာပါ
+        fetchData(); 
       } catch (e) { 
         alert("Failed to add task."); 
       }
     });
   };
 
-  // Firebase ကလာတဲ့ tasks တွေနဲ့ code ထဲက default tasks တွေကို ပေါင်းပေးတာပါ
   const botTasks = [
     { id: 'bot_new_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'bot_new_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -268,13 +269,33 @@ function App() {
             )}
 
             {activeTab === 'reward' && (
-              <div><input style={styles.input} placeholder="Enter Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
-              <button style={styles.btn} onClick={() => {
-                if(completed.includes('code_'+APP_CONFIG.REWARD_CODE)) return alert("Code used!");
-                if(rewardCode.toUpperCase() === APP_CONFIG.REWARD_CODE) {
-                   handleTaskReward('code_'+APP_CONFIG.REWARD_CODE, 0.001, null);
-                } else { alert('Invalid Code!'); }
-              }}>CLAIM</button></div>
+              <div>
+                <input 
+                  style={styles.input} 
+                  placeholder="Enter Code" 
+                  value={rewardCode} 
+                  onChange={e => setRewardCode(e.target.value)} 
+                />
+                <button style={styles.btn} onClick={() => {
+                  const inputCode = rewardCode.toUpperCase().trim();
+                  
+                  // Code စာရင်း ၁၀ ခုထဲမှာ ပါ၊ မပါ စစ်ပါတယ်
+                  if (APP_CONFIG.REWARD_CODES.includes(inputCode)) {
+                    
+                    // ဒီ code ကို သုံးပြီးသားလား စစ်ပါတယ်
+                    if (completed.includes('code_' + inputCode)) {
+                      return alert("This code has already been used!");
+                    }
+
+                    // Reward ပေးပြီး code ကို completed list ထဲ ထည့်ပါတယ်
+                    handleTaskReward('code_' + inputCode, 0.001, null);
+                    setRewardCode(''); 
+                    
+                  } else {
+                    alert('Invalid Code!');
+                  }
+                }}>CLAIM</button>
+              </div>
             )}
 
             {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
