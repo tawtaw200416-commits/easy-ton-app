@@ -24,7 +24,7 @@ function App() {
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || []);
   const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem('refs')) || []);
   const [customTasks, setCustomTasks] = useState([]);
-  const [dynamicCodes, setDynamicCodes] = useState([]); // Admin ထည့်မယ့် code များအတွက်
+  const [dynamicCodes, setDynamicCodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
@@ -32,11 +32,13 @@ function App() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   
+  // Admin States
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
   const [adminTaskType, setAdminTaskType] = useState('bot');
-  const [adminNewPromoCode, setAdminNewPromoCode] = useState(''); // Admin code သစ် input
+  const [adminNewPromoCode, setAdminNewPromoCode] = useState('');
 
+  // User Task Submission States
   const [userChannelName, setUserChannelName] = useState('');
   const [userChannelLink, setUserChannelLink] = useState('');
 
@@ -52,7 +54,7 @@ function App() {
       const [userRes, tasksRes, codesRes] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
         fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`) // Promo codes ဆွဲထုတ်မယ်
+        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`)
       ]);
       const userData = await userRes.json();
       const tasksData = await tasksRes.json();
@@ -126,6 +128,59 @@ function App() {
     });
   };
 
+  // +++ User က Support ဆီ Task လှမ်းပို့သည့် function +++
+  const handleUserAddChannel = () => {
+    if (!userChannelName || !userChannelLink) return alert("Please fill both Name and Link!");
+    const logData = btoa(unescape(encodeURIComponent(`User Task Submission:\nName: ${userChannelName}\nLink: ${userChannelLink}`)));
+    
+    if (tg) { tg.openTelegramLink(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`); } 
+    else { window.open(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`, '_blank'); }
+
+    setTimeout(() => {
+      runWithAd(() => {
+        alert("Submitted to support!");
+        setUserChannelName('');
+        setUserChannelLink('');
+      });
+    }, 1000);
+  };
+
+  // +++ Admin က Task အသစ်ထည့်သည့် function +++
+  const handleAdminAddTask = async () => {
+    if (!adminTaskName || !adminTaskLink) return alert("Please fill Admin fields!");
+    
+    runWithAd(async () => {
+      const newTask = { 
+        id: 'task_' + Date.now(), 
+        name: adminTaskName, 
+        link: adminTaskLink, 
+        type: adminTaskType 
+      };
+      try {
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method: 'POST', body: JSON.stringify(newTask) });
+        alert("Global Task Added Successfully!");
+        setAdminTaskName(''); setAdminTaskLink('');
+        fetchData(); 
+      } catch (e) { alert("Failed to add task."); }
+    });
+  };
+
+  const handleAdminAddPromo = async () => {
+    if (!adminNewPromoCode) return alert("Please enter a code!");
+    const newCode = adminNewPromoCode.toUpperCase().trim();
+    runWithAd(async () => {
+      try {
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`, { 
+            method: 'POST', 
+            body: JSON.stringify({ code: newCode, reward: 0.001 }) 
+        });
+        alert("New Promo Code Added!");
+        setAdminNewPromoCode('');
+        fetchData(); 
+      } catch (e) { alert("Failed to add code."); }
+    });
+  };
+
   const handleWithdrawRequest = () => {
     const amount = Number(withdrawAmount);
     if (amount < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdraw is ${APP_CONFIG.MIN_WITHDRAW} TON`);
@@ -150,43 +205,18 @@ function App() {
     });
   };
 
-  // +++ Admin က Promo Code အသစ်ထည့်ရန် +++
-  const handleAdminAddPromo = async () => {
-    if (!adminNewPromoCode) return alert("Please enter a code!");
-    const newCode = adminNewPromoCode.toUpperCase().trim();
-    
-    runWithAd(async () => {
-      try {
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`, { 
-            method: 'POST', 
-            body: JSON.stringify({ code: newCode, reward: 0.001 }) 
-        });
-        alert("New Promo Code Added!");
-        setAdminNewPromoCode('');
-        fetchData(); 
-      } catch (e) { alert("Failed to add code."); }
-    });
-  };
-
   const handleClaimCode = () => {
     const input = rewardCode.toUpperCase().trim();
     if (!input) return;
-
-    // Hardcoded codes (EASYTON1-10) ထဲမှာရှိလား စစ်မယ်
     const isHardcoded = APP_CONFIG.REWARD_CODES.includes(input);
-    // Firebase ထဲက Admin ထည့်ထားတဲ့ code ထဲမှာရှိလား စစ်မယ်
     const dynamicMatch = dynamicCodes.find(c => c.code === input);
-
     if (isHardcoded || dynamicMatch) {
       const rewardId = 'code_' + input;
       if (completed.includes(rewardId)) return alert("Already used!");
-      
       const rewardAmt = dynamicMatch ? dynamicMatch.reward : 0.001;
       handleTaskReward(rewardId, rewardAmt, null);
       setRewardCode('');
-    } else {
-      alert('Invalid Code!');
-    }
+    } else { alert('Invalid Code!'); }
   };
 
   const botTasks = [
@@ -260,9 +290,19 @@ function App() {
               <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, APP_CONFIG.TASK_REWARD, t.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>START</button></div>
             ))}
             
-            {activeTab === 'social' && socialTasks.filter(t => !completed.includes(t.id)).map(t => (
-              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, APP_CONFIG.TASK_REWARD, t.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>JOIN</button></div>
-            ))}
+            {activeTab === 'social' && (
+              <>
+                <div style={{paddingBottom: 15, borderBottom: '2px solid #eee', marginBottom: 15}}>
+                   <h4 style={{marginTop:0}}>+ Add Your Channel Task</h4>
+                   <input style={styles.input} placeholder="Channel Name" value={userChannelName} onChange={e => setUserChannelName(e.target.value)} />
+                   <input style={styles.input} placeholder="Channel Link" value={userChannelLink} onChange={e => setUserChannelLink(e.target.value)} />
+                   <button style={{...styles.btn, background: '#24A1DE'}} onClick={handleUserAddChannel}>SUBMIT TO SUPPORT</button>
+                </div>
+                {socialTasks.filter(t => !completed.includes(t.id)).map(t => (
+                  <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, APP_CONFIG.TASK_REWARD, t.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>JOIN</button></div>
+                ))}
+              </>
+            )}
 
             {activeTab === 'reward' && (
               <div>
@@ -273,14 +313,14 @@ function App() {
 
             {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
               <div>
-                 <h4 style={{marginTop:0}}>Admin: Add Task</h4>
+                 <h4 style={{marginTop:0}}>Admin: Add Global Task</h4>
                  <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                  <input style={styles.input} placeholder="Task Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
                  <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
                     <option value="bot">BOT</option>
                     <option value="social">SOCIAL</option>
                  </select>
-                 <button style={{...styles.btn, background: '#10b981', marginBottom: 20}} onClick={handleAdminAddTask}>ADD TASK</button>
+                 <button style={{...styles.btn, background: '#10b981', marginBottom: 20}} onClick={handleAdminAddTask}>ADD GLOBAL TASK</button>
 
                  <h4 style={{marginTop:0, borderTop: '2px solid #eee', paddingTop: 10}}>Admin: Add Promo Code</h4>
                  <input style={styles.input} placeholder="EASYTON11" value={adminNewPromoCode} onChange={e => setAdminNewPromoCode(e.target.value)} />
