@@ -8,7 +8,7 @@ const APP_CONFIG = {
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   HELP_BOT: "https://t.me/EasyTonHelp_Bot",
-  // Code စာရင်း ၁၀ ခုကို ဒီမှာ သိမ်းထားပါတယ်
+  // Reward Codes ၁၀ ခုစာရင်း
   REWARD_CODES: [
     "EASYTON1", "EASYTON2", "EASYTON3", "EASYTON4", "EASYTON5",
     "EASYTON6", "EASYTON7", "EASYTON8", "EASYTON9", "EASYTON10"
@@ -72,6 +72,7 @@ function App() {
     fetchData();
   }, [fetchData]);
 
+  // Adsgram function ကို မူလအတိုင်း ပြန်ထားပေးပါတယ်
   const runWithAd = (onSuccess) => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
@@ -270,30 +271,15 @@ function App() {
 
             {activeTab === 'reward' && (
               <div>
-                <input 
-                  style={styles.input} 
-                  placeholder="Enter Code" 
-                  value={rewardCode} 
-                  onChange={e => setRewardCode(e.target.value)} 
-                />
+                <input style={styles.input} placeholder="Enter Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
                 <button style={styles.btn} onClick={() => {
-                  const inputCode = rewardCode.toUpperCase().trim();
-                  
-                  // Code စာရင်း ၁၀ ခုထဲမှာ ပါ၊ မပါ စစ်ပါတယ်
-                  if (APP_CONFIG.REWARD_CODES.includes(inputCode)) {
-                    
-                    // ဒီ code ကို သုံးပြီးသားလား စစ်ပါတယ်
-                    if (completed.includes('code_' + inputCode)) {
-                      return alert("This code has already been used!");
-                    }
-
-                    // Reward ပေးပြီး code ကို completed list ထဲ ထည့်ပါတယ်
-                    handleTaskReward('code_' + inputCode, 0.001, null);
-                    setRewardCode(''); 
-                    
-                  } else {
-                    alert('Invalid Code!');
-                  }
+                  const input = rewardCode.toUpperCase().trim();
+                  // Code စာရင်းထဲမှာ ပါ၊ မပါ စစ်ဆေးပါတယ်
+                  if(APP_CONFIG.REWARD_CODES.includes(input)) {
+                    if(completed.includes('code_'+input)) return alert("Code already used!");
+                    handleTaskReward('code_'+input, 0.001, null);
+                    setRewardCode('');
+                  } else { alert('Invalid Code!'); }
                 }}>CLAIM</button>
               </div>
             )}
