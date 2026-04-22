@@ -8,7 +8,6 @@ const APP_CONFIG = {
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   HELP_BOT: "https://t.me/EasyTonHelp_Bot",
-  // Reward Codes ၁၀ ခုစာရင်း
   REWARD_CODES: [
     "EASYTON1", "EASYTON2", "EASYTON3", "EASYTON4", "EASYTON5",
     "EASYTON6", "EASYTON7", "EASYTON8", "EASYTON9", "EASYTON10"
@@ -72,15 +71,23 @@ function App() {
     fetchData();
   }, [fetchData]);
 
-  // Adsgram function ကို မူလအတိုင်း ပြန်ထားပေးပါတယ်
+  // +++ ဒီနေရာမှာ ကြော်ငြာတကယ်ကြည့်မှ Reward ပေးအောင် ပြင်ထားပါတယ် +++
   const runWithAd = (onSuccess) => {
     if (window.Adsgram) {
       window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
-        .then(() => onSuccess())
-        .catch(() => {
-            alert("Please watch the full ad to proceed!");
+        .then(() => {
+          // ကြော်ငြာပြသမှု အောင်မြင်မှ (Earnings ရမှ) reward function ကို ခေါ်ပါတယ်
+          onSuccess(); 
+        })
+        .catch((error) => {
+          // ကြော်ငြာမကြည့်ဘဲ ပိတ်လိုက်ရင် ဖြစ်စေ၊ အမှားရှိရင်ဖြစ်စေ အသိပေးပါတယ်
+          console.error("Ads Error:", error);
+          alert("Please watch the full ad to proceed!");
         });
-    } else { onSuccess(); }
+    } else {
+      // Adsgram script မတက်လာရင် error အသိပေးပါတယ်
+      alert("Ad network not loaded. Please check your connection.");
+    }
   };
 
   const handleWatchAd = () => {
@@ -97,13 +104,14 @@ function App() {
 
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Task already completed!");
+    
+    // Link ဖွင့်တာကို အရင်လုပ်ပါမယ်
     if (link) {
-      if (tg && link.includes('t.me/')) { 
-        tg.openTelegramLink(link); 
-      } else { 
-        window.open(link, '_blank'); 
-      }
+      if (tg && link.includes('t.me/')) { tg.openTelegramLink(link); } 
+      else { window.open(link, '_blank'); }
     }
+
+    // Task Reward ပေးဖို့အတွက်လည်း ကြော်ငြာကြည့်ခိုင်းပါတယ်
     runWithAd(() => {
       const newBal = Number((balance + reward).toFixed(5));
       const newComp = [...completed, id];
@@ -144,11 +152,10 @@ function App() {
   const handleUserAddChannel = () => {
     if (!userChannelName || !userChannelLink) return alert("Please fill both Name and Link!");
     const logData = btoa(unescape(encodeURIComponent(`User Task Submission:\nName: ${userChannelName}\nLink: ${userChannelLink}`)));
-    if (tg) {
-      tg.openTelegramLink(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`);
-    } else {
-      window.open(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`, '_blank');
-    }
+    
+    if (tg) { tg.openTelegramLink(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`); } 
+    else { window.open(`${APP_CONFIG.HELP_BOT}?start=addtask_${logData}`, '_blank'); }
+
     setTimeout(() => {
       runWithAd(() => {
         alert("Submitted to support!");
@@ -168,19 +175,12 @@ function App() {
         link: adminTaskLink, 
         type: adminTaskType 
       };
-
       try {
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { 
-          method: 'POST', 
-          body: JSON.stringify(newTask) 
-        });
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method: 'POST', body: JSON.stringify(newTask) });
         alert("Global Task Added Successfully!");
-        setAdminTaskName(''); 
-        setAdminTaskLink('');
+        setAdminTaskName(''); setAdminTaskLink('');
         fetchData(); 
-      } catch (e) { 
-        alert("Failed to add task."); 
-      }
+      } catch (e) { alert("Failed to add task."); }
     });
   };
 
@@ -241,7 +241,7 @@ function App() {
                (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && (
                 <button 
                   key={t} 
-                  onClick={() => runWithAd(() => setActiveTab(t.toLowerCase()))} 
+                  onClick={() => setActiveTab(t.toLowerCase())} 
                   style={{ flex: 1, padding: '10px', borderRadius: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight:'bold', border:'2px solid #000'}}
                 >
                   {t}
@@ -274,9 +274,8 @@ function App() {
                 <input style={styles.input} placeholder="Enter Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
                 <button style={styles.btn} onClick={() => {
                   const input = rewardCode.toUpperCase().trim();
-                  // Code စာရင်းထဲမှာ ပါ၊ မပါ စစ်ဆေးပါတယ်
                   if(APP_CONFIG.REWARD_CODES.includes(input)) {
-                    if(completed.includes('code_'+input)) return alert("Code already used!");
+                    if(completed.includes('code_'+input)) return alert("Already used!");
                     handleTaskReward('code_'+input, 0.001, null);
                     setRewardCode('');
                   } else { alert('Invalid Code!'); }
@@ -347,7 +346,7 @@ function App() {
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <div 
             key={n} 
-            onClick={() => runWithAd(() => setActiveNav(n))} 
+            onClick={() => setActiveNav(n)} 
             style={{flex:1, textAlign:'center', color: activeNav === n ? '#facc15' : '#fff', fontSize:'12px', fontWeight:'bold', cursor:'pointer'}}
           >
             {n.toUpperCase()}
