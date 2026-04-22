@@ -110,7 +110,7 @@ function App() {
   };
 
   const handleTaskReward = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Task already completed!");
+    if (completed.includes(id)) return alert("Already completed!");
     if (link) {
       if (tg && link.includes('t.me/')) { tg.openTelegramLink(link); } 
       else { window.open(link, '_blank'); }
@@ -128,7 +128,6 @@ function App() {
     });
   };
 
-  // +++ User က Support ဆီ Task လှမ်းပို့သည့် function +++
   const handleUserAddChannel = () => {
     if (!userChannelName || !userChannelLink) return alert("Please fill both Name and Link!");
     const logData = btoa(unescape(encodeURIComponent(`User Task Submission:\nName: ${userChannelName}\nLink: ${userChannelLink}`)));
@@ -145,47 +144,52 @@ function App() {
     }, 1000);
   };
 
-  // +++ Admin က Task အသစ်ထည့်သည့် function +++
+  // Admin: Add Global Task (Removed runWithAd for faster Admin management)
   const handleAdminAddTask = async () => {
     if (!adminTaskName || !adminTaskLink) return alert("Please fill Admin fields!");
     
-    runWithAd(async () => {
-      const newTask = { 
-        id: 'task_' + Date.now(), 
-        name: adminTaskName, 
-        link: adminTaskLink, 
-        type: adminTaskType 
-      };
-      try {
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method: 'POST', body: JSON.stringify(newTask) });
+    const newTask = { 
+      id: 'task_' + Date.now(), 
+      name: adminTaskName, 
+      link: adminTaskLink, 
+      type: adminTaskType 
+    };
+    try {
+      const response = await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { 
+        method: 'POST', 
+        body: JSON.stringify(newTask) 
+      });
+      if (response.ok) {
         alert("Global Task Added Successfully!");
         setAdminTaskName(''); setAdminTaskLink('');
         fetchData(); 
-      } catch (e) { alert("Failed to add task."); }
-    });
+      } else { alert("Failed to add task. Check DB Rules."); }
+    } catch (e) { alert("Network Error."); }
   };
 
+  // Admin: Add Promo Code (Removed runWithAd to fix "Fail" issue)
   const handleAdminAddPromo = async () => {
     if (!adminNewPromoCode) return alert("Please enter a code!");
     const newCode = adminNewPromoCode.toUpperCase().trim();
-    runWithAd(async () => {
-      try {
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`, { 
-            method: 'POST', 
-            body: JSON.stringify({ code: newCode, reward: 0.001 }) 
-        });
+    
+    try {
+      const response = await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`, { 
+          method: 'POST', 
+          body: JSON.stringify({ code: newCode, reward: 0.001 }) 
+      });
+      if (response.ok) {
         alert("New Promo Code Added!");
         setAdminNewPromoCode('');
         fetchData(); 
-      } catch (e) { alert("Failed to add code."); }
-    });
+      } else { alert("Failed to add code. Check DB Rules."); }
+    } catch (e) { alert("Network Error."); }
   };
 
   const handleWithdrawRequest = () => {
     const amount = Number(withdrawAmount);
-    if (amount < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdraw is ${APP_CONFIG.MIN_WITHDRAW} TON`);
+    if (amount < APP_CONFIG.MIN_WITHDRAW) return alert(`Min withdraw is ${APP_CONFIG.MIN_WITHDRAW} TON`);
     if (amount > balance) return alert("Insufficient balance!");
-    if (!withdrawAddress || withdrawAddress.length < 10) return alert("Please enter a valid TON wallet address.");
+    if (!withdrawAddress || withdrawAddress.length < 10) return alert("Invalid TON address.");
 
     runWithAd(() => {
       const newBal = Number((balance - amount).toFixed(5));
@@ -219,31 +223,16 @@ function App() {
     } else { alert('Invalid Code!'); }
   };
 
+  // Default Tasks
   const botTasks = [
     { id: 'bot_new_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'bot_new_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-    { id: 'bot_new_3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-    { id: 'bot_new_4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-    { id: 'bot_new_5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
-    { id: 'bot_new_6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
     ...customTasks.filter(t => t.type === 'bot')
   ];
 
   const socialTasks = [
     { id: 's_1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-    { id: 's_2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-    { id: 's_3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
-    { id: 's_4', name: "@M9460", link: "https://t.me/M9460" },
-    { id: 's_5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
-    { id: 's_6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
-    { id: 's_7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
-    { id: 's_8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
-    { id: 's_9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
     { id: 's_10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-    { id: 's_11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
-    { id: 's_12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
-    { id: 's_13', name: "@zrbtua", link: "https://t.me/zrbtua" },
-    { id: 's_14', name: "@perviu1million", link: "https://t.me/perviu1million" },
     ...customTasks.filter(t => t.type === 'social')
   ];
 
@@ -334,14 +323,9 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3 style={{marginTop:0}}>Referral Program</h3>
-          <p style={{fontSize:14}}>Share your link and earn <b>0.001 TON</b>!</p>
+          <p style={{fontSize:14}}>Share link and earn <b>{APP_CONFIG.REF_REWARD} TON</b>!</p>
           <div style={{background:'#eee', padding:10, borderRadius:10, fontSize:12, wordBreak:'break-all', border:'1px dashed #000'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</div>
-          <button style={{...styles.btn, marginTop:10}} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!"); }}>COPY LINK</button>
-          
-          <h4 style={{marginBottom:10, marginTop:25}}>Invite History</h4>
-          {referrals.length === 0 ? <p style={{color:'#999', fontSize:12}}>No friends invited yet.</p> : 
-            referrals.map((r, i) => (<div key={i} style={styles.row}><span>User ID: {r.id}</span><span style={{color:'#10b981'}}>Complete +0.001 TON</span></div>))
-          }
+          <button style={{...styles.btn, marginTop:10}} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!"); }}>COPY LINK</button>
         </div>
       )}
 
@@ -353,24 +337,22 @@ function App() {
           <button style={{...styles.btn, background:'#3b82f6'}} onClick={handleWithdrawRequest}>WITHDRAW NOW</button>
           
           <h4 style={{marginTop:25, marginBottom:10}}>Withdraw History</h4>
-          {withdrawHistory.length === 0 ? <p style={{color:'#999', fontSize:12}}>No history.</p> : 
-            withdrawHistory.map((h, i) => (
-              <div key={i} style={{...styles.row, fontSize:12}}>
-                <div><b>{h.amount} TON</b><br/><small>{h.date}</small></div>
-                <div style={{color: '#f59e0b'}}>● {h.status}</div>
-              </div>
-            ))
-          }
+          {withdrawHistory.map((h, i) => (
+            <div key={i} style={{...styles.row, fontSize:12}}>
+              <div><b>{h.amount} TON</b><br/><small>{h.date}</small></div>
+              <div style={{color: '#f59e0b'}}>● {h.status}</div>
+            </div>
+          ))}
         </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h3 style={{marginTop:0}}>My Profile</h3>
+          <h3>My Profile</h3>
           <div style={styles.row}><span>Status:</span> <b style={{color:'#10b981'}}>Active</b></div>
           <div style={styles.row}><span>Balance:</span> <b>{balance.toFixed(5)} TON</b></div>
-          <div style={styles.row}><span>User ID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
-          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => { if(tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT); }}>@EasyTonHelp_Bot</b></div>
+          <div style={styles.row}><span>ID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6'}} onClick={() => tg?.openTelegramLink(APP_CONFIG.HELP_BOT)}>@EasyTonHelp_Bot</b></div>
         </div>
       )}
 
