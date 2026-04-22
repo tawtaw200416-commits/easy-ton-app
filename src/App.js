@@ -24,7 +24,7 @@ function App() {
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || []);
   const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem('refs')) || []);
   const [customTasks, setCustomTasks] = useState([]);
-  const [dynamicCodes, setDynamicCodes] = useState([]); // Admin ထည့်တဲ့ code အသစ်တွေအတွက်
+  const [dynamicCodes, setDynamicCodes] = useState([]); // Admin ထည့်မယ့် code များအတွက်
   const [loading, setLoading] = useState(true);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
@@ -35,7 +35,7 @@ function App() {
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
   const [adminTaskType, setAdminTaskType] = useState('bot');
-  const [adminNewCode, setAdminNewCode] = useState(''); // Admin code သစ်ထည့်ဖို့ input
+  const [adminNewPromoCode, setAdminNewPromoCode] = useState(''); // Admin code သစ် input
 
   const [userChannelName, setUserChannelName] = useState('');
   const [userChannelLink, setUserChannelLink] = useState('');
@@ -52,7 +52,7 @@ function App() {
       const [userRes, tasksRes, codesRes] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
         fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`) // Promo codes ဆွဲမယ်
+        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`) // Promo codes ဆွဲထုတ်မယ်
       ]);
       const userData = await userRes.json();
       const tasksData = await tasksRes.json();
@@ -68,7 +68,10 @@ function App() {
         setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], fbKey: key })));
       }
       if (codesData) {
-        setDynamicCodes(Object.keys(codesData).map(key => ({ code: codesData[key].code, reward: codesData[key].reward })));
+        setDynamicCodes(Object.keys(codesData).map(key => ({ 
+            code: codesData[key].code, 
+            reward: codesData[key].reward 
+        })));
       }
     } catch (e) { console.error("Sync Error:", e); }
     setLoading(false);
@@ -119,7 +122,7 @@ function App() {
         method: 'PATCH',
         body: JSON.stringify({ balance: newBal, completed: newComp })
       });
-      alert(`Success! +${reward} TON`);
+      alert(`Task Success! +${reward} TON`);
     });
   };
 
@@ -147,25 +150,31 @@ function App() {
     });
   };
 
-  // Admin က Code အသစ်ပေါင်းထည့်တဲ့ Function
-  const handleAdminAddCode = async () => {
-    if (!adminNewCode) return alert("Please enter a code!");
-    const codeData = { code: adminNewCode.toUpperCase().trim(), reward: 0.001 };
-    try {
-      await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`, { method: 'POST', body: JSON.stringify(codeData) });
-      alert("Promo Code Added!");
-      setAdminNewCode('');
-      fetchData();
-    } catch (e) { alert("Failed to add code."); }
+  // +++ Admin က Promo Code အသစ်ထည့်ရန် +++
+  const handleAdminAddPromo = async () => {
+    if (!adminNewPromoCode) return alert("Please enter a code!");
+    const newCode = adminNewPromoCode.toUpperCase().trim();
+    
+    runWithAd(async () => {
+      try {
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`, { 
+            method: 'POST', 
+            body: JSON.stringify({ code: newCode, reward: 0.001 }) 
+        });
+        alert("New Promo Code Added!");
+        setAdminNewPromoCode('');
+        fetchData(); 
+      } catch (e) { alert("Failed to add code."); }
+    });
   };
 
   const handleClaimCode = () => {
     const input = rewardCode.toUpperCase().trim();
     if (!input) return;
 
-    // Hardcoded codes စစ်မယ်
+    // Hardcoded codes (EASYTON1-10) ထဲမှာရှိလား စစ်မယ်
     const isHardcoded = APP_CONFIG.REWARD_CODES.includes(input);
-    // Admin ထည့်ထားတဲ့ dynamic codes ထဲမှာရှိလား စစ်မယ်
+    // Firebase ထဲက Admin ထည့်ထားတဲ့ code ထဲမှာရှိလား စစ်မယ်
     const dynamicMatch = dynamicCodes.find(c => c.code === input);
 
     if (isHardcoded || dynamicMatch) {
@@ -180,7 +189,6 @@ function App() {
     }
   };
 
-  // --- ပြီးခဲ့တဲ့ code ထဲက list တွေ (botTasks, socialTasks, styles) အတူတူပဲဖြစ်ရပါမယ် ---
   const botTasks = [
     { id: 'bot_new_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'bot_new_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -272,24 +280,28 @@ function App() {
                     <option value="bot">BOT</option>
                     <option value="social">SOCIAL</option>
                  </select>
-                 <button style={{...styles.btn, background: '#10b981', marginBottom: 20}} onClick={() => runWithAd(handleAdminAddTask)}>ADD TASK</button>
-                 
-                 <h4 style={{marginTop:0, borderTop: '1px solid #eee', paddingTop: 10}}>Admin: Add Promo Code</h4>
-                 <input style={styles.input} placeholder="NEWCODE2024" value={adminNewCode} onChange={e => setAdminNewCode(e.target.value)} />
-                 <button style={{...styles.btn, background: '#a855f7'}} onClick={() => runWithAd(handleAdminAddCode)}>ADD PROMO CODE</button>
+                 <button style={{...styles.btn, background: '#10b981', marginBottom: 20}} onClick={handleAdminAddTask}>ADD TASK</button>
+
+                 <h4 style={{marginTop:0, borderTop: '2px solid #eee', paddingTop: 10}}>Admin: Add Promo Code</h4>
+                 <input style={styles.input} placeholder="EASYTON11" value={adminNewPromoCode} onChange={e => setAdminNewPromoCode(e.target.value)} />
+                 <button style={{...styles.btn, background: '#a855f7'}} onClick={handleAdminAddPromo}>ADD CODE</button>
               </div>
             )}
           </div>
         </>
       )}
 
-      {/* --- Invite, Withdraw, Profile Section များ အရင်အတိုင်းပဲ ဆက်ရှိနေပါမယ် --- */}
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3 style={{marginTop:0}}>Referral Program</h3>
           <p style={{fontSize:14}}>Share your link and earn <b>0.001 TON</b>!</p>
           <div style={{background:'#eee', padding:10, borderRadius:10, fontSize:12, wordBreak:'break-all', border:'1px dashed #000'}}>https://t.me/EasyTONFree_Bot?start={APP_CONFIG.MY_UID}</div>
           <button style={{...styles.btn, marginTop:10}} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!"); }}>COPY LINK</button>
+          
+          <h4 style={{marginBottom:10, marginTop:25}}>Invite History</h4>
+          {referrals.length === 0 ? <p style={{color:'#999', fontSize:12}}>No friends invited yet.</p> : 
+            referrals.map((r, i) => (<div key={i} style={styles.row}><span>User ID: {r.id}</span><span style={{color:'#10b981'}}>Complete +0.001 TON</span></div>))
+          }
         </div>
       )}
 
@@ -299,14 +311,26 @@ function App() {
           <input style={styles.input} type="number" placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
           <input style={styles.input} placeholder="TON Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
           <button style={{...styles.btn, background:'#3b82f6'}} onClick={handleWithdrawRequest}>WITHDRAW NOW</button>
+          
+          <h4 style={{marginTop:25, marginBottom:10}}>Withdraw History</h4>
+          {withdrawHistory.length === 0 ? <p style={{color:'#999', fontSize:12}}>No history.</p> : 
+            withdrawHistory.map((h, i) => (
+              <div key={i} style={{...styles.row, fontSize:12}}>
+                <div><b>{h.amount} TON</b><br/><small>{h.date}</small></div>
+                <div style={{color: '#f59e0b'}}>● {h.status}</div>
+              </div>
+            ))
+          }
         </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
           <h3 style={{marginTop:0}}>My Profile</h3>
+          <div style={styles.row}><span>Status:</span> <b style={{color:'#10b981'}}>Active</b></div>
           <div style={styles.row}><span>Balance:</span> <b>{balance.toFixed(5)} TON</b></div>
           <div style={styles.row}><span>User ID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={styles.row}><span>Support:</span> <b style={{color:'#3b82f6', cursor:'pointer'}} onClick={() => { if(tg) tg.openTelegramLink(APP_CONFIG.HELP_BOT); else window.open(APP_CONFIG.HELP_BOT); }}>@EasyTonHelp_Bot</b></div>
         </div>
       )}
 
