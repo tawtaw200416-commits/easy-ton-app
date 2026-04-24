@@ -16,12 +16,12 @@ const APP_CONFIG = {
 
 function App() {
   const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_bal')) || 0.0000);
-  const [isVip, setIsVip] = useState(false); // VIP status
+  const [isVip, setIsVip] = useState(false);
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('comp_tasks')) || []);
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || []);
   const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem('refs')) || []);
   const [customTasks, setCustomTasks] = useState([]);
-  const [leaderboard, setLeaderboard] = useState([]); // Leaderboard State
+  const [leaderboard, setLeaderboard] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   
@@ -51,7 +51,7 @@ function App() {
       const [u, t, all] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
         fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`) // Leaderboard အတွက် အကုန်ယူမယ်
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`)
       ]);
       const userData = await u.json();
       const tasksData = await t.json();
@@ -59,7 +59,7 @@ function App() {
 
       if (userData) {
         setBalance(Number(userData.balance || 0));
-        setIsVip(!!userData.isVip); // Firebase ထဲက isVip ကိုစစ်ခြင်း
+        setIsVip(!!userData.isVip);
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(Array.isArray(userData.referrals) ? userData.referrals : []);
@@ -67,6 +67,7 @@ function App() {
       if (tasksData) setCustomTasks(Object.values(tasksData));
 
       if (allUsers) {
+        // VIP မဟုတ်သူရော၊ VIP ရော အားလုံးကို တွက်ချက်ပေးထားသည်
         const sorted = Object.entries(allUsers)
           .map(([id, data]) => ({ id, balance: data.balance || 0 }))
           .sort((a, b) => b.balance - a.balance)
@@ -79,7 +80,6 @@ function App() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const processReward = (id, rewardAmount) => {
-    // Watch Ads ဖြစ်ခဲ့ရင် VIP reward နဲ့ Normal reward ခွဲပေးမယ်
     const finalReward = (id === 'watch_ad') ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : rewardAmount;
 
     if (window.Adsgram) {
@@ -96,10 +96,10 @@ function App() {
               method: 'PATCH',
               body: JSON.stringify({ balance: newBal, completed: newCompleted })
             });
-            alert(`Reward Success: +${finalReward} TON ${isVip ? '(VIP)' : ''}`);
-            fetchData(); // Rank update ဖြစ်အောင် refresh လုပ်
+            alert(`Reward Success: +${finalReward} TON ${isVip ? '(VIP Bonus)' : ''}`);
+            fetchData();
           } else {
-            alert("Reward failed. You must watch the full ad.");
+            alert("Reward failed. Watch full ad.");
           }
         })
         .catch(() => alert("Ads failed to load."));
@@ -113,12 +113,9 @@ function App() {
     if (link) {
       tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
     }
-    setTimeout(() => {
-      processReward(id, reward);
-    }, 1500);
+    setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // Bot tasks and Social tasks remain same...
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -136,14 +133,7 @@ function App() {
     { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
     { id: 's5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
     { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
-    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
-    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
-    { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
     { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-    { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
-    { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
-    { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
-    { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" },
     ...customTasks.filter(t => t.type === 'social')
   ];
 
@@ -236,13 +226,13 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {leaderboard.map((u, i) => (
+              {leaderboard.length > 0 ? leaderboard.map((u, i) => (
                 <tr key={i} style={{borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff9c4' : 'transparent'}}>
                   <td style={{padding:10}}>{i+1}</td>
                   <td style={{padding:10, fontSize:12}}>{u.id.slice(0,8)}...</td>
                   <td style={{padding:10, textAlign:'right', fontWeight:'bold'}}>{Number(u.balance).toFixed(4)}</td>
                 </tr>
-              ))}
+              )) : <tr><td colSpan="3" style={{textAlign:'center', padding:20}}>No users yet. Be the first!</td></tr>}
             </tbody>
           </table>
         </div>
@@ -250,14 +240,23 @@ function App() {
 
       {activeNav === 'withdraw' && (
         <>
-          <div style={styles.card}>
-            <h3>Deposit Verification</h3>
-            <div style={{background: '#fee2e2', color: '#b91c1c', padding: '10px', borderRadius: '10px', marginBottom: '10px', fontWeight: 'bold', textAlign: 'center', border: '1px solid #ef4444'}}>⚠️ Pay 1 TON to Admin Wallet for Verification</div>
-            <p style={{fontSize: '11px', margin: '5px 0'}}>Wallet: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
-            <button style={{...styles.btn, padding: '8px', marginBottom: '10px'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Wallet Copied!"); }}>COPY WALLET</button>
-            <p style={{fontSize: '11px', margin: '5px 0'}}>Memo: <b>{APP_CONFIG.MY_UID}</b></p>
-            <button style={{...styles.btn, padding: '8px'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Memo Copied!"); }}>COPY MEMO</button>
-          </div>
+          {/* Deposit စာသားနေရာတွင် Buy VIP ကို အစားထိုးခြင်း */}
+          {!isVip && (
+            <div style={styles.card}>
+              <h3 style={{color: '#0ea5e9'}}>🚀 Upgrade to VIP</h3>
+              <p style={{fontSize: '13px', margin: '10px 0'}}>
+                VIP User ဖြစ်သွားရင် Video တစ်ခုကို <b>0.003 TON</b> အထိရမှာပါ!
+              </p>
+              <div style={{background: '#f0f9ff', padding: '10px', borderRadius: '10px', border: '1px solid #0ea5e9', marginBottom: '15px'}}>
+                <p style={{fontSize: '11px', margin: '5px 0'}}>Admin Wallet: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
+                <button style={{...styles.btn, background: '#0ea5e9', padding: '8px', fontSize: '12px'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Wallet Copied!"); }}>COPY WALLET</button>
+                <p style={{fontSize: '11px', margin: '10px 0 5px 0'}}>Memo (Your ID): <b>{APP_CONFIG.MY_UID}</b></p>
+                <button style={{...styles.btn, background: '#0ea5e9', padding: '8px', fontSize: '12px'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Memo Copied!"); }}>COPY MEMO</button>
+              </div>
+              <button style={{...styles.btn, background: '#0ea5e9'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>BUY VIP (Send Screenshot)</button>
+            </div>
+          )}
+
           <div style={styles.card}>
             <h3>Withdraw</h3>
             <input style={styles.input} placeholder="TON Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
@@ -312,14 +311,6 @@ function App() {
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b>{isVip ? "VIP USER ⭐" : "ACTIVE ✅"}</b></div>
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
-          
-          {!isVip && (
-            <div style={{marginTop:15, padding:10, background:'#f0f9ff', borderRadius:10, border:'1px dashed #0ea5e9'}}>
-                <p style={{fontSize:12, marginBottom:10}}>Upgrade to <b>VIP</b> to earn <b>0.003 TON</b> per ad!</p>
-                <button style={{...styles.btn, background:'#0ea5e9'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>BUY VIP</button>
-            </div>
-          )}
-          
           <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT, '_blank')}>SUPPORT</button>
         </div>
       )}
