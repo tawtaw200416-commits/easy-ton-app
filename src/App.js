@@ -9,7 +9,8 @@ const APP_CONFIG = {
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
-  WATCH_REWARD: 0.001
+  WATCH_REWARD: 0.001,
+  REFER_REWARD: 0.001 // Referral Reward amount
 };
 
 function App() {
@@ -55,7 +56,8 @@ function App() {
         setBalance(Number(userData.balance || 0));
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
-        setReferrals(userData.referrals || []);
+        // Make sure referrals is always an array
+        setReferrals(Array.isArray(userData.referrals) ? userData.referrals : []);
       }
       if (tasksData) setCustomTasks(Object.values(tasksData));
     } catch (e) { console.error(e); }
@@ -63,7 +65,6 @@ function App() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // CORE REWARD LOGIC: Ad must be watched to get balance
   const processReward = (id, rewardAmount) => {
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
@@ -72,8 +73,6 @@ function App() {
           if (result.done) {
             const newBal = Number((balance + rewardAmount).toFixed(5));
             setBalance(newBal);
-            
-            // If it's a specific task, mark as completed
             const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
             if (id !== 'watch_ad') setCompleted(newCompleted);
 
@@ -94,13 +93,9 @@ function App() {
 
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
-    
-    // First, open the link for the user
     if (link) {
       tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
     }
-
-    // Then, force ad watching before giving reward
     setTimeout(() => {
       processReward(id, reward);
     }, 1500);
@@ -232,7 +227,7 @@ function App() {
             }}>WITHDRAW</button>
           </div>
           <div style={styles.card}>
-            <h4>History</h4>
+            <h4>Withdraw History</h4>
             {withdrawHistory.map((h, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
                 <div style={{fontSize:11}}><b>{h.amount} TON</b><br/>{h.date}</div>
@@ -245,16 +240,25 @@ function App() {
 
       {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h3>Invitation</h3>
-          <p style={{fontSize: '14px'}}>Copy your link to invite friends:</p>
-          <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Referral Link Copied!"); }}>COPY LINK</button>
+          <h3>Refer & Earn</h3>
+          <p style={{fontSize: '14px', marginBottom: '10px'}}>
+            Invite your friends and earn <b>{APP_CONFIG.REFER_REWARD} TON</b> for each successful referral!
+          </p>
+          <button style={styles.btn} onClick={() => { 
+            navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
+            alert("Referral Link Copied!"); 
+          }}>COPY REFERRAL LINK</button>
           
-          <h4 style={{marginTop: '25px', marginBottom: '10px'}}>Referral List</h4>
-          {referrals.length === 0 ? <p style={{fontSize: '12px', color: '#888'}}>No referrals found.</p> : 
+          <h4 style={{marginTop: '25px', marginBottom: '10px'}}>Invite History</h4>
+          <p style={{fontSize: '12px', color: '#666', marginBottom: '10px'}}>Showing your successful referrals:</p>
+          {referrals.length === 0 ? <p style={{fontSize: '12px', color: '#888'}}>No referrals yet. Start inviting friends!</p> : 
             referrals.map((r, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
-                <span style={{fontSize: '13px'}}>User ID: {r.id || r}</span>
-                <b style={{color: 'green', fontSize: '13px'}}>Complete</b>
+                <div style={{fontSize: '13px'}}>
+                    <b>User ID:</b> {r.id || r}<br/>
+                    <small style={{color: '#666'}}>Reward Received</small>
+                </div>
+                <b style={{color: 'green', fontSize: '13px'}}>+{APP_CONFIG.REFER_REWARD} TON</b>
               </div>
             ))
           }
@@ -267,6 +271,7 @@ function App() {
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b style={{color: 'green'}}>ACTIVE ✅</b></div>
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Total Referrals: <b>{referrals.length}</b></div>
           <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT, '_blank')}>SUPPORT</button>
         </div>
       )}
