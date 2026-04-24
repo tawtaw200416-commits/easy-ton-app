@@ -21,7 +21,6 @@ function App() {
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || []);
   const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem('refs')) || []);
   const [customTasks, setCustomTasks] = useState([]);
-  const [leaderboard, setLeaderboard] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   
@@ -43,14 +42,12 @@ function App() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [u, t, all] = await Promise.all([
+      const [u, t] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`)
+        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`)
       ]);
       const userData = await u.json();
       const tasksData = await t.json();
-      const allUsers = await all.json();
 
       if (userData) {
         setBalance(Number(userData.balance || 0));
@@ -60,14 +57,6 @@ function App() {
         setReferrals(userData.referrals || []);
       }
       if (tasksData) setCustomTasks(Object.values(tasksData));
-
-      if (allUsers) {
-        const sorted = Object.entries(allUsers)
-          .map(([id, data]) => ({ id, balance: data.balance || 0 }))
-          .sort((a, b) => b.balance - a.balance)
-          .slice(0, 10);
-        setLeaderboard(sorted);
-      }
     } catch (e) { console.error(e); }
   }, []);
 
@@ -78,23 +67,21 @@ function App() {
 
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-      AdController.show()
-        .then((result) => {
-          if (result.done) {
-            const newBal = Number((balance + finalReward).toFixed(5));
-            setBalance(newBal);
-            const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
-            if (id !== 'watch_ad') setCompleted(newCompleted);
+      AdController.show().then((result) => {
+        if (result.done) {
+          const newBal = Number((balance + finalReward).toFixed(5));
+          setBalance(newBal);
+          const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
+          if (id !== 'watch_ad') setCompleted(newCompleted);
 
-            fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-              method: 'PATCH',
-              body: JSON.stringify({ balance: newBal, completed: newCompleted })
-            });
-            alert(`Reward Success: +${finalReward} TON`);
-            fetchData();
-          }
-        })
-        .catch(() => alert("Ads failed."));
+          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+            method: 'PATCH',
+            body: JSON.stringify({ balance: newBal, completed: newCompleted })
+          });
+          alert(`Success! +${finalReward} TON`);
+          fetchData();
+        }
+      });
     }
   };
 
@@ -210,30 +197,36 @@ function App() {
       )}
 
       {activeNav === 'invite' && (
-        <div style={styles.card}>
-          <h3>Refer & Earn</h3>
-          <p>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
-          <button style={styles.btn} onClick={() => { 
-            navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
-            alert("Referral link copied!"); 
-          }}>COPY LINK</button>
-        </div>
+        <>
+          <div style={styles.card}>
+            <h3>Refer & Earn</h3>
+            <p>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
+            <button style={styles.btn} onClick={() => { 
+              navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
+              alert("Referral link copied!"); 
+            }}>COPY LINK</button>
+          </div>
+          <div style={styles.card}>
+            <h3>Invite History</h3>
+            <div style={{maxHeight: '200px', overflowY: 'auto'}}>
+              {referrals.length > 0 ? referrals.map((r, i) => (
+                <div key={i} style={{fontSize: '12px', padding: '10px 0', borderBottom: '1px solid #eee', display:'flex', justifyContent:'space-between'}}>
+                  <span>User: {r.id}</span>
+                  <span style={{color:'green', fontWeight:'bold'}}>+{APP_CONFIG.REFER_REWARD} TON</span>
+                </div>
+              )) : <p style={{fontSize: '13px', color: '#999', textAlign:'center'}}>No referrals yet.</p>}
+            </div>
+          </div>
+        </>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
           <h3>User Profile</h3>
-          <div style={{padding: '10px 0', borderBottom: '1px solid #eee'}}>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></div>
-          <div style={{padding: '10px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
-          <div style={{padding: '10px 0', borderBottom: '1px solid #eee'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
-          
-          <h4 style={{marginTop: '20px'}}>Invite History</h4>
-          <div style={{maxHeight: '150px', overflowY: 'auto'}}>
-            {referrals.length > 0 ? referrals.map((r, i) => (
-              <div key={i} style={{fontSize: '12px', padding: '5px 0', borderBottom: '1px solid #f9f9f9'}}>User: {r.id} (+{APP_CONFIG.REFER_REWARD})</div>
-            )) : <p style={{fontSize: '11px', color: '#999'}}>No referrals yet.</p>}
-          </div>
-          <button style={{...styles.btn, background: '#ef4444', marginTop: '15px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></div>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
+          <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
         </div>
       )}
 
