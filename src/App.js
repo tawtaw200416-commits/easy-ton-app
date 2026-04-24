@@ -17,13 +17,11 @@ const APP_CONFIG = {
 };
 
 function App() {
-  // LocalStorage ကို default မယူတော့ဘဲ 0.0000 နဲ့ပဲ စပါမယ် (Firebase က data ရမှ ပြောင်းပါမယ်)
   const [balance, setBalance] = useState(0.0000);
   const [isVip, setIsVip] = useState(false);
   const [completed, setCompleted] = useState([]);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
   const [referrals, setReferrals] = useState([]);
-  
   const [customTasks, setCustomTasks] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
@@ -43,7 +41,6 @@ function App() {
     return (Date.now() - timestamp >= 300000) ? "Success" : "Pending";
   };
 
-  // ဒေတာသိမ်းတဲ့အခါမှာပဲ LocalStorage ကို သုံးပါမယ် (Backup အနေနဲ့)
   useEffect(() => {
     localStorage.setItem(`ton_bal_${APP_CONFIG.MY_UID}`, balance.toString());
     localStorage.setItem(`comp_tasks_${APP_CONFIG.MY_UID}`, JSON.stringify(completed));
@@ -60,7 +57,6 @@ function App() {
       const tasksData = await t.json();
       const allUsers = await all.json();
 
-      // Firebase မှာ data ရှိရင် အဲဒီ data ကိုပဲ အတည်ယူပါတယ်
       if (userData) {
         setBalance(Number(userData.balance || 0));
         setIsVip(!!userData.isVip);
@@ -68,7 +64,6 @@ function App() {
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
       } else {
-        // User မရှိသေးရင် 0 နဲ့ အသစ်ဆောက်ပါတယ်
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PUT',
           body: JSON.stringify({ balance: 0, isVip: false, completed: [], withdrawHistory: [] })
@@ -125,17 +120,18 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
+  // BOT TASKS (7 ONLY)
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
     { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-    { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'b4', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=3f47e34c" },
     { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
     { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
-    { id: 'b7', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=1793453606" },
-    ...customTasks.filter(t => t.type === 'bot')
+    { id: 'b7', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" }
   ];
 
+  // SOCIAL TASKS (14 ONLY)
   const socialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
@@ -145,9 +141,15 @@ function App() {
     { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
     { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
     { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+    { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
     { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-    ...customTasks.filter(t => t.type === 'social')
+    { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
+    { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
+    { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
+    { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
   ];
+
+  const rewardPrizes = ["1 TON", "0.8 TON", "0.6 TON", "0.4 TON", "0.3 TON", "0.2 TON", "0.2 TON", "0.1 TON", "0.1 TON", "0.1 TON"];
 
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
@@ -215,11 +217,6 @@ function App() {
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
                    alert("Task Saved!"); fetchData();
                 }}>SAVE TASK</button>
-                <input style={styles.input} placeholder="New Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
-                <button style={{...styles.btn, background: 'purple'}} onClick={async () => {
-                   await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.VIP_CODE_REWARD }) });
-                   alert("Promo Code Created!");
-                }}>CREATE CODE</button>
               </div>
             )}
           </div>
@@ -228,21 +225,30 @@ function App() {
 
       {activeNav === 'leaderboard' && (
         <div style={styles.card}>
-          <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners</h3>
+          <div style={{background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', textAlign: 'center', marginBottom: '15px'}}>
+             <h4 style={{margin: 0}}>RANKING SEASON ENDS ON</h4>
+             <h2 style={{margin: '5px 0'}}>30.5.2026</h2>
+             <small style={{color: '#fff'}}>Top earners will receive exclusive rewards!</small>
+          </div>
+
+          <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners & Prizes</h3>
           <table style={{width:'100%', borderCollapse:'collapse'}}>
             <thead>
               <tr style={{borderBottom:'2px solid #000'}}>
                 <th style={{padding:8, textAlign:'left'}}>Rank</th>
-                <th style={{padding:8, textAlign:'left'}}>User</th>
-                <th style={{padding:8, textAlign:'right'}}>Balance</th>
+                <th style={{padding:8, textAlign:'left'}}>User ID</th>
+                <th style={{padding:8, textAlign:'right'}}>Prize</th>
               </tr>
             </thead>
             <tbody>
               {leaderboard.map((u, i) => (
                 <tr key={i} style={{borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff9c4' : 'transparent'}}>
                   <td style={{padding:10}}>{i+1}</td>
-                  <td style={{padding:10, fontSize:12}}>{u.id.slice(0,8)}...</td>
-                  <td style={{padding:10, textAlign:'right', fontWeight:'bold'}}>{Number(u.balance).toFixed(4)}</td>
+                  <td style={{padding:10, fontSize:12, fontWeight: u.id === APP_CONFIG.MY_UID ? 'bold' : 'normal'}}>
+                    {/* Admin ID (1793453606) ဖြစ်ရင် ID အပြည့်ပြမယ်၊ ကျန်တာ ၈ လုံးပဲပြမယ် */}
+                    {APP_CONFIG.MY_UID === "1793453606" ? u.id : (u.id.slice(0,8) + "...")}
+                  </td>
+                  <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
                 </tr>
               ))}
             </tbody>
