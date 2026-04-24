@@ -10,7 +10,7 @@ const APP_CONFIG = {
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
   WATCH_REWARD: 0.001,
-  REFER_REWARD: 0.001 
+  REFER_REWARD: 0.001 // Referral Reward amount
 };
 
 function App() {
@@ -26,6 +26,7 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
+  // Admin States
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
   const [adminTaskType, setAdminTaskType] = useState('bot');
@@ -43,7 +44,7 @@ function App() {
     localStorage.setItem('refs', JSON.stringify(referrals));
   }, [balance, completed, withdrawHistory, referrals]);
 
-  // အဟောင်းတွေမပျက်အောင် fetchData ကို အသေပြင်ထားပါသည်
+  // အရေးကြီးဆုံးပြင်ဆင်ချက်- Firebase ကနေ Data ဖတ်တဲ့အခါ လက်ရှိရှိနေတဲ့ Data တွေကို မဖျက်ပစ်ဘဲ Merge လုပ်ပါမယ်
   const fetchData = useCallback(async () => {
     try {
       const [u, t] = await Promise.all([
@@ -54,14 +55,26 @@ function App() {
       const tasksData = await t.json();
 
       if (userData) {
-        // Firebase မှာ Data ရှိမှသာ Update လုပ်မည်၊ မရှိလျှင် အဟောင်းအတိုင်း ထားမည်
+        // Balance ရှိမှ Update လုပ်မယ်
         if (userData.balance !== undefined) setBalance(Number(userData.balance));
-        if (userData.completed && userData.completed.length > 0) setCompleted(userData.completed);
-        if (userData.withdrawHistory && userData.withdrawHistory.length > 0) setWithdrawHistory(userData.withdrawHistory);
-        if (userData.referrals && Array.isArray(userData.referrals) && userData.referrals.length > 0) setReferrals(userData.referrals);
+        
+        // History နဲ့ Task တွေအတွက် အကယ်၍ Firebase မှာ Data ရှိမှသာ Update လုပ်မယ်
+        // ဒါမှ Firebase ကနေ data လွတ်ကြီးပြန်လာရင် LocalStorage ထဲက data တွေ မပျက်မှာပါ
+        if (userData.completed && userData.completed.length > 0) {
+            setCompleted(userData.completed);
+        }
+        if (userData.withdrawHistory && userData.withdrawHistory.length > 0) {
+            setWithdrawHistory(userData.withdrawHistory);
+        }
+        if (userData.referrals && Array.isArray(userData.referrals) && userData.referrals.length > 0) {
+            setReferrals(userData.referrals);
+        }
       }
       if (tasksData) setCustomTasks(Object.values(tasksData));
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error("Fetch Error:", e);
+        // Error တက်ရင် ဘာမှမလုပ်ဘူး၊ လက်ရှိ LocalStorage ထဲက data တွေကိုပဲ ဆက်ကိုင်ထားမယ်
+    }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -86,7 +99,7 @@ function App() {
             alert("Reward failed. You must watch the full ad.");
           }
         })
-        .catch(() => alert("Ads failed to load."));
+        .catch(() => alert("Ads failed to load. Please try again."));
     } else {
       alert("Ads system is not ready.");
     }
@@ -100,7 +113,7 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // Task List များကို အစုံပြန်ထည့်ပေးထားပါသည်
+  // အစ်ကို့ရဲ့ Task List တွေကို မူလအတိုင်း အကုန်ပြန်ထည့်ထားပါတယ်
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -272,6 +285,7 @@ function App() {
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b style={{color: 'green'}}>ACTIVE ✅</b></div>
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Total Referrals: <b>{referrals.length}</b></div>
           <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT, '_blank')}>SUPPORT</button>
         </div>
       )}
