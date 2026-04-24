@@ -37,6 +37,35 @@ function App() {
   const [adminTaskType, setAdminTaskType] = useState('bot');
   const [adminNewPromoCode, setAdminNewPromoCode] = useState('');
 
+  // --- Tasks Data (Bot 6 ခု နှင့် Social 14 ခု) ---
+  const botTasks = [
+    { id: 'bot_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'bot_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'bot_3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'bot_4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'bot_5', name: "Major Bot", link: "https://t.me/major/start?startapp=1793453606" },
+    { id: 'bot_6', name: "Blum Bot", link: "https://t.me/BlumCryptoBot/app?startapp=ref_G7nE1W7n" },
+    ...customTasks.filter(t => t.type === 'bot')
+  ];
+
+  const socialTasks = [
+    { id: 's_1', name: "Join GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 's_2', name: "Join EasyTON Free", link: "https://t.me/easytonfree" },
+    { id: 's_3', name: "Join TON Community", link: "https://t.me/toncoin" },
+    { id: 's_4', name: "Follow Twitter", link: "https://x.com/ton_blockchain" },
+    { id: 's_5', name: "Subscribe YouTube", link: "https://youtube.com/@easyton" },
+    { id: 's_6', name: "Join Channel 1", link: "https://t.me/example1" },
+    { id: 's_7', name: "Join Channel 2", link: "https://t.me/example2" },
+    { id: 's_8', name: "Join Channel 3", link: "https://t.me/example3" },
+    { id: 's_9', name: "Join Channel 4", link: "https://t.me/example4" },
+    { id: 's_10', name: "Join Channel 5", link: "https://t.me/example5" },
+    { id: 's_11', name: "Join Channel 6", link: "https://t.me/example6" },
+    { id: 's_12', name: "Join Channel 7", link: "https://t.me/example7" },
+    { id: 's_13', name: "Join Channel 8", link: "https://t.me/example8" },
+    { id: 's_14', name: "Join Channel 9", link: "https://t.me/example9" },
+    ...customTasks.filter(t => t.type === 'social')
+  ];
+
   useEffect(() => {
     localStorage.setItem('ton_bal', balance.toString());
     localStorage.setItem('comp_tasks', JSON.stringify(completed));
@@ -132,7 +161,6 @@ function App() {
     } else { alert('Invalid Code!'); }
   };
 
-  // အသစ်ပြင်ဆင်ထားသော Withdraw Function (Data ကို "withdrawals" node ထဲ ပို့ပေးမည်)
   const handleWithdrawRequest = () => {
     const amount = Number(withdrawAmount);
     if (amount < APP_CONFIG.MIN_WITHDRAW) return alert(`Min withdraw ${APP_CONFIG.MIN_WITHDRAW} TON`);
@@ -151,13 +179,11 @@ function App() {
       };
 
       try {
-        // ၁။ User ဆီက balance ကို နှုတ်မယ်
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PATCH',
           body: JSON.stringify({ balance: newBal })
         });
 
-        // ၂။ Withdrawals ဆိုတဲ့ နေရာမှာ အချက်အလက်တွေ စုသိမ်းမယ်
         await fetch(`${APP_CONFIG.FIREBASE_URL}/withdrawals.json`, {
           method: 'POST',
           body: JSON.stringify(requestData)
@@ -199,20 +225,6 @@ function App() {
       } catch (e) { alert("Error."); }
     });
   };
-
-  const botTasks = [
-    { id: 'bot_new_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-    { id: 'bot_new_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-    { id: 'bot_new_3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-    { id: 'bot_new_4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-    ...customTasks.filter(t => t.type === 'bot')
-  ];
-
-  const socialTasks = [
-    { id: 's_1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-    { id: 's_10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-    ...customTasks.filter(t => t.type === 'social')
-  ];
 
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '120px', fontFamily: 'sans-serif' },
