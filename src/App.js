@@ -9,13 +9,13 @@ const APP_CONFIG = {
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
-  WATCH_REWARD: 0.001,       
-  VIP_WATCH_REWARD: 0.003,   
+  WATCH_REWARD: 0.0009,       // VIP မဟုတ်သူအတွက်
+  VIP_WATCH_REWARD: 0.003,    // VIP အတွက်
+  CODE_REWARD: 0.001,         // Reward Code အတွက်
   REFER_REWARD: 0.001
 };
 
 function App() {
-  // ID မငြိစေရန် LocalStorage Key များကို UID ဖြင့် ခွဲသိမ်းခြင်း
   const [balance, setBalance] = useState(() => Number(localStorage.getItem(`ton_bal_${APP_CONFIG.MY_UID}`)) || 0.0000);
   const [isVip, setIsVip] = useState(false);
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem(`comp_tasks_${APP_CONFIG.MY_UID}`)) || []);
@@ -81,7 +81,11 @@ function App() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const processReward = (id, rewardAmount) => {
-    const finalReward = (id === 'watch_ad') ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : rewardAmount;
+    // Watch Ads အတွက် Reward Logic
+    let finalReward = rewardAmount;
+    if (id === 'watch_ad') {
+      finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
+    }
 
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
@@ -107,6 +111,8 @@ function App() {
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
+    
+    // Reward code သို့မဟုတ် အခြား task reward ဖြစ်လျှင် Ads အရင်ပြမည်
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
@@ -183,7 +189,7 @@ function App() {
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, 0.005)}>CLAIM</button>
+                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
               </div>
             )}
             {activeTab === 'admin' && (
@@ -202,7 +208,7 @@ function App() {
                 }}>SAVE TASK</button>
                 <input style={styles.input} placeholder="New Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <button style={{...styles.btn, background: 'purple'}} onClick={async () => {
-                   await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify({ code: adminPromoCode, reward: 0.005 }) });
+                   await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.CODE_REWARD }) });
                    alert("Promo Code Created!");
                 }}>CREATE CODE</button>
               </div>
@@ -296,7 +302,6 @@ function App() {
                 }}>COPY REFERRAL LINK</button>
             </div>
             
-            {/* Invite History Card */}
             <div style={styles.card}>
                 <h3>Invite History</h3>
                 <div style={{maxHeight: '200px', overflowY: 'auto'}}>
