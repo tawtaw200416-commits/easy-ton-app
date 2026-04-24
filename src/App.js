@@ -44,7 +44,6 @@ function App() {
     localStorage.setItem('refs', JSON.stringify(referrals));
   }, [balance, completed, withdrawHistory, referrals]);
 
-  // အရေးကြီးဆုံးပြင်ဆင်ချက်- Firebase ကနေ Data ဖတ်တဲ့အခါ လက်ရှိရှိနေတဲ့ Data တွေကို မဖျက်ပစ်ဘဲ Merge လုပ်ပါမယ်
   const fetchData = useCallback(async () => {
     try {
       const [u, t] = await Promise.all([
@@ -55,25 +54,19 @@ function App() {
       const tasksData = await t.json();
 
       if (userData) {
-        // Balance ရှိမှ Update လုပ်မယ်
+        // Balance ရှိမှသာ Update လုပ်မည်၊ မရှိလျှင် LocalStorage က data ကိုပဲ သုံးမည်
         if (userData.balance !== undefined) setBalance(Number(userData.balance));
         
-        // History နဲ့ Task တွေအတွက် အကယ်၍ Firebase မှာ Data ရှိမှသာ Update လုပ်မယ်
-        // ဒါမှ Firebase ကနေ data လွတ်ကြီးပြန်လာရင် LocalStorage ထဲက data တွေ မပျက်မှာပါ
-        if (userData.completed && userData.completed.length > 0) {
-            setCompleted(userData.completed);
-        }
-        if (userData.withdrawHistory && userData.withdrawHistory.length > 0) {
-            setWithdrawHistory(userData.withdrawHistory);
-        }
-        if (userData.referrals && Array.isArray(userData.referrals) && userData.referrals.length > 0) {
+        // Data မပျက်စေရန် null မဖြစ်မှသာ Update လုပ်ပါမည်
+        if (userData.completed) setCompleted(userData.completed);
+        if (userData.withdrawHistory) setWithdrawHistory(userData.withdrawHistory);
+        if (userData.referrals && Array.isArray(userData.referrals)) {
             setReferrals(userData.referrals);
         }
       }
       if (tasksData) setCustomTasks(Object.values(tasksData));
     } catch (e) { 
-        console.error("Fetch Error:", e);
-        // Error တက်ရင် ဘာမှမလုပ်ဘူး၊ လက်ရှိ LocalStorage ထဲက data တွေကိုပဲ ဆက်ကိုင်ထားမယ်
+        console.error("Connection Error:", e);
     }
   }, []);
 
@@ -113,7 +106,6 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // အစ်ကို့ရဲ့ Task List တွေကို မူလအတိုင်း အကုန်ပြန်ထည့်ထားပါတယ်
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -262,17 +254,20 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3>Refer & Earn</h3>
+          <p style={{fontSize: '14px', marginBottom: '15px', color: '#000', fontWeight: 'bold'}}>
+            Invite your friends and get <span style={{color: 'green'}}>0.001 TON</span> per successful referral!
+          </p>
           <button style={styles.btn} onClick={() => { 
             navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
             alert("Referral Link Copied!"); 
           }}>COPY REFERRAL LINK</button>
           
           <h4 style={{marginTop: '25px', marginBottom: '10px'}}>Invite History</h4>
-          {referrals.length === 0 ? <p style={{fontSize: '12px'}}>No referrals yet.</p> : 
+          {referrals.length === 0 ? <p style={{fontSize: '12px'}}>No referrals yet. Invite friends to earn more!</p> : 
             referrals.map((r, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
                 <div style={{fontSize: '13px'}}><b>User ID:</b> {r.id || r}</div>
-                <b style={{color: 'green', fontSize: '13px'}}>+{APP_CONFIG.REFER_REWARD} TON</b>
+                <b style={{color: 'green', fontSize: '13px'}}>+0.001 TON</b>
               </div>
             ))
           }
