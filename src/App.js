@@ -9,7 +9,7 @@ const APP_CONFIG = {
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
-  WATCH_REWARD: 0.001,
+  WATCH_REWARD: 0.003, // 0.001 မှ 0.003 သို့ ပြောင်းလဲထားပါသည်
   REFER_REWARD: 0.001 // Referral Reward amount
 };
 
