@@ -4,7 +4,7 @@ const tg = window.Telegram?.WebApp;
 
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
-  MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606",
+  MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", // အစ်ကို့ ID
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   HELP_BOT: "https://t.me/EasyTonHelp_Bot",
@@ -35,12 +35,12 @@ function App() {
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
   const [adminTaskType, setAdminTaskType] = useState('bot');
-  const [adminNewPromoCode, setAdminNewPromoCode] = useState('');
+  const [adminNewPromoCode, setAdminNewPromoCode] = useState(''); 
 
   const [userChannelName, setUserChannelName] = useState('');
   const [userChannelLink, setUserChannelLink] = useState('');
 
-  // Status Checking Logic (၅ မိနစ်ပြည့်လျှင် Success ပြမည်)
+  // ၅ မိနစ်ပြည့်မပြည့် စစ်ဆေးပေးမည့် logic
   const checkStatus = (timestamp) => {
     if (!timestamp) return "Pending";
     const fiveMinutes = 5 * 60 * 1000;
@@ -86,40 +86,44 @@ function App() {
     fetchData();
   }, [fetchData]);
 
+  const runWithAd = (onSuccess) => {
+    if (window.Adsgram) {
+      window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID }).show()
+        .then(() => { onSuccess(); })
+        .catch((error) => { alert("Please watch full ad!"); });
+    } else { alert("Ad network error."); }
+  };
+
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
     if (link) {
       if (tg && link.includes('t.me/')) { tg.openTelegramLink(link); } 
       else { window.open(link, '_blank'); }
     }
-    alert("Reward will be added after confirmation (5 mins).");
-    setTimeout(async () => {
-        const newBal = Number((balance + reward).toFixed(5));
-        const newComp = [...completed, id];
-        setBalance(newBal);
-        setCompleted(newComp);
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-          method: 'PATCH',
-          body: JSON.stringify({ balance: newBal, completed: newComp })
-        });
-        alert(`Success! +${reward} TON added.`);
-    }, 10000); // Demo အနေနဲ့ ၁၀ စက္ကန့်ထားပါတယ်၊ ၅ မိနစ်အတွက် 300000 ပြောင်းပါ
+    alert("Verification in progress... Balance will be added in 5 mins.");
+    runWithAd(() => {
+        setTimeout(() => {
+            const newBal = Number((balance + reward).toFixed(5));
+            const newComp = [...completed, id];
+            setBalance(newBal);
+            setCompleted(newComp);
+            fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+              method: 'PATCH',
+              body: JSON.stringify({ balance: newBal, completed: newComp })
+            });
+            alert("Reward Verified!");
+        }, 300000); // 5 mins
+    });
   };
 
   const handleWithdrawRequest = () => {
     const amount = Number(withdrawAmount);
-    if (amount < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdraw is ${APP_CONFIG.MIN_WITHDRAW} TON`);
+    if (amount < APP_CONFIG.MIN_WITHDRAW) return alert(`Min withdraw: ${APP_CONFIG.MIN_WITHDRAW}`);
     if (amount > balance) return alert("Insufficient balance!");
-    if (!withdrawAddress || withdrawAddress.length < 10) return alert("Valid TON address required.");
+    if (!withdrawAddress || withdrawAddress.length < 10) return alert("Enter valid address.");
 
     const newBal = Number((balance - amount).toFixed(5));
-    const requestData = { 
-      amount, 
-      address: withdrawAddress, 
-      date: new Date().toLocaleString(), 
-      timestamp: Date.now(), 
-      status: "Pending" 
-    };
+    const requestData = { amount, address: withdrawAddress, date: new Date().toLocaleString(), timestamp: Date.now(), status: "Pending" };
     
     setBalance(newBal);
     setWithdrawHistory([requestData, ...withdrawHistory]);
@@ -130,22 +134,36 @@ function App() {
       method: 'PATCH',
       body: JSON.stringify({ balance: newBal, withdrawHistory: [requestData, ...withdrawHistory] })
     });
-    alert("Withdrawal submitted! Processed in 5 mins.");
+    alert("Request sent! Will show Success after 5 mins.");
   };
 
-  const copyToClipboard = (text, msg) => {
-    navigator.clipboard.writeText(text);
-    alert(msg);
+  const handleAdminAddTask = async () => {
+    if (!adminTaskName || !adminTaskLink) return alert("Fill all fields!");
+    const newTask = { id: 'task_' + Date.now(), name: adminTaskName, link: adminTaskLink, type: adminTaskType };
+    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method: 'POST', body: JSON.stringify(newTask) });
+    alert("Task Added!");
+    setAdminTaskName(''); setAdminTaskLink(''); fetchData();
   };
 
-  // Task Data ဟောင်းများ
+  const handleAdminAddPromo = async () => {
+    if (!adminNewPromoCode) return alert("Enter Code!");
+    await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`, { method: 'POST', body: JSON.stringify({ code: adminNewPromoCode.toUpperCase(), reward: 0.001 }) });
+    alert("Code Added!");
+    setAdminNewPromoCode(''); fetchData();
+  };
+
   const botTasks = [
-    { id: 'bot_new_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot" },
-    { id: 'bot_new_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMiner" }
+    { id: 'bot1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'bot2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'bot3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'bot4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    ...customTasks.filter(t => t.type === 'bot')
   ];
 
   const socialTasks = [
-    { id: 's_10', name: "@easytonfree", link: "https://t.me/easytonfree" }
+    { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+    ...customTasks.filter(t => t.type === 'social')
   ];
 
   const styles = {
@@ -156,80 +174,89 @@ function App() {
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', borderTop: '4px solid #fff', padding: '15px 0' },
     input: { width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #000', marginBottom: '10px', boxSizing: 'border-box' },
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #eee' },
-    copyBox: { background: '#f3f4f6', padding: '10px', borderRadius: '8px', fontSize: '12px', marginBottom: '10px', border: '1px dashed #000', wordBreak: 'break-all' },
-    alertBox: { background: '#fef2f2', border: '2px solid #ef4444', color: '#b91c1c', padding: '10px', borderRadius: '10px', marginBottom: '15px', textAlign: 'center', fontWeight: 'bold', fontSize: '14px' }
+    alertBox: { background: '#fef2f2', border: '2px solid #ef4444', color: '#b91c1c', padding: '10px', borderRadius: '10px', marginBottom: '15px', textAlign: 'center', fontWeight: 'bold' }
   };
 
   return (
     <div style={styles.main}>
       <div style={styles.header}>
-        <small style={{ color: '#facc15', letterSpacing: '1px' }}>YOUR BALANCE</small>
+        <small style={{ color: '#facc15' }}>TOTAL BALANCE</small>
         <h1 style={{ color: '#fff', fontSize: '42px', margin: '5px 0' }}>{balance.toFixed(5)} <span style={{fontSize:16}}>TON</span></h1>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
-            {['BOT', 'SOCIAL', 'REWARD'].map(t => (
+            {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
+               (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && (
                 <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', fontWeight:'bold', border:'2px solid #000'}}>{t}</button>
+               )
             ))}
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && botTasks.map(task => (
-              <div key={task.id} style={styles.row}><b>{task.name}</b><button onClick={() => handleTaskReward(task.id, 0.001, task.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>START</button></div>
+            {activeTab === 'bot' && botTasks.filter(t => !completed.includes(t.id)).map(t => (
+              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>START</button></div>
             ))}
-            {activeTab === 'social' && socialTasks.map(task => (
-              <div key={task.id} style={styles.row}><b>{task.name}</b><button onClick={() => handleTaskReward(task.id, 0.001, task.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>JOIN</button></div>
+            {activeTab === 'social' && socialTasks.filter(t => !completed.includes(t.id)).map(t => (
+              <div key={t.id} style={styles.row}><b>{t.name}</b><button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{...styles.btn, width: '90px', padding: '8px'}}>JOIN</button></div>
             ))}
+            {activeTab === 'reward' && (
+              <div>
+                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCode} onChange={e => setRewardCode(e.target.value)} />
+                <button style={styles.btn} onClick={() => {if(rewardCode) handleTaskReward('code_'+rewardCode, 0.001, null); setRewardCode('');}}>CLAIM</button>
+              </div>
+            )}
+            {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
+              <div>
+                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
+                <input style={styles.input} placeholder="Task Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
+                <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
+                    <option value="bot">BOT</option>
+                    <option value="social">SOCIAL</option>
+                </select>
+                <button style={{...styles.btn, background:'#10b981', marginBottom:10}} onClick={handleAdminAddTask}>ADD TASK</button>
+                <input style={styles.input} placeholder="New Promo Code" value={adminNewPromoCode} onChange={e => setAdminNewPromoCode(e.target.value)} />
+                <button style={{...styles.btn, background:'#a855f7'}} onClick={handleAdminAddPromo}>ADD CODE</button>
+              </div>
+            )}
           </div>
         </>
       )}
 
       {activeNav === 'withdraw' && (
         <>
-          {/* Deposit Section */}
           <div style={styles.card}>
-            <h3 style={{marginTop:0}}>Deposit TON</h3>
-            
-            {/* အနီရောင် Alert Box */}
+            <h3>Deposit TON</h3>
             <div style={styles.alertBox}>⚠️ You must top up 1 TON to withdraw</div>
-            
-            <label style={{fontSize:12, fontWeight:'bold'}}>Admin Wallet Address:</label>
-            <div style={styles.copyBox}>{APP_CONFIG.ADMIN_WALLET}</div>
-            <button style={{...styles.btn, padding:'8px', marginBottom:'15px'}} onClick={() => copyToClipboard(APP_CONFIG.ADMIN_WALLET, "Wallet Address Copied!")}>COPY ADDRESS</button>
-
-            <label style={{fontSize:12, fontWeight:'bold'}}>Comment / Memo (User ID):</label>
-            <div style={styles.copyBox}>{APP_CONFIG.MY_UID}</div>
-            <button style={{...styles.btn, padding:'8px'}} onClick={() => copyToClipboard(APP_CONFIG.MY_UID, "Memo (UID) Copied!")}>COPY MEMO</button>
+            <p style={{fontSize:12}}>Wallet: <br/><b>{APP_CONFIG.ADMIN_WALLET}</b></p>
+            <button style={{...styles.btn, padding:8, marginBottom:10}} onClick={() => {navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Copied!");}}>COPY ADDRESS</button>
+            <p style={{fontSize:12}}>Memo (User ID): <br/><b>{APP_CONFIG.MY_UID}</b></p>
+            <button style={{...styles.btn, padding:8}} onClick={() => {navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Copied!");}}>COPY MEMO</button>
           </div>
-
-          {/* Withdraw Section */}
           <div style={styles.card}>
-            <h3 style={{marginTop:0}}>Withdraw TON</h3>
-            <input style={styles.input} type="number" placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-            <input style={styles.input} placeholder="TON Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+            <h3>Withdraw</h3>
+            <input style={styles.input} placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+            <input style={styles.input} placeholder="Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background:'#3b82f6'}} onClick={handleWithdrawRequest}>WITHDRAW NOW</button>
-            
-            <h4 style={{marginTop:25, marginBottom:10}}>History</h4>
+            <h4 style={{marginTop:20}}>History</h4>
             {withdrawHistory.map((h, i) => (
-                <div key={i} style={styles.row}>
-                  <div style={{fontSize:12}}><b>-{h.amount} TON</b><br/><small>{h.date}</small></div>
-                  <div style={{color: checkStatus(h.timestamp) === 'Success' ? '#10b981' : '#f59e0b', fontSize:12, fontWeight:'bold'}}>
-                    ● {checkStatus(h.timestamp)}
-                  </div>
-                </div>
+              <div key={i} style={styles.row}>
+                <div style={{fontSize:12}}><b>{h.amount} TON</b><br/>{h.date}</div>
+                <div style={{color: checkStatus(h.timestamp) === 'Success' ? '#10b981' : '#f59e0b', fontWeight:'bold'}}>● {checkStatus(h.timestamp)}</div>
+              </div>
             ))}
           </div>
         </>
       )}
 
-      {activeNav === 'invite' && (
-        <div style={styles.card}>Invite Link: https://t.me/Bot?start={APP_CONFIG.MY_UID}</div>
-      )}
-
       {activeNav === 'profile' && (
-        <div style={styles.card}>User ID: {APP_CONFIG.MY_UID}</div>
+        <div style={styles.card}>
+          <h3>My Profile</h3>
+          <div style={styles.row}><span>Balance:</span> <b>{balance.toFixed(5)} TON</b></div>
+          <div style={styles.row}><span>User ID:</span> <b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={styles.row}><span>Referrals:</span> <b>{referrals.length}</b></div>
+        </div>
       )}
 
       <div style={styles.nav}>
