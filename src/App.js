@@ -9,8 +9,8 @@ const APP_CONFIG = {
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
-  WATCH_REWARD: 0.001,       // Normal User
-  VIP_WATCH_REWARD: 0.003,   // VIP User
+  WATCH_REWARD: 0.0009,       // Normal User Reward (Changed to 0.0009)
+  VIP_WATCH_REWARD: 0.003,   // VIP User Reward
   REFER_REWARD: 0.001
 };
 
@@ -67,7 +67,6 @@ function App() {
       if (tasksData) setCustomTasks(Object.values(tasksData));
 
       if (allUsers) {
-        // VIP မဟုတ်သူရော၊ VIP ရော အားလုံးကို တွက်ချက်ပေးထားသည်
         const sorted = Object.entries(allUsers)
           .map(([id, data]) => ({ id, balance: data.balance || 0 }))
           .sort((a, b) => b.balance - a.balance)
@@ -80,6 +79,7 @@ function App() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const processReward = (id, rewardAmount) => {
+    // Only watch_ad reward is modified based on VIP status
     const finalReward = (id === 'watch_ad') ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : rewardAmount;
 
     if (window.Adsgram) {
@@ -96,10 +96,10 @@ function App() {
               method: 'PATCH',
               body: JSON.stringify({ balance: newBal, completed: newCompleted })
             });
-            alert(`Reward Success: +${finalReward} TON ${isVip ? '(VIP Bonus)' : ''}`);
+            alert(`Reward Success: +${finalReward} TON ${isVip ? '(VIP)' : ''}`);
             fetchData();
           } else {
-            alert("Reward failed. Watch full ad.");
+            alert("Reward failed. You must watch the full ad.");
           }
         })
         .catch(() => alert("Ads failed to load."));
@@ -240,12 +240,12 @@ function App() {
 
       {activeNav === 'withdraw' && (
         <>
-          {/* Deposit စာသားနေရာတွင် Buy VIP ကို အစားထိုးခြင်း */}
+          {/* Upgrade to VIP section replacing Deposit section */}
           {!isVip && (
             <div style={styles.card}>
               <h3 style={{color: '#0ea5e9'}}>🚀 Upgrade to VIP</h3>
               <p style={{fontSize: '13px', margin: '10px 0'}}>
-                VIP User ဖြစ်သွားရင် Video တစ်ခုကို <b>0.003 TON</b> အထိရမှာပါ!
+                Become a VIP to earn <b>0.003 TON</b> per ad!
               </p>
               <div style={{background: '#f0f9ff', padding: '10px', borderRadius: '10px', border: '1px solid #0ea5e9', marginBottom: '15px'}}>
                 <p style={{fontSize: '11px', margin: '5px 0'}}>Admin Wallet: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
