@@ -15,11 +15,13 @@ const APP_CONFIG = {
 };
 
 function App() {
-  const [balance, setBalance] = useState(() => Number(localStorage.getItem('ton_bal')) || 0.0000);
+  // ID မငြိစေရန် LocalStorage Key များကို UID ဖြင့် ခွဲသိမ်းခြင်း
+  const [balance, setBalance] = useState(() => Number(localStorage.getItem(`ton_bal_${APP_CONFIG.MY_UID}`)) || 0.0000);
   const [isVip, setIsVip] = useState(false);
-  const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('comp_tasks')) || []);
-  const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || []);
-  const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem('refs')) || []);
+  const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem(`comp_tasks_${APP_CONFIG.MY_UID}`)) || []);
+  const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem(`wd_hist_${APP_CONFIG.MY_UID}`)) || []);
+  const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem(`refs_${APP_CONFIG.MY_UID}`)) || []);
+  
   const [customTasks, setCustomTasks] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
@@ -40,10 +42,10 @@ function App() {
   };
 
   useEffect(() => {
-    localStorage.setItem('ton_bal', balance.toString());
-    localStorage.setItem('comp_tasks', JSON.stringify(completed));
-    localStorage.setItem('wd_hist', JSON.stringify(withdrawHistory));
-    localStorage.setItem('refs', JSON.stringify(referrals));
+    localStorage.setItem(`ton_bal_${APP_CONFIG.MY_UID}`, balance.toString());
+    localStorage.setItem(`comp_tasks_${APP_CONFIG.MY_UID}`, JSON.stringify(completed));
+    localStorage.setItem(`wd_hist_${APP_CONFIG.MY_UID}`, JSON.stringify(withdrawHistory));
+    localStorage.setItem(`refs_${APP_CONFIG.MY_UID}`, JSON.stringify(referrals));
   }, [balance, completed, withdrawHistory, referrals]);
 
   const fetchData = useCallback(async () => {
@@ -62,7 +64,7 @@ function App() {
         setIsVip(!!userData.isVip);
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
-        setReferrals(Array.isArray(userData.referrals) ? userData.referrals : []);
+        setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
       }
       if (tasksData) setCustomTasks(Object.values(tasksData));
 
@@ -284,14 +286,29 @@ function App() {
       )}
 
       {activeNav === 'invite' && (
-        <div style={styles.card}>
-          <h3>Refer & Earn</h3>
-          <p style={{fontSize: '14px', marginBottom: '10px'}}>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
-          <button style={styles.btn} onClick={() => { 
-            navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
-            alert("Referral Link Copied!"); 
-          }}>COPY REFERRAL LINK</button>
-        </div>
+        <>
+            <div style={styles.card}>
+                <h3>Refer & Earn</h3>
+                <p style={{fontSize: '14px', marginBottom: '10px'}}>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
+                <button style={styles.btn} onClick={() => { 
+                    navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
+                    alert("Referral Link Copied!"); 
+                }}>COPY REFERRAL LINK</button>
+            </div>
+            
+            {/* Invite History Card */}
+            <div style={styles.card}>
+                <h3>Invite History</h3>
+                <div style={{maxHeight: '200px', overflowY: 'auto'}}>
+                    {referrals.length > 0 ? referrals.map((r, i) => (
+                        <div key={i} style={{fontSize: '12px', padding: '10px 0', borderBottom: '1px solid #eee', display:'flex', justifyContent:'space-between'}}>
+                            <span>User ID: {r.id || r}</span>
+                            <span style={{color:'green', fontWeight:'bold'}}>+{APP_CONFIG.REFER_REWARD} TON</span>
+                        </div>
+                    )) : <p style={{fontSize: '13px', color: '#999', textAlign:'center'}}>No friends invited yet.</p>}
+                </div>
+            </div>
+        </>
       )}
 
       {activeNav === 'profile' && (
