@@ -22,7 +22,6 @@ function App() {
   const [completed, setCompleted] = useState([]);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
   const [referrals, setReferrals] = useState([]);
-  const [customTasks, setCustomTasks] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
@@ -41,20 +40,14 @@ function App() {
     return (Date.now() - timestamp >= 300000) ? "Success" : "Pending";
   };
 
-  useEffect(() => {
-    localStorage.setItem(`ton_bal_${APP_CONFIG.MY_UID}`, balance.toString());
-    localStorage.setItem(`comp_tasks_${APP_CONFIG.MY_UID}`, JSON.stringify(completed));
-  }, [balance, completed]);
-
+  // Firebase ကနေ data အမြဲ Sync လုပ်ဖို့ fetchData ကို သုံးပါတယ် (Device တူရင် Data တူနေမှာပါ)
   const fetchData = useCallback(async () => {
     try {
-      const [u, t, all] = await Promise.all([
+      const [u, all] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
         fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`)
       ]);
       const userData = await u.json();
-      const tasksData = await t.json();
       const allUsers = await all.json();
 
       if (userData) {
@@ -69,8 +62,6 @@ function App() {
           body: JSON.stringify({ balance: 0, isVip: false, completed: [], withdrawHistory: [] })
         });
       }
-
-      if (tasksData) setCustomTasks(Object.values(tasksData));
 
       if (allUsers) {
         const sorted = Object.entries(allUsers)
@@ -99,8 +90,9 @@ function App() {
         .then((result) => {
           if (result.done) {
             const newBal = Number((balance + finalReward).toFixed(5));
-            setBalance(newBal);
             const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
+            
+            setBalance(newBal);
             if (id !== 'watch_ad') setCompleted(newCompleted);
 
             fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
@@ -108,7 +100,6 @@ function App() {
               body: JSON.stringify({ balance: newBal, completed: newCompleted })
             });
             alert(`Reward Success: +${finalReward} TON`);
-            fetchData();
           }
         });
     }
@@ -120,7 +111,6 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // BOT TASKS (7 ONLY)
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -131,7 +121,6 @@ function App() {
     { id: 'b7', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" }
   ];
 
-  // SOCIAL TASKS (14 ONLY)
   const socialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
@@ -205,17 +194,29 @@ function App() {
             )}
             {activeTab === 'admin' && (
               <div>
-                <h4>Admin Control</h4>
+                <h4>Create Promo Code</h4>
+                <input style={styles.input} placeholder="Promo Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
+                <button style={{...styles.btn, background: 'purple'}} onClick={async () => {
+                   if(!adminPromoCode) return alert("Enter code name!");
+                   await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { 
+                     method: 'PUT', 
+                     body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.VIP_CODE_REWARD }) 
+                   });
+                   alert("Promo Code Created!"); setAdminPromoCode('');
+                }}>CREATE CODE</button>
+                
+                <hr style={{margin: '20px 0'}}/>
+                <h4>Add Global Task</h4>
                 <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
                 <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
                   <option value="bot">BOT</option>
                   <option value="social">SOCIAL</option>
                 </select>
-                <button style={{...styles.btn, background: 'green', marginBottom: '15px'}} onClick={async () => {
+                <button style={{...styles.btn, background: 'green'}} onClick={async () => {
                    const id = 't_'+Date.now();
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
-                   alert("Task Saved!"); fetchData();
+                   alert("Global Task Saved!"); fetchData();
                 }}>SAVE TASK</button>
               </div>
             )}
@@ -228,7 +229,7 @@ function App() {
           <div style={{background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', textAlign: 'center', marginBottom: '15px'}}>
              <h4 style={{margin: 0}}>RANKING SEASON ENDS ON</h4>
              <h2 style={{margin: '5px 0'}}>30.5.2026</h2>
-             <small style={{color: '#fff'}}>Top earners will receive exclusive rewards!</small>
+             <small style={{color: '#fff'}}>VIP members can withdraw</small>
           </div>
 
           <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners & Prizes</h3>
@@ -244,8 +245,7 @@ function App() {
               {leaderboard.map((u, i) => (
                 <tr key={i} style={{borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff9c4' : 'transparent'}}>
                   <td style={{padding:10}}>{i+1}</td>
-                  <td style={{padding:10, fontSize:12, fontWeight: u.id === APP_CONFIG.MY_UID ? 'bold' : 'normal'}}>
-                    {/* Admin ID (1793453606) ဖြစ်ရင် ID အပြည့်ပြမယ်၊ ကျန်တာ ၈ လုံးပဲပြမယ် */}
+                  <td style={{padding:10, fontSize:12}}>
                     {APP_CONFIG.MY_UID === "1793453606" ? u.id : (u.id.slice(0,8) + "...")}
                   </td>
                   <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
