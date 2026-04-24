@@ -17,11 +17,12 @@ const APP_CONFIG = {
 };
 
 function App() {
-  const [balance, setBalance] = useState(() => Number(localStorage.getItem(`ton_bal_${APP_CONFIG.MY_UID}`)) || 0.0000);
+  // LocalStorage ကို default မယူတော့ဘဲ 0.0000 နဲ့ပဲ စပါမယ် (Firebase က data ရမှ ပြောင်းပါမယ်)
+  const [balance, setBalance] = useState(0.0000);
   const [isVip, setIsVip] = useState(false);
-  const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem(`comp_tasks_${APP_CONFIG.MY_UID}`)) || []);
-  const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem(`wd_hist_${APP_CONFIG.MY_UID}`)) || []);
-  const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem(`refs_${APP_CONFIG.MY_UID}`)) || []);
+  const [completed, setCompleted] = useState([]);
+  const [withdrawHistory, setWithdrawHistory] = useState([]);
+  const [referrals, setReferrals] = useState([]);
   
   const [customTasks, setCustomTasks] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
@@ -42,12 +43,11 @@ function App() {
     return (Date.now() - timestamp >= 300000) ? "Success" : "Pending";
   };
 
+  // ဒေတာသိမ်းတဲ့အခါမှာပဲ LocalStorage ကို သုံးပါမယ် (Backup အနေနဲ့)
   useEffect(() => {
     localStorage.setItem(`ton_bal_${APP_CONFIG.MY_UID}`, balance.toString());
     localStorage.setItem(`comp_tasks_${APP_CONFIG.MY_UID}`, JSON.stringify(completed));
-    localStorage.setItem(`wd_hist_${APP_CONFIG.MY_UID}`, JSON.stringify(withdrawHistory));
-    localStorage.setItem(`refs_${APP_CONFIG.MY_UID}`, JSON.stringify(referrals));
-  }, [balance, completed, withdrawHistory, referrals]);
+  }, [balance, completed]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -60,6 +60,7 @@ function App() {
       const tasksData = await t.json();
       const allUsers = await all.json();
 
+      // Firebase မှာ data ရှိရင် အဲဒီ data ကိုပဲ အတည်ယူပါတယ်
       if (userData) {
         setBalance(Number(userData.balance || 0));
         setIsVip(!!userData.isVip);
@@ -67,7 +68,7 @@ function App() {
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
       } else {
-        // Initial user creation
+        // User မရှိသေးရင် 0 နဲ့ အသစ်ဆောက်ပါတယ်
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PUT',
           body: JSON.stringify({ balance: 0, isVip: false, completed: [], withdrawHistory: [] })
@@ -124,7 +125,6 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // --- CLEANED BOT TASKS (TOTAL 7 TASKS) ---
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
