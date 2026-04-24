@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 const tg = window.Telegram?.WebApp;
 
 const APP_CONFIG = {
-  ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9", //
+  ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
@@ -20,6 +20,7 @@ function App() {
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('comp_tasks')) || []);
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem('wd_hist')) || []);
   const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem('refs')) || []);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [customTasks, setCustomTasks] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
@@ -33,7 +34,6 @@ function App() {
   const [adminTaskType, setAdminTaskType] = useState('bot');
   const [adminPromoCode, setAdminPromoCode] = useState('');
 
-  // ၅ မိနစ်ပြည့်ရင် Success ပြပေးရန် Logic
   const getStatus = (timestamp) => {
     const fiveMinutes = 5 * 60 * 1000;
     return (Date.now() - timestamp > fiveMinutes) ? "Success" : "Pending";
@@ -48,12 +48,14 @@ function App() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [u, t] = await Promise.all([
+      const [u, t, all] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`)
+        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`)
       ]);
       const userData = await u.json();
       const tasksData = await t.json();
+      const allUsers = await all.json();
 
       if (userData) {
         setBalance(Number(userData.balance || 0));
@@ -63,6 +65,12 @@ function App() {
         setReferrals(userData.referrals || []);
       }
       if (tasksData) setCustomTasks(Object.values(tasksData));
+      if (allUsers) {
+        const sorted = Object.entries(allUsers)
+          .map(([id, data]) => ({ id, balance: data.balance || 0 }))
+          .sort((a, b) => b.balance - a.balance).slice(0, 10);
+        setLeaderboard(sorted);
+      }
     } catch (e) { console.error(e); }
   }, []);
 
@@ -70,7 +78,6 @@ function App() {
 
   const processReward = (id, rewardAmount) => {
     const finalReward = (id === 'watch_ad') ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : rewardAmount;
-
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
       AdController.show().then((result) => {
@@ -79,7 +86,6 @@ function App() {
           setBalance(newBal);
           const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
           if (id !== 'watch_ad') setCompleted(newCompleted);
-
           fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PATCH',
             body: JSON.stringify({ balance: newBal, completed: newCompleted })
@@ -100,33 +106,23 @@ function App() {
   const handleWithdraw = () => {
     const amt = Number(withdrawAmount);
     if (!withdrawAddress || amt < APP_CONFIG.MIN_WITHDRAW) {
-      return alert(`အနည်းဆုံး ${APP_CONFIG.MIN_WITHDRAW} TON ထုတ်ပေးပါဗျ`);
+      return alert(`Minimum withdraw is ${APP_CONFIG.MIN_WITHDRAW} TON`);
     }
-    if (amt > balance) return alert("လက်ကျန်ငွေ မလုံလောက်ပါ");
-
-    const newEntry = {
-      amount: amt,
-      address: withdrawAddress,
-      timestamp: Date.now(),
-      date: new Date().toLocaleString()
-    };
-
-    const newBal = Number((balance - amt).toFixed(5)); // Auto Deduction
+    if (amt > balance) return alert("Insufficient balance");
+    const newEntry = { amount: amt, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString() };
+    const newBal = Number((balance - amt).toFixed(5));
     const newHistory = [newEntry, ...withdrawHistory];
-
     setBalance(newBal);
     setWithdrawHistory(newHistory);
-    
     fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
       method: 'PATCH',
       body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
     });
-
-    alert("ငွေထုတ်ယူမှု တင်ပြပြီးပါပြီ။ ၅ မိနစ်အတွင်း အတည်ပြုပေးပါမည်။");
+    alert("Withdrawal submitted! Will be Success in 5 minutes.");
     setWithdrawAmount(''); setWithdrawAddress('');
   };
 
-  const botTasks = [ //
+  const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
     { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
@@ -137,7 +133,7 @@ function App() {
     ...customTasks.filter(t => t.type === 'bot')
   ];
 
-  const socialTasks = [ //
+  const socialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
     { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" },
@@ -204,7 +200,7 @@ function App() {
                 <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, 0.005)}>CLAIM</button>
               </div>
             )}
-            {activeTab === 'admin' && ( //
+            {activeTab === 'admin' && (
               <div>
                 <h4>Admin Control</h4>
                 <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
@@ -228,6 +224,15 @@ function App() {
               </div>
             )}
           </div>
+          <div style={styles.card}>
+            <h3>Global Leaderboard</h3>
+            {leaderboard.map((u, i) => (
+              <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #eee'}}>
+                <span>#{i+1} User ID: {u.id}</span>
+                <span style={{fontWeight:'bold'}}>{Number(u.balance).toFixed(4)} TON</span>
+              </div>
+            ))}
+          </div>
         </>
       )}
 
@@ -236,10 +241,7 @@ function App() {
           <div style={styles.card}>
             <h3>Refer & Earn</h3>
             <p>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
-            <button style={styles.btn} onClick={() => { 
-              navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
-              alert("Referral link copied!"); 
-            }}>COPY LINK</button>
+            <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Referral link copied!"); }}>COPY LINK</button>
           </div>
           <div style={styles.card}>
             <h3>Invite History</h3>
@@ -255,29 +257,30 @@ function App() {
         </>
       )}
 
-      {activeNav === 'withdraw' && ( //
+      {activeNav === 'withdraw' && (
         <>
           <div style={styles.card}>
-            <h3 style={{color: '#ef4444'}}>⚠️ Pay 1 TON for Verification</h3>
+            <h3 style={{color: '#ef4444'}}>💎 BUY VIP</h3>
+            <p style={{fontSize: '14px', margin: '5px 0'}}>Top up 1 TON to withdraw instantly!</p>
             <div style={{fontSize: '12px', marginBottom: '10px'}}>
-              Wallet: <b>{APP_CONFIG.ADMIN_WALLET}</b>
+              Admin Wallet: <b>{APP_CONFIG.ADMIN_WALLET}</b>
               <button style={{...styles.btn, height: '30px', padding: '0', marginTop: '5px', background: '#3b82f6'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Copied!"); }}>COPY WALLET</button>
             </div>
             <div style={{fontSize: '12px'}}>
-              Memo: <b>{APP_CONFIG.MY_UID}</b>
+              Memo (Required): <b>{APP_CONFIG.MY_UID}</b>
               <button style={{...styles.btn, height: '30px', padding: '0', marginTop: '5px', background: '#3b82f6'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Copied!"); }}>COPY MEMO</button>
             </div>
           </div>
 
           <div style={styles.card}>
-            <h3>Withdraw</h3>
-            <input style={styles.input} placeholder="TON Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-            <input style={styles.input} placeholder="Your Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+            <h3>Withdraw TON</h3>
+            <input style={styles.input} placeholder="Amount (Min 0.1 TON)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+            <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={handleWithdraw}>WITHDRAW</button>
           </div>
 
           <div style={styles.card}>
-            <h3>History</h3>
+            <h3>Withdraw History</h3>
             <div style={{maxHeight: '200px', overflowY: 'auto'}}>
               {withdrawHistory.map((h, i) => (
                 <div key={i} style={{fontSize: '11px', padding: '10px 0', borderBottom: '1px solid #eee'}}>
