@@ -32,6 +32,7 @@ function App() {
   const [adminTaskType, setAdminTaskType] = useState('bot');
   const [adminPromoCode, setAdminPromoCode] = useState('');
 
+  // ၅ မိနစ် (၃၀၀,၀၀၀ ms) ပြည့်လျှင် Success ပြမည့် logic
   const checkStatus = (timestamp) => {
     if (!timestamp) return "Pending";
     return (Date.now() - timestamp >= 300000) ? "Success" : "Pending";
@@ -52,22 +53,14 @@ function App() {
       ]);
       const userData = await u.json();
       const tasksData = await t.json();
-
       if (userData) {
-        // Balance ရှိမှသာ Update လုပ်မည်၊ မရှိလျှင် LocalStorage က data ကိုပဲ သုံးမည်
-        if (userData.balance !== undefined) setBalance(Number(userData.balance));
-        
-        // Data မပျက်စေရန် null မဖြစ်မှသာ Update လုပ်ပါမည်
-        if (userData.completed) setCompleted(userData.completed);
-        if (userData.withdrawHistory) setWithdrawHistory(userData.withdrawHistory);
-        if (userData.referrals && Array.isArray(userData.referrals)) {
-            setReferrals(userData.referrals);
-        }
+        setBalance(Number(userData.balance || 0));
+        setCompleted(userData.completed || []);
+        setWithdrawHistory(userData.withdrawHistory || []);
+        setReferrals(Array.isArray(userData.referrals) ? userData.referrals : []);
       }
       if (tasksData) setCustomTasks(Object.values(tasksData));
-    } catch (e) { 
-        console.error("Connection Error:", e);
-    }
+    } catch (e) { console.error(e); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -103,7 +96,9 @@ function App() {
     if (link) {
       tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
     }
-    setTimeout(() => { processReward(id, reward); }, 1500);
+    setTimeout(() => {
+      processReward(id, reward);
+    }, 1500);
   };
 
   const botTasks = [
@@ -188,6 +183,10 @@ function App() {
                 <h4>Admin Control</h4>
                 <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
+                <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
+                  <option value="bot">BOT</option>
+                  <option value="social">SOCIAL</option>
+                </select>
                 <button style={{...styles.btn, background: 'green', marginBottom: '15px'}} onClick={async () => {
                    const id = 't_'+Date.now();
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
@@ -208,7 +207,7 @@ function App() {
         <>
           <div style={styles.card}>
             <h3>Deposit Verification</h3>
-            <div style={{background: '#fee2e2', color: '#b91c1c', padding: '10px', borderRadius: '10px', marginBottom: '10px', fontWeight: 'bold', textAlign: 'center', border: '1px solid #ef4444'}}>⚠️ Pay 1 TON for Verification</div>
+            <div style={{background: '#fee2e2', color: '#b91c1c', padding: '10px', borderRadius: '10px', marginBottom: '10px', fontWeight: 'bold', textAlign: 'center', border: '1px solid #ef4444'}}>⚠️ Pay 1 TON to Admin Wallet for Verification</div>
             <p style={{fontSize: '11px', margin: '5px 0'}}>Wallet: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
             <button style={{...styles.btn, padding: '8px', marginBottom: '10px'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Wallet Copied!"); }}>COPY WALLET</button>
             <p style={{fontSize: '11px', margin: '5px 0'}}>Memo: <b>{APP_CONFIG.MY_UID}</b></p>
@@ -220,8 +219,10 @@ function App() {
             <input style={styles.input} placeholder="Your Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
+                // Validation - အနည်းဆုံး 0.1 ပြည့်ရမည်
                 if(amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Min withdraw is ${APP_CONFIG.MIN_WITHDRAW} TON`);
-                if(amt > balance) return alert(`Insufficient balance!`);
+                // Validation - Balance ထက်ပိုထုတ်၍မရပါ
+                if(amt > balance) return alert(`Insufficient balance! You only have ${balance.toFixed(5)} TON`);
 
                 const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString() };
                 const newHistory = [entry, ...withdrawHistory];
@@ -230,6 +231,7 @@ function App() {
                 setWithdrawHistory(newHistory);
                 setBalance(newBal);
 
+                // Firebase Sync
                 fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
                   method: 'PATCH',
                   body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
@@ -240,11 +242,12 @@ function App() {
             }}>WITHDRAW</button>
           </div>
           <div style={styles.card}>
-            <h4>History</h4>
+            <h4>Withdraw History</h4>
             {withdrawHistory.map((h, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
                 <div style={{fontSize:11}}><b>{h.amount} TON</b><br/>{h.date}</div>
-                <div style={{ color: checkStatus(h.timestamp) === 'Success' ? 'green' : 'orange', fontWeight: 'bold' }}>{checkStatus(h.timestamp)}</div>
+                {/* checkStatus မှတဆင့် ၅ မိနစ်ပြည့်လျှင် Success ပြပါမည် */}
+                <div style={{ color: checkStatus(h.timestamp) === 'Success' ? 'green' : 'orange', fontWeight: 'bold', fontSize: '12px' }}>{checkStatus(h.timestamp)}</div>
               </div>
             ))}
           </div>
@@ -254,8 +257,8 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3>Refer & Earn</h3>
-          <p style={{fontSize: '14px', marginBottom: '15px', color: '#000', fontWeight: 'bold'}}>
-            Invite your friends and get <span style={{color: 'green'}}>0.001 TON</span> per successful referral!
+          <p style={{fontSize: '14px', marginBottom: '10px'}}>
+            Invite your friends and earn <b>{APP_CONFIG.REFER_REWARD} TON</b> for each successful referral!
           </p>
           <button style={styles.btn} onClick={() => { 
             navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
@@ -263,11 +266,15 @@ function App() {
           }}>COPY REFERRAL LINK</button>
           
           <h4 style={{marginTop: '25px', marginBottom: '10px'}}>Invite History</h4>
-          {referrals.length === 0 ? <p style={{fontSize: '12px'}}>No referrals yet. Invite friends to earn more!</p> : 
+          <p style={{fontSize: '12px', color: '#666', marginBottom: '10px'}}>Showing your successful referrals:</p>
+          {referrals.length === 0 ? <p style={{fontSize: '12px', color: '#888'}}>No referrals yet. Start inviting friends!</p> : 
             referrals.map((r, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
-                <div style={{fontSize: '13px'}}><b>User ID:</b> {r.id || r}</div>
-                <b style={{color: 'green', fontSize: '13px'}}>+0.001 TON</b>
+                <div style={{fontSize: '13px'}}>
+                    <b>User ID:</b> {r.id || r}<br/>
+                    <small style={{color: '#666'}}>Reward Received</small>
+                </div>
+                <b style={{color: 'green', fontSize: '13px'}}>+{APP_CONFIG.REFER_REWARD} TON</b>
               </div>
             ))
           }
