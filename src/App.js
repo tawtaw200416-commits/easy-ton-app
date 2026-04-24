@@ -7,6 +7,7 @@ const APP_CONFIG = {
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
+  SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot", // Support Bot Link
   MIN_WITHDRAW: 0.1,
   WATCH_REWARD: 0.001
 };
@@ -63,7 +64,7 @@ function App() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleTaskReward = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Already completed!");
+    if (completed.includes(id)) return alert("Already done!");
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
     
     setTimeout(() => {
@@ -74,7 +75,7 @@ function App() {
         method: 'PATCH',
         body: JSON.stringify({ balance: newBal, completed: [...completed, id] })
       });
-      alert(`Success! +${reward} TON added.`);
+      alert(`+${reward} TON Success!`);
     }, 2000);
   };
 
@@ -90,7 +91,19 @@ function App() {
 
   const socialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 's3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 's5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+    { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
     { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+    { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
+    { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
+    { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
+    { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" },
     ...customTasks.filter(t => t.type === 'social')
   ];
 
@@ -145,24 +158,23 @@ function App() {
             )}
             {activeTab === 'admin' && (
               <div>
-                <h4 style={{marginTop:0}}>Add Task (Bot/Social)</h4>
+                <h4>Admin Control</h4>
                 <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
                 <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
                   <option value="bot">BOT Task</option>
                   <option value="social">SOCIAL Task</option>
                 </select>
-                <button style={{...styles.btn, background: 'green'}} onClick={async () => {
+                <button style={{...styles.btn, background: 'green', marginBottom: '15px'}} onClick={async () => {
                    const id = 't_'+Date.now();
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
                    alert("Task Added!"); fetchData();
                 }}>ADD TASK</button>
-                <h4 style={{marginTop: 20}}>Add Promo Code</h4>
-                <input style={styles.input} placeholder="Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
+                <input style={styles.input} placeholder="Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <button style={{...styles.btn, background: 'purple'}} onClick={async () => {
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify({ code: adminPromoCode, reward: 0.001 }) });
                    alert("Code Added!");
-                }}>ADD CODE</button>
+                }}>ADD PROMO CODE</button>
               </div>
             )}
           </div>
@@ -172,15 +184,16 @@ function App() {
       {activeNav === 'withdraw' && (
         <>
           <div style={styles.card}>
-            <h3>Deposit</h3>
-            <div style={{background: '#fee2e2', color: '#b91c1c', padding: '10px', borderRadius: '10px', marginBottom: '10px', fontWeight: 'bold', textAlign: 'center', border: '1px solid #ef4444'}}>⚠️ You must top up 1 TON to withdraw</div>
-            <p style={{fontSize: '12px', margin: '5px 0'}}>Address: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
-            <button style={{...styles.btn, padding: '8px', marginBottom: '10px'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Copied Address!"); }}>COPY ADDRESS</button>
+            <h3>Deposit & Verification</h3>
+            <div style={{background: '#fee2e2', color: '#b91c1c', padding: '10px', borderRadius: '10px', marginBottom: '10px', fontWeight: 'bold', textAlign: 'center', border: '1px solid #ef4444'}}>⚠️ Top up 1 TON to Admin Wallet first!</div>
+            <p style={{fontSize: '12px', margin: '5px 0'}}>Admin Wallet: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
+            <button style={{...styles.btn, padding: '8px', marginBottom: '10px'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Wallet Copied!"); }}>COPY WALLET</button>
             <p style={{fontSize: '12px', margin: '5px 0'}}>Memo (UID): <b>{APP_CONFIG.MY_UID}</b></p>
-            <button style={{...styles.btn, padding: '8px'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Copied Memo!"); }}>COPY MEMO</button>
+            <button style={{...styles.btn, padding: '8px'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Memo Copied!"); }}>COPY MEMO</button>
+            <button style={{...styles.btn, background: '#10b981', marginTop: '10px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT, '_blank')}>CONTACT SUPPORT</button>
           </div>
           <div style={styles.card}>
-            <h3>Withdraw</h3>
+            <h3>Withdrawal</h3>
             <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
@@ -188,11 +201,11 @@ function App() {
                 const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString() };
                 setWithdrawHistory([entry, ...withdrawHistory]);
                 setBalance(b => b - Number(withdrawAmount));
-                alert("Withdrawal Requested!");
+                alert("Withdraw Request Sent! Please send screenshot to Support.");
             }}>WITHDRAW NOW</button>
           </div>
           <div style={styles.card}>
-            <h4>Withdraw History</h4>
+            <h4>History</h4>
             {withdrawHistory.map((h, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
                 <div style={{fontSize:12}}><b>{h.amount} TON</b><br/>{h.date}</div>
@@ -205,9 +218,9 @@ function App() {
 
       {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h3>Referral Program</h3>
-          <p style={{fontSize: '14px'}}>Invite friends and earn 0.001 TON per user!</p>
-          <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!"); }}>COPY INVITE LINK</button>
+          <h3>Refer & Earn</h3>
+          <p style={{fontSize: '14px'}}>Copy link below to invite friends:</p>
+          <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!"); }}>COPY LINK</button>
           
           <h4 style={{marginTop: '25px', marginBottom: '10px'}}>Invite History</h4>
           {referrals.length === 0 ? <p style={{fontSize: '12px', color: '#888'}}>No referrals yet.</p> : 
@@ -223,16 +236,17 @@ function App() {
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h3>My Profile</h3>
-          <div style={{padding: '10px 0', borderBottom: '1px solid #eee'}}>Status: <b style={{color: 'green'}}>Active</b></div>
-          <div style={{padding: '10px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
-          <div style={{padding: '10px 0', borderBottom: '1px solid #eee'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
+          <h3>Account Profile</h3>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b style={{color: 'green'}}>Active ✅</b></div>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
+          <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT, '_blank')}>SUPPORT 🎧</button>
         </div>
       )}
 
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '12px' }}>{n.toUpperCase()}</button>
+          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '11px' }}>{n.toUpperCase()}</button>
         ))}
       </div>
     </div>
