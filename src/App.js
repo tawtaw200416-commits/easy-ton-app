@@ -9,9 +9,10 @@ const APP_CONFIG = {
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
-  WATCH_REWARD: 0.0009,       // VIP မဟုတ်သူအတွက်
-  VIP_WATCH_REWARD: 0.003,    // VIP အတွက်
-  CODE_REWARD: 0.001,         // Reward Code အတွက်
+  WATCH_REWARD: 0.0009,       // Reward for Normal Users
+  VIP_WATCH_REWARD: 0.003,    // Reward for VIP Users
+  CODE_REWARD: 0.0007,        // Reward Code for Normal Users
+  VIP_CODE_REWARD: 0.001,     // Reward Code for VIP Users
   REFER_REWARD: 0.001
 };
 
@@ -81,8 +82,9 @@ function App() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const processReward = (id, rewardAmount) => {
-    // Watch Ads အတွက် Reward Logic
     let finalReward = rewardAmount;
+    
+    // Ads Reward Logic
     if (id === 'watch_ad') {
       finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
     }
@@ -112,7 +114,6 @@ function App() {
     if (completed.includes(id)) return alert("Already completed!");
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
     
-    // Reward code သို့မဟုတ် အခြား task reward ဖြစ်လျှင် Ads အရင်ပြမည်
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
@@ -189,7 +190,7 @@ function App() {
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
+                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, isVip ? APP_CONFIG.VIP_CODE_REWARD : APP_CONFIG.CODE_REWARD)}>CLAIM</button>
               </div>
             )}
             {activeTab === 'admin' && (
@@ -208,7 +209,7 @@ function App() {
                 }}>SAVE TASK</button>
                 <input style={styles.input} placeholder="New Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <button style={{...styles.btn, background: 'purple'}} onClick={async () => {
-                   await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.CODE_REWARD }) });
+                   await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.VIP_CODE_REWARD }) });
                    alert("Promo Code Created!");
                 }}>CREATE CODE</button>
               </div>
