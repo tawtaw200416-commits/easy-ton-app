@@ -49,6 +49,7 @@ function App() {
     localStorage.setItem(`refs_${APP_CONFIG.MY_UID}`, JSON.stringify(referrals));
   }, [balance, completed, withdrawHistory, referrals]);
 
+  // --- UPDATED FETCHDATA FOR LEADERBOARD & DATA STRUCTURE ---
   const fetchData = useCallback(async () => {
     try {
       const [u, t, all] = await Promise.all([
@@ -66,25 +67,34 @@ function App() {
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
+      } else {
+        // Create user record if not exists
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+          method: 'PUT',
+          body: JSON.stringify({ balance: 0, isVip: false, completed: [], withdrawHistory: [] })
+        });
       }
+
       if (tasksData) setCustomTasks(Object.values(tasksData));
 
       if (allUsers) {
         const sorted = Object.entries(allUsers)
-          .map(([id, data]) => ({ id, balance: data.balance || 0 }))
+          .filter(([id, data]) => typeof data === 'object' && data !== null)
+          .map(([id, data]) => ({ 
+            id: id, 
+            balance: Number(data.balance || 0) 
+          }))
           .sort((a, b) => b.balance - a.balance)
           .slice(0, 10);
         setLeaderboard(sorted);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Fetch Error:", e); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const processReward = (id, rewardAmount) => {
     let finalReward = rewardAmount;
-    
-    // Ads Reward Logic
     if (id === 'watch_ad') {
       finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
     }
@@ -117,10 +127,8 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
+  // --- BOT TASKS (REMOVED 3 TASKS AS REQUESTED) ---
   const botTasks = [
-    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-    { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
     { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
     { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
     { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
