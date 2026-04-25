@@ -172,10 +172,10 @@ function App() {
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
-    card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
+    card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000', color: '#000' },
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
-    blueBtn: { width: '100%', padding: '10px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer', marginBottom: '5px' },
-    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
+    blueBtn: { width: '100%', padding: '10px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer', marginTop: '5px' },
+    input: { width: '100%', padding: '12px', marginBottom: '10px', borderRadius: '10px', border: '2px solid #000', boxSizing: 'border-box' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' }
   };
 
@@ -242,59 +242,65 @@ function App() {
 
       {activeNav === 'withdraw' && (
         <>
-          {/* BUY VIP Section - အပေါ်မှာ ထားပေးထားပါတယ် */}
+          {/* BUY VIP SECTION - အပေါ်မှာ ထားပေးထားပါတယ် */}
           {!isVip && (
-            <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-               <h2 style={{color: '#facc15', marginBottom: 5}}>BUY VIP ⭐</h2>
-               <p style={{fontSize: 14, fontWeight: 'bold', marginBottom: 15, color: '#facc15'}}>Top up 1Ton to Get VIP</p>
+            <div style={styles.card}>
+               <h2 style={{fontSize: '20px', marginBottom: '5px'}}>💎 BUY VIP</h2>
+               <p style={{fontSize: '14px', marginBottom: '15px'}}>Top up 1Ton to Get VIP</p>
                
-               <div style={{textAlign: 'left', background: '#222', padding: '10px', borderRadius: '10px', marginBottom: '10px', border: '1px solid #444'}}>
-                  <p style={{fontSize: 11, color: '#facc15', margin: '0 0 5px 0'}}>TON Address:</p>
-                  <p style={{fontSize: 10, wordBreak: 'break-all', marginBottom: 10}}>{APP_CONFIG.ADMIN_WALLET}</p>
+               <div style={{background: '#f8f9fa', padding: '12px', borderRadius: '10px', border: '1px solid #ddd', marginBottom: '10px'}}>
+                  <p style={{fontSize: '11px', color: '#666', margin: '0 0 5px 0'}}>Admin Wallet Address:</p>
+                  <p style={{fontSize: '10px', fontWeight: 'bold', wordBreak: 'break-all', marginBottom: '8px'}}>{APP_CONFIG.ADMIN_WALLET}</p>
                   <button style={styles.blueBtn} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Address Copied!"); }}>COPY ADDRESS</button>
                   
-                  <div style={{height: '10px'}}></div>
-                  
-                  <p style={{fontSize: 11, color: '#facc15', margin: '0 0 5px 0'}}>Memo ID:</p>
-                  <p style={{fontSize: 14, fontWeight: 'bold', marginBottom: 10}}>{APP_CONFIG.MY_UID}</p>
-                  <button style={styles.blueBtn} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Memo ID Copied!"); }}>COPY MEMO ID</button>
+                  <div style={{margin: '15px 0'}}>
+                    <p style={{fontSize: '11px', color: '#666', margin: '0 0 5px 0'}}>Memo ID (Your ID):</p>
+                    <p style={{fontSize: '16px', fontWeight: 'bold', marginBottom: '8px'}}>{APP_CONFIG.MY_UID}</p>
+                    <button style={styles.blueBtn} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Memo ID Copied!"); }}>COPY MEMO ID</button>
+                  </div>
                </div>
                
-               <button style={{...styles.btn, background: '#facc15', color: '#000', marginTop: 5}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
+               <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>VERIFY PAYMENT</button>
             </div>
           )}
 
           <div style={styles.card}>
             <h3>Withdraw TON</h3>
-            <p style={{fontSize:12, color:'#666', marginBottom:10}}>Min Withdrawal: 0.1 TON</p>
+            <p style={{fontSize:12, color:'#666', marginBottom:10}}>Min Withdrawal: 0.1 TON (No VIP required)</p>
             <input style={styles.input} placeholder="Amount (Min 0.1 TON)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = parseFloat(withdrawAmount);
-                if(isNaN(amt) || amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Min is ${APP_CONFIG.MIN_WITHDRAW} TON`);
-                if(amt > balance) return alert("Insufficient balance!");
-                if(!withdrawAddress) return alert("Enter Address!");
+                if(isNaN(amt) || amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdrawal is ${APP_CONFIG.MIN_WITHDRAW} TON`);
+                if(amt > balance) return alert(`Insufficient balance! Your balance: ${balance.toFixed(5)}`);
+                if(!withdrawAddress) return alert("Enter TON Address!");
 
                 const newBal = parseFloat((balance - amt).toFixed(5));
-                const entry = { amount: amt, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString() };
+                const entry = { 
+                  amount: amt, 
+                  address: withdrawAddress, 
+                  timestamp: Date.now(), 
+                  date: new Date().toLocaleString() 
+                };
                 const newHistory = [entry, ...withdrawHistory];
                 
                 setBalance(newBal);
                 setWithdrawHistory(newHistory);
                 
+                // Firebase မှာ Balance နုတ်ပြီး သိမ်းမယ်
                 fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
                   method: 'PATCH',
                   body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
                 });
-                alert("Request Sent! Balance Deducted.");
+                alert("Withdrawal Request Sent! Balance Deducted.");
                 setWithdrawAmount(''); setWithdrawAddress('');
             }}>WITHDRAW NOW</button>
           </div>
 
           <div style={styles.card}>
             <h4>History</h4>
-            {withdrawHistory.length === 0 ? <p style={{fontSize: 12, color: '#999'}}>No history yet.</p> : 
+            {withdrawHistory.length === 0 ? <p style={{fontSize:12, color:'#999'}}>No history yet.</p> : 
               withdrawHistory.map((h, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
                   <div style={{fontSize:11}}>
@@ -310,6 +316,7 @@ function App() {
         </>
       )}
 
+      {/* Leaderboard, Invite & Profile Sections */}
       {activeNav === 'leaderboard' && (
         <div style={styles.card}>
           <h3 style={{textAlign:'center'}}>🏆 Top 10 Earners</h3>
@@ -332,17 +339,18 @@ function App() {
             <p>Earn {APP_CONFIG.REFER_REWARD} TON per friend!</p>
             <button style={styles.btn} onClick={() => { 
                 navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
-                alert("Copied!"); 
+                alert("Link Copied!"); 
             }}>COPY REFERRAL LINK</button>
         </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h3>Profile</h3>
+          <h3>User Profile</h3>
           <p>ID: {APP_CONFIG.MY_UID}</p>
-          <p>Status: {isVip ? "VIP ⭐" : "Standard"}</p>
           <p>Balance: {balance.toFixed(5)} TON</p>
+          <p>Status: {isVip ? "VIP ⭐" : "ACTIVE ✅"}</p>
+          <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
         </div>
       )}
 
