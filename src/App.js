@@ -50,25 +50,26 @@ function App() {
       const userData = await u.json();
       const allUsers = await all.json();
 
-      // VIP manual activation for 5020977059
+      // VIP manual activation for specified IDs
       const isManualVip = APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606";
 
       if (userData) {
+        // Sync user data if already exists
         setBalance(Number(userData.balance || 0));
         setIsVip(isManualVip || !!userData.isVip);
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
         
-        // Sync username silently
+        // Update profile details without zeroing out balance
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PATCH',
           body: JSON.stringify({ username: APP_CONFIG.MY_USERNAME, isVip: isManualVip || userData.isVip })
         });
       } else {
-        // Only create if user is truly new to avoid overwriting existing data
+        // Only initialize for absolutely new users
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-          method: 'PATCH', // Changed to PATCH to avoid overwriting everything to 0
+          method: 'PATCH', 
           body: JSON.stringify({ 
             balance: 0, 
             isVip: isManualVip, 
@@ -84,7 +85,7 @@ function App() {
           .map(([id, data]) => ({ 
             id: id, 
             balance: typeof data === 'object' ? (data.balance || 0) : 0,
-            username: typeof data === 'object' ? (data.username || "No User") : "No User"
+            username: typeof data === 'object' ? (data.username || "User") : "User"
           }))
           .sort((a, b) => b.balance - a.balance)
           .slice(0, 10);
@@ -112,6 +113,7 @@ function App() {
             setBalance(newBal);
             if (id !== 'watch_ad') setCompleted(newCompleted);
 
+            // Use PATCH to ensure we don't overwrite other data
             fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
               method: 'PATCH',
               body: JSON.stringify({ balance: newBal, completed: newCompleted })
@@ -128,7 +130,6 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // ... (botTasks and socialTasks remain the same)
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -227,10 +228,6 @@ function App() {
                 <h4>Add Global Task</h4>
                 <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
-                <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
-                  <option value="bot">BOT</option>
-                  <option value="social">SOCIAL</option>
-                </select>
                 <button style={{...styles.btn, background: 'green'}} onClick={async () => {
                    const id = 't_'+Date.now();
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
@@ -247,7 +244,7 @@ function App() {
           <div style={{background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', textAlign: 'center', marginBottom: '15px'}}>
              <h4 style={{margin: 0}}>RANKING SEASON ENDS ON</h4>
              <h2 style={{margin: '5px 0'}}>30.5.2026</h2>
-             <small style={{color: '#fff'}}>VIP members can withdraw</small>
+             <small style={{color: '#fff'}}>Top earners get TON rewards!</small>
           </div>
 
           <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners</h3>
@@ -255,7 +252,7 @@ function App() {
             <thead>
               <tr style={{borderBottom:'2px solid #000'}}>
                 <th style={{padding:8, textAlign:'left'}}>Rank</th>
-                <th style={{padding:8, textAlign:'left'}}>User Info</th>
+                <th style={{padding:8, textAlign:'left'}}>User ID</th>
                 <th style={{padding:8, textAlign:'right'}}>Prize</th>
               </tr>
             </thead>
@@ -265,12 +262,9 @@ function App() {
                   <td style={{padding:10}}>{i+1}</td>
                   <td style={{padding:10, fontSize:11}}>
                     {APP_CONFIG.MY_UID === "1793453606" ? (
-                      <div>
-                        <b>{u.id}</b><br/>
-                        <span style={{color: '#6366f1'}}>@{u.username}</span>
-                      </div>
+                      <div><b>{u.id}</b><br/><small>@{u.username}</small></div>
                     ) : (
-                      <span>{u.id.slice(0,8) + "..."}</span>
+                      <span>{u.id.slice(0,5) + "..."}</span>
                     )}
                   </td>
                   <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
@@ -281,7 +275,6 @@ function App() {
         </div>
       )}
 
-      {/* Withdraw, Invite, Profile sections stay same but logic handles 0 issues */}
       {activeNav === 'withdraw' && (
         <>
           <div style={styles.card}>
