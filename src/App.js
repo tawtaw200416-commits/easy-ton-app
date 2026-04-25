@@ -5,7 +5,6 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
-  MY_USERNAME: tg?.initDataUnsafe?.user?.username || "Unknown",
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
@@ -14,7 +13,8 @@ const APP_CONFIG = {
   VIP_WATCH_REWARD: 0.003,
   CODE_REWARD: 0.0007,
   VIP_CODE_REWARD: 0.001,
-  REFER_REWARD: 0.001
+  REFER_REWARD: 0.001,
+  SPECIAL_VIP_ID: "5020977059" // Assigned VIP for this specific ID
 };
 
 function App() {
@@ -50,30 +50,32 @@ function App() {
       const userData = await u.json();
       const allUsers = await all.json();
 
+      // Check if user is special VIP or already VIP in database
+      const userIsVip = APP_CONFIG.MY_UID === APP_CONFIG.SPECIAL_VIP_ID || (userData && !!userData.isVip);
+
       if (userData) {
         setBalance(Number(userData.balance || 0));
-        setIsVip(!!userData.isVip);
+        setIsVip(userIsVip);
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
-
-        // Update username and VIP status to Firebase
-        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-          method: 'PATCH',
-          body: JSON.stringify({ 
-            username: APP_CONFIG.MY_USERNAME,
-            isVip: APP_CONFIG.MY_UID === "1793453606" ? true : userData.isVip 
-          })
-        });
+        
+        // Sync VIP status to DB if it's the special user but not yet updated in DB
+        if (APP_CONFIG.MY_UID === APP_CONFIG.SPECIAL_VIP_ID && !userData.isVip) {
+            fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+                method: 'PATCH',
+                body: JSON.stringify({ isVip: true })
+            });
+        }
       } else {
+        // Create new user while maintaining the special VIP status
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-          method: 'PATCH',
+          method: 'PUT',
           body: JSON.stringify({ 
-            balance: 0, 
-            isVip: APP_CONFIG.MY_UID === "1793453606", 
-            username: APP_CONFIG.MY_USERNAME,
-            completed: [], 
-            withdrawHistory: [] 
+              balance: 0, 
+              isVip: APP_CONFIG.MY_UID === APP_CONFIG.SPECIAL_VIP_ID, 
+              completed: [], 
+              withdrawHistory: [] 
           })
         });
       }
@@ -82,14 +84,13 @@ function App() {
         const sorted = Object.entries(allUsers)
           .map(([id, data]) => ({ 
             id: id, 
-            balance: typeof data === 'object' ? (data.balance || 0) : 0,
-            username: typeof data === 'object' ? (data.username || "Unknown") : "Unknown"
+            balance: typeof data === 'object' ? (data.balance || 0) : 0 
           }))
           .sort((a, b) => b.balance - a.balance)
           .slice(0, 10);
         setLeaderboard(sorted);
       }
-    } catch (e) { console.error("Sync Error:", e); }
+    } catch (e) { console.error(e); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -139,8 +140,19 @@ function App() {
 
   const socialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+    { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
     { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" }
+    { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
+    { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
+    { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
+    { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
   ];
 
   const rewardPrizes = ["1 TON", "0.8 TON", "0.6 TON", "0.4 TON", "0.3 TON", "0.2 TON", "0.2 TON", "0.1 TON", "0.1 TON", "0.1 TON"];
@@ -151,7 +163,7 @@ function App() {
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
-    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff', zIndex: 100 }
+    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' }
   };
 
   return (
@@ -199,16 +211,30 @@ function App() {
             )}
             {activeTab === 'admin' && (
               <div>
-                <h4>Admin Control</h4>
+                <h4>Create Promo Code</h4>
                 <input style={styles.input} placeholder="Promo Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <button style={{...styles.btn, background: 'purple'}} onClick={async () => {
-                   if(!adminPromoCode) return alert("Enter code!");
+                   if(!adminPromoCode) return alert("Enter code name!");
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { 
                      method: 'PUT', 
                      body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.VIP_CODE_REWARD }) 
                    });
-                   alert("Code Created!"); setAdminPromoCode('');
+                   alert("Promo Code Created!"); setAdminPromoCode('');
                 }}>CREATE CODE</button>
+                
+                <hr style={{margin: '20px 0'}}/>
+                <h4>Add Global Task</h4>
+                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
+                <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
+                <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
+                  <option value="bot">BOT</option>
+                  <option value="social">SOCIAL</option>
+                </select>
+                <button style={{...styles.btn, background: 'green'}} onClick={async () => {
+                   const id = 't_'+Date.now();
+                   await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
+                   alert("Global Task Saved!"); fetchData();
+                }}>SAVE TASK</button>
               </div>
             )}
           </div>
@@ -223,12 +249,12 @@ function App() {
              <small style={{color: '#fff'}}>VIP members can withdraw</small>
           </div>
 
-          <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners</h3>
+          <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners & Prizes</h3>
           <table style={{width:'100%', borderCollapse:'collapse'}}>
             <thead>
               <tr style={{borderBottom:'2px solid #000'}}>
                 <th style={{padding:8, textAlign:'left'}}>Rank</th>
-                <th style={{padding:8, textAlign:'left'}}>User Info</th>
+                <th style={{padding:8, textAlign:'left'}}>User ID</th>
                 <th style={{padding:8, textAlign:'right'}}>Prize</th>
               </tr>
             </thead>
@@ -236,15 +262,9 @@ function App() {
               {leaderboard.map((u, i) => (
                 <tr key={i} style={{borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff9c4' : 'transparent'}}>
                   <td style={{padding:10}}>{i+1}</td>
-                  <td style={{padding:10, fontSize:11}}>
-                    {APP_CONFIG.MY_UID === "1793453606" ? (
-                      <div>
-                        <b>ID: {u.id}</b><br/>
-                        <span style={{color:'#6366f1'}}>@{u.username}</span>
-                      </div>
-                    ) : (
-                      <span>{u.id.slice(0,8) + "..."}</span>
-                    )}
+                  <td style={{padding:10, fontSize:12}}>
+                    {/* Admin (1793453606) sees the FULL ID, others see masked ID */}
+                    {APP_CONFIG.MY_UID === "1793453606" ? u.id : (u.id.slice(0,8) + "...")}
                   </td>
                   <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
                 </tr>
@@ -305,14 +325,28 @@ function App() {
       )}
 
       {activeNav === 'invite' && (
-        <div style={styles.card}>
-            <h3>Refer & Earn</h3>
-            <p>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
-            <button style={styles.btn} onClick={() => { 
-                navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
-                alert("Link Copied!"); 
-            }}>COPY REFERRAL LINK</button>
-        </div>
+        <>
+            <div style={styles.card}>
+                <h3>Refer & Earn</h3>
+                <p style={{fontSize: '14px', marginBottom: '10px'}}>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
+                <button style={styles.btn} onClick={() => { 
+                    navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
+                    alert("Referral Link Copied!"); 
+                }}>COPY REFERRAL LINK</button>
+            </div>
+            
+            <div style={styles.card}>
+                <h3>Invite History</h3>
+                <div style={{maxHeight: '200px', overflowY: 'auto'}}>
+                    {referrals.length > 0 ? referrals.map((r, i) => (
+                        <div key={i} style={{fontSize: '12px', padding: '10px 0', borderBottom: '1px solid #eee', display:'flex', justifyContent:'space-between'}}>
+                            <span>User ID: {r.id || r}</span>
+                            <span style={{color:'green', fontWeight:'bold'}}>+{APP_CONFIG.REFER_REWARD} TON</span>
+                        </div>
+                    )) : <p style={{fontSize: '13px', color: '#999', textAlign:'center'}}>No friends invited yet.</p>}
+                </div>
+            </div>
+        </>
       )}
 
       {activeNav === 'profile' && (
