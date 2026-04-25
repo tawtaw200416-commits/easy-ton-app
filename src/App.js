@@ -17,8 +17,8 @@ const APP_CONFIG = {
   REFER_REWARD: 0.001
 };
 
-// VIP List
-const VIP_USERS = ["5020977059", "1793453606", "5020977059"]; 
+// VIP စာရင်း (ID အသစ်ထည့်ထားပါတယ်)
+const VIP_IDS = ["5020977059", "1793453606"];
 
 function App() {
   const [balance, setBalance] = useState(0.0000);
@@ -57,22 +57,17 @@ function App() {
       const allUsers = await all.json();
       const adminTasks = await tasksRes.json();
 
-      // VIP Status check logic
-      const vipStatus = VIP_USERS.includes(APP_CONFIG.MY_UID) || (userData && !!userData.isVip);
-      setIsVip(vipStatus);
+      // VIP Status check
+      const isUserVip = VIP_IDS.includes(APP_CONFIG.MY_UID) || (userData && !!userData.isVip);
+      setIsVip(isUserVip);
 
       if (userData) {
-        // Balance update (ensure it's a number and not overwriting with 0 if data exists)
-        if (userData.balance !== undefined && userData.balance !== null) {
-            setBalance(parseFloat(userData.balance));
-        }
-        
-        // Task data persistence
+        // Data ရှိရင် ရှိတဲ့အတိုင်း သုံးမယ် (0 ပြန်မဖြစ်အောင် စစ်ထားတယ်)
+        setBalance(userData.balance !== undefined ? parseFloat(userData.balance) : 0);
         setCompleted(Array.isArray(userData.completed) ? userData.completed : []);
         setWithdrawHistory(Array.isArray(userData.withdrawHistory) ? userData.withdrawHistory : []);
         setReferrals(userData.referrals ? Object.entries(userData.referrals) : []);
         
-        // Update username if missing
         if (!userData.username || userData.username === "Unknown") {
           await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PATCH',
@@ -80,16 +75,17 @@ function App() {
           });
         }
       } else {
-        // Initial user creation - only if user doesn't exist at all
+        // Data လုံးဝမရှိသေးတဲ့ User အသစ်ဆိုရင်ပဲ ဒါကိုလုပ်မယ်
+        const initialData = { 
+          balance: 0, 
+          username: APP_CONFIG.MY_USERNAME,
+          isVip: VIP_IDS.includes(APP_CONFIG.MY_UID), 
+          completed: [], 
+          withdrawHistory: [] 
+        };
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PUT',
-          body: JSON.stringify({ 
-            balance: 0, 
-            username: APP_CONFIG.MY_USERNAME,
-            isVip: VIP_USERS.includes(APP_CONFIG.MY_UID), 
-            completed: [], 
-            withdrawHistory: [] 
-          })
+          body: JSON.stringify(initialData)
         });
       }
 
@@ -111,7 +107,7 @@ function App() {
           .slice(0, 10);
         setLeaderboard(sorted);
       }
-    } catch (e) { console.error("Fetch Error:", e); }
+    } catch (e) { console.error("Fetch error:", e); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -131,11 +127,11 @@ function App() {
           if (result.done) {
             setBalance(prev => {
                 const newBal = parseFloat((prev + finalReward).toFixed(5));
-                const newCompleted = (id !== 'watch_ad' && !completed.includes(id)) ? [...completed, id] : completed;
+                const newCompleted = id !== 'watch_ad' && !completed.includes(id) ? [...completed, id] : completed;
                 
                 if (id !== 'watch_ad') setCompleted(newCompleted);
 
-                // Immediate Database Update
+                // Firebase Update
                 fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
                     method: 'PATCH',
                     body: JSON.stringify({ balance: newBal, completed: newCompleted })
@@ -155,7 +151,6 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // Static Task Lists
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -351,20 +346,21 @@ function App() {
             <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
-                const amt = Number(withdrawAmount);
+                const amt = parseFloat(withdrawAmount);
                 if(!isVip) return alert("Only VIP members can withdraw!");
-                if(amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdrawal is ${APP_CONFIG.MIN_WITHDRAW} TON`);
-                if(amt > balance) return alert(`Insufficient balance!`);
+                if(isNaN(amt) || amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdrawal is ${APP_CONFIG.MIN_WITHDRAW} TON`);
+                if(amt > balance) return alert(`Insufficient balance! Your balance: ${balance.toFixed(5)}`);
                 
-                const newBal = Number((balance - amt).toFixed(5));
+                const newBal = parseFloat((balance - amt).toFixed(5));
                 const entry = { 
-                  amount: withdrawAmount, 
+                  amount: amt, 
                   address: withdrawAddress, 
                   timestamp: Date.now(), 
                   date: new Date().toLocaleString() 
                 };
                 const newHistory = [entry, ...withdrawHistory];
                 
+                // Balance ထဲကနေ ချက်ချင်းနုတ်မယ်
                 setBalance(newBal);
                 setWithdrawHistory(newHistory);
                 
