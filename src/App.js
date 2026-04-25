@@ -4,7 +4,6 @@ const tg = window.Telegram?.WebApp;
 
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
-  MEMO_ID: "1793453606", // Memo ID သတ်မှတ်ချက် (လိုအပ်သလို ပြောင်းလဲနိုင်သည်)
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   MY_USERNAME: tg?.initDataUnsafe?.user?.username || "Unknown",
   ADSGRAM_BLOCK_ID: "27611", 
@@ -41,7 +40,7 @@ function App() {
   
   const [extraTasks, setExtraTasks] = useState({ bot: [], social: [] });
 
-  // ၅ မိနစ် (၃၀၀,၀၀၀ ms) ပြည့်ရင် Success ပြပေးမယ့် Function
+  // ၅ မိနစ်ပြည့်ရင် Success ပြပေးမယ့် Function
   const checkStatus = (timestamp) => {
     if (!timestamp) return "Pending";
     return (Date.now() - timestamp >= 300000) ? "Success" : "Pending";
@@ -102,12 +101,6 @@ function App() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  // Copy Function
-  const handleCopy = (text, msg) => {
-    navigator.clipboard.writeText(text);
-    alert(msg);
-  };
 
   const processReward = (id, rewardAmount) => {
     let finalReward = rewardAmount;
@@ -181,7 +174,7 @@ function App() {
     header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
-    blueBtn: { width: '100%', padding: '12px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
+    blueBtn: { width: '100%', padding: '10px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer', marginBottom: '5px' },
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' }
   };
@@ -228,31 +221,63 @@ function App() {
                 <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
               </div>
             )}
+            {activeTab === 'admin' && (
+              <div>
+                <h4>Admin Controls</h4>
+                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
+                <input style={styles.input} placeholder="Task Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
+                <button style={{...styles.btn, background: 'green'}} onClick={async () => {
+                    const id = 'ext_' + Date.now();
+                    await fetch(`${APP_CONFIG.FIREBASE_URL}/admin_tasks/${adminTaskType}/${id}.json`, {
+                        method: 'PUT',
+                        body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink })
+                    });
+                    alert("Added!"); fetchData();
+                }}>ADD TASK</button>
+              </div>
+            )}
           </div>
         </>
       )}
 
       {activeNav === 'withdraw' && (
         <>
+          {/* BUY VIP Section - အပေါ်မှာ ထားပေးထားပါတယ် */}
+          {!isVip && (
+            <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
+               <h2 style={{color: '#facc15', marginBottom: 5}}>BUY VIP ⭐</h2>
+               <p style={{fontSize: 14, fontWeight: 'bold', marginBottom: 15, color: '#facc15'}}>Top up 1Ton to Get VIP</p>
+               
+               <div style={{textAlign: 'left', background: '#222', padding: '10px', borderRadius: '10px', marginBottom: '10px', border: '1px solid #444'}}>
+                  <p style={{fontSize: 11, color: '#facc15', margin: '0 0 5px 0'}}>TON Address:</p>
+                  <p style={{fontSize: 10, wordBreak: 'break-all', marginBottom: 10}}>{APP_CONFIG.ADMIN_WALLET}</p>
+                  <button style={styles.blueBtn} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Address Copied!"); }}>COPY ADDRESS</button>
+                  
+                  <div style={{height: '10px'}}></div>
+                  
+                  <p style={{fontSize: 11, color: '#facc15', margin: '0 0 5px 0'}}>Memo ID:</p>
+                  <p style={{fontSize: 14, fontWeight: 'bold', marginBottom: 10}}>{APP_CONFIG.MY_UID}</p>
+                  <button style={styles.blueBtn} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Memo ID Copied!"); }}>COPY MEMO ID</button>
+               </div>
+               
+               <button style={{...styles.btn, background: '#facc15', color: '#000', marginTop: 5}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
+            </div>
+          )}
+
           <div style={styles.card}>
             <h3>Withdraw TON</h3>
-            <p style={{fontSize:12, color:'#666', marginBottom:10}}>Min Withdrawal: 0.1 TON (No VIP required)</p>
+            <p style={{fontSize:12, color:'#666', marginBottom:10}}>Min Withdrawal: 0.1 TON</p>
             <input style={styles.input} placeholder="Amount (Min 0.1 TON)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             
-            <button style={styles.blueBtn} onClick={() => {
+            <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = parseFloat(withdrawAmount);
-                if(isNaN(amt) || amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdrawal is ${APP_CONFIG.MIN_WITHDRAW} TON`);
-                if(amt > balance) return alert(`Insufficient balance! Your balance: ${balance.toFixed(5)}`);
-                if(!withdrawAddress) return alert("Enter TON Address!");
+                if(isNaN(amt) || amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Min is ${APP_CONFIG.MIN_WITHDRAW} TON`);
+                if(amt > balance) return alert("Insufficient balance!");
+                if(!withdrawAddress) return alert("Enter Address!");
 
                 const newBal = parseFloat((balance - amt).toFixed(5));
-                const entry = { 
-                  amount: amt, 
-                  address: withdrawAddress, 
-                  timestamp: Date.now(), 
-                  date: new Date().toLocaleString() 
-                };
+                const entry = { amount: amt, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString() };
                 const newHistory = [entry, ...withdrawHistory];
                 
                 setBalance(newBal);
@@ -262,68 +287,38 @@ function App() {
                   method: 'PATCH',
                   body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
                 });
-                alert("Withdrawal Request Sent! Balance Deducted.");
+                alert("Request Sent! Balance Deducted.");
                 setWithdrawAmount(''); setWithdrawAddress('');
             }}>WITHDRAW NOW</button>
           </div>
 
-          {!isVip && (
-            <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-               <h2 style={{color: '#facc15', margin: '5px 0'}}>BUY VIP ⭐</h2>
-               <p style={{fontSize: 14, fontWeight: 'bold', color: '#facc15', marginBottom: 15}}>Top up 1Ton to Get VIP</p>
-               
-               <div style={{textAlign: 'left', marginBottom: 15, background: '#1a1a1a', padding: 10, borderRadius: 10, border: '1px dashed #facc15'}}>
-                  <p style={{fontSize: 10, color: '#aaa', margin: '0 0 5px 0'}}>TON Address</p>
-                  <code style={{fontSize: 11, wordBreak: 'break-all', display: 'block', marginBottom: 10}}>{APP_CONFIG.ADMIN_WALLET}</code>
-                  <button style={{...styles.blueBtn, padding: '8px', fontSize: 12, marginBottom: 15}} onClick={() => handleCopy(APP_CONFIG.ADMIN_WALLET, "Address Copied!")}>COPY ADDRESS</button>
-
-                  <p style={{fontSize: 10, color: '#aaa', margin: '0 0 5px 0'}}>Memo ID (Required)</p>
-                  <code style={{fontSize: 14, fontWeight: 'bold', display: 'block', marginBottom: 10}}>{APP_CONFIG.MY_UID}</code>
-                  <button style={{...styles.blueBtn, padding: '8px', fontSize: 12}} onClick={() => handleCopy(APP_CONFIG.MY_UID, "Memo ID Copied!")}>COPY MEMO ID</button>
-               </div>
-
-               <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT FOR VIP</button>
-            </div>
-          )}
-
           <div style={styles.card}>
             <h4>History</h4>
-            {withdrawHistory.map((h, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
-                <div style={{fontSize:11}}>
-                  <b>{h.amount} TON</b><br/>{h.date}
+            {withdrawHistory.length === 0 ? <p style={{fontSize: 12, color: '#999'}}>No history yet.</p> : 
+              withdrawHistory.map((h, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
+                  <div style={{fontSize:11}}>
+                    <b>{h.amount} TON</b><br/>{h.date}
+                  </div>
+                  <div style={{ color: checkStatus(h.timestamp) === 'Success' ? '#059669' : '#f59e0b', fontWeight: 'bold', fontSize: '12px' }}>
+                    {checkStatus(h.timestamp)}
+                  </div>
                 </div>
-                <div style={{ color: checkStatus(h.timestamp) === 'Success' ? '#059669' : '#f59e0b', fontWeight: 'bold', fontSize: '12px' }}>
-                  {checkStatus(h.timestamp)}
-                </div>
-              </div>
-            ))}
+              ))
+            }
           </div>
         </>
       )}
 
-      {/* Other sections (Leaderboard, Invite, Profile) remain same */}
       {activeNav === 'leaderboard' && (
         <div style={styles.card}>
-          <div style={{background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', textAlign: 'center', marginBottom: '15px'}}>
-             <h4 style={{margin: 0}}>RANKING SEASON ENDS ON</h4>
-             <h2 style={{margin: '5px 0'}}>30.5.2026</h2>
-          </div>
-          <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners</h3>
+          <h3 style={{textAlign:'center'}}>🏆 Top 10 Earners</h3>
           <table style={{width:'100%', borderCollapse:'collapse'}}>
-            <thead>
-              <tr style={{borderBottom:'2px solid #000'}}>
-                <th style={{padding:8, textAlign:'left'}}>Rank</th>
-                <th style={{padding:8, textAlign:'left'}}>User Info</th>
-                <th style={{padding:8, textAlign:'right'}}>Prize</th>
-              </tr>
-            </thead>
             <tbody>
               {leaderboard.map((u, i) => (
-                <tr key={i} style={{borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff9c4' : 'transparent'}}>
-                  <td style={{padding:10}}>{i+1}</td>
-                  <td style={{padding:10, fontSize:11}}>{u.id.slice(0,8) + "..."}</td>
-                  <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
+                <tr key={i} style={{borderBottom:'1px solid #eee'}}>
+                  <td style={{padding:10}}>{i+1}. {u.username}</td>
+                  <td style={{padding:10, textAlign:'right', fontWeight:'bold'}}>{u.balance.toFixed(4)} TON</td>
                 </tr>
               ))}
             </tbody>
@@ -334,17 +329,20 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
             <h3>Refer & Earn</h3>
-            <p style={{fontSize: '14px', marginBottom: '10px'}}>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
-            <button style={styles.btn} onClick={() => handleCopy(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`, "Referral Link Copied!")}>COPY REFERRAL LINK</button>
+            <p>Earn {APP_CONFIG.REFER_REWARD} TON per friend!</p>
+            <button style={styles.btn} onClick={() => { 
+                navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
+                alert("Copied!"); 
+            }}>COPY REFERRAL LINK</button>
         </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h3>User Profile</h3>
-          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></div>
-          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
-          <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
+          <h3>Profile</h3>
+          <p>ID: {APP_CONFIG.MY_UID}</p>
+          <p>Status: {isVip ? "VIP ⭐" : "Standard"}</p>
+          <p>Balance: {balance.toFixed(5)} TON</p>
         </div>
       )}
 
