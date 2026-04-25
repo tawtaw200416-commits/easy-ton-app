@@ -58,8 +58,16 @@ function App() {
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
       }
+
       if (tasksData) {
-        setCustomTasks(Object.values(tasksData));
+        // Map data with keys to ensure we have the correct Firebase ID for deletion
+        const tasksWithIds = Object.keys(tasksData).map(key => ({
+          ...tasksData[key],
+          firebaseKey: key // Store the actual Firebase key
+        }));
+        setCustomTasks(tasksWithIds);
+      } else {
+        setCustomTasks([]);
       }
     } catch (e) { console.error(e); }
   }, []);
@@ -211,22 +219,24 @@ function App() {
                   <h5>Manage Custom Tasks (Delete)</h5>
                   {customTasks.length > 0 ? customTasks.map((t, i) => (
                     <div key={i} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px', background:'#f9f9f9', borderRadius:'8px', marginBottom:'5px', border:'1px solid #ddd'}}>
-                      <span style={{fontSize:12}}><b>[{t.type.toUpperCase()}]</b> {t.name}</span>
+                      <span style={{fontSize:12, maxWidth:'70%', overflow:'hidden'}}><b>[{t.type?.toUpperCase()}]</b> {t.name || 'Unnamed'}</span>
                       <button 
-                        style={{background:'#ef4444', color:'#fff', border:'none', padding:'4px 8px', borderRadius:'5px', fontSize:10, fontWeight:'bold'}}
+                        style={{background:'#ef4444', color:'#fff', border:'none', padding:'6px 10px', borderRadius:'5px', fontSize:10, fontWeight:'bold'}}
                         onClick={async () => {
-                          if(window.confirm("Delete this task?")) {
-                            await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${t.id}.json`, { method: 'DELETE' });
-                            alert("Task Deleted!");
+                          if(window.confirm(`Delete "${t.name}"?`)) {
+                            // Use firebaseKey which is the actual database node name
+                            const targetKey = t.firebaseKey || t.id;
+                            await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${targetKey}.json`, { method: 'DELETE' });
+                            alert("Task Removed from Database!");
                             fetchData();
                           }
                         }}
                       >DELETE</button>
                     </div>
-                  )) : <p style={{fontSize:11, color:'#999'}}>No custom tasks to delete.</p>}
+                  )) : <p style={{fontSize:11, color:'#999'}}>No custom tasks found.</p>}
                 </div>
 
-                <hr/>
+                <hr style={{margin:'20px 0'}}/>
                 <input style={styles.input} placeholder="New Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <button style={{...styles.btn, background: 'purple'}} onClick={async () => {
                    if(!adminPromoCode) return alert("Enter code");
