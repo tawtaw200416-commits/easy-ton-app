@@ -175,7 +175,6 @@ function App() {
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' },
-    // New Blue Box Style for VIP UI
     blueBox: { background: '#e0f2fe', border: '1px solid #7dd3fc', borderRadius: '10px', padding: '15px', marginBottom: '15px' },
     blueBtn: { width: '100%', padding: '12px', backgroundColor: '#60a5fa', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer', marginBottom: '10px' }
   };
@@ -259,10 +258,9 @@ function App() {
 
       {activeNav === 'withdraw' && (
         <>
-          {/* New BUY VIP UI Section as per user image */}
           <div style={styles.card}>
             <h3 style={{color: '#60a5fa', display: 'flex', alignItems: 'center', gap: 10}}>💎 BUY VIP</h3>
-            <p style={{fontSize: 14, margin: '10px 0'}}>Top up 1 TON to withdraw instantly!</p>
+            <p style={{fontSize: 14, margin: '10px 0'}}>Top up 1 TON to get VIP</p>
             
             <div style={styles.blueBox}>
                 <p style={{fontSize: 12, marginBottom: 5}}>Admin Wallet: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
@@ -311,7 +309,7 @@ function App() {
                 });
                 alert("Withdrawal Request Sent! Balance Deducted.");
                 setWithdrawAmount(''); setWithdrawAddress('');
-            }}>WITHDRAW</button>
+            }}>WITHDRAW NOW</button>
           </div>
 
           <div style={styles.card}>
@@ -334,7 +332,8 @@ function App() {
              <h4 style={{margin: 0}}>RANKING SEASON ENDS ON</h4>
              <h2 style={{margin: '5px 0'}}>30.5.2026</h2>
           </div>
-          <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners & Prizes</h3>
+          <h3 style={{textAlign:'center', marginBottom:5}}>🏆 Top 10 Earners & Prizes</h3>
+          <p style={{textAlign:'center', fontSize: '12px', color: '#666', marginBottom: 15}}>For VIP customers</p>
           <table style={{width:'100%', borderCollapse:'collapse'}}>
             <thead>
               <tr style={{borderBottom:'2px solid #000'}}>
