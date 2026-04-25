@@ -17,6 +17,9 @@ const APP_CONFIG = {
   REFER_REWARD: 0.001
 };
 
+// VIP List
+const VIP_USERS = ["5020977059", "1793453606", "5020977059"]; 
+
 function App() {
   const [balance, setBalance] = useState(0.0000);
   const [isVip, setIsVip] = useState(false);
@@ -54,42 +57,40 @@ function App() {
       const allUsers = await all.json();
       const adminTasks = await tasksRes.json();
 
-      if (userData) {
-        // Balance အရင် update လုပ်မယ်
-        const currentBal = typeof userData.balance === 'number' ? userData.balance : Number(userData.balance || 0);
-        setBalance(currentBal);
-        
-        // VIP Check (အသစ်ထည့်ထားတဲ့ ID ပါဝင်ပါတယ်)
-        const vipList = ["5020977059", "1793453606"];
-        const vipStatus = !!userData.isVip || vipList.includes(APP_CONFIG.MY_UID);
-        setIsVip(vipStatus);
+      // VIP Status check logic
+      const vipStatus = VIP_USERS.includes(APP_CONFIG.MY_UID) || (userData && !!userData.isVip);
+      setIsVip(vipStatus);
 
-        // Completed tasks logic ပြင်ဆင်ခြင်း
+      if (userData) {
+        // Balance update (ensure it's a number and not overwriting with 0 if data exists)
+        if (userData.balance !== undefined && userData.balance !== null) {
+            setBalance(parseFloat(userData.balance));
+        }
+        
+        // Task data persistence
         setCompleted(Array.isArray(userData.completed) ? userData.completed : []);
         setWithdrawHistory(Array.isArray(userData.withdrawHistory) ? userData.withdrawHistory : []);
         setReferrals(userData.referrals ? Object.entries(userData.referrals) : []);
         
-        if (!userData.username) {
+        // Update username if missing
+        if (!userData.username || userData.username === "Unknown") {
           await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PATCH',
             body: JSON.stringify({ username: APP_CONFIG.MY_USERNAME })
           });
         }
       } else {
-        // User အသစ်ဆိုရင် အောက်ပါအတိုင်းစမယ်
-        const vipList = ["5020977059", "1793453606"];
+        // Initial user creation - only if user doesn't exist at all
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PUT',
           body: JSON.stringify({ 
             balance: 0, 
             username: APP_CONFIG.MY_USERNAME,
-            isVip: vipList.includes(APP_CONFIG.MY_UID), 
+            isVip: VIP_USERS.includes(APP_CONFIG.MY_UID), 
             completed: [], 
             withdrawHistory: [] 
           })
         });
-        setBalance(0);
-        setIsVip(vipList.includes(APP_CONFIG.MY_UID));
       }
 
       if (adminTasks) {
@@ -104,7 +105,7 @@ function App() {
           .map(([id, data]) => ({ 
             id: id, 
             username: data.username || "No Name",
-            balance: typeof data.balance === 'number' ? data.balance : Number(data.balance || 0)
+            balance: (data && typeof data === 'object') ? (parseFloat(data.balance) || 0) : 0 
           }))
           .sort((a, b) => b.balance - a.balance)
           .slice(0, 10);
@@ -128,16 +129,19 @@ function App() {
       AdController.show()
         .then((result) => {
           if (result.done) {
-            const newBal = Number((balance + finalReward).toFixed(5));
-            const isTask = id !== 'watch_ad';
-            const newCompleted = (isTask && !completed.includes(id)) ? [...completed, id] : completed;
-            
-            setBalance(newBal);
-            if (isTask) setCompleted(newCompleted);
+            setBalance(prev => {
+                const newBal = parseFloat((prev + finalReward).toFixed(5));
+                const newCompleted = (id !== 'watch_ad' && !completed.includes(id)) ? [...completed, id] : completed;
+                
+                if (id !== 'watch_ad') setCompleted(newCompleted);
 
-            fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-              method: 'PATCH',
-              body: JSON.stringify({ balance: newBal, completed: newCompleted })
+                // Immediate Database Update
+                fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ balance: newBal, completed: newCompleted })
+                });
+                
+                return newBal;
             });
             alert(`Reward Success: +${finalReward} TON`);
           }
@@ -151,6 +155,7 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
+  // Static Task Lists
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -196,7 +201,7 @@ function App() {
       <div style={styles.header}>
         <div style={{display:'flex', justifyContent:'center', alignItems:'center', gap:5}}>
             <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
-            {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP</span>}
+            {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP ⭐</span>}
         </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
       </div>
