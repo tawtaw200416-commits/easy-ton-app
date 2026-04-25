@@ -60,10 +60,9 @@ function App() {
       }
 
       if (tasksData) {
-        // Map data with keys to ensure we have the correct Firebase ID for deletion
         const tasksWithIds = Object.keys(tasksData).map(key => ({
           ...tasksData[key],
-          firebaseKey: key // Store the actual Firebase key
+          firebaseKey: key 
         }));
         setCustomTasks(tasksWithIds);
       } else {
@@ -142,8 +141,14 @@ function App() {
     { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
   ];
 
-  const allBotTasks = [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')];
-  const allSocialTasks = [...fixedSocialTasks, ...customTasks.filter(t => t.type === 'social')];
+  // Logic to prevent duplicate tasks based on name or link
+  const uniqueCustomTasks = customTasks.filter(ct => 
+    !fixedBotTasks.some(ft => ft.name === ct.name || ft.link === ct.link) &&
+    !fixedSocialTasks.some(ft => ft.name === ct.name || ft.link === ct.link)
+  );
+
+  const allBotTasks = [...fixedBotTasks, ...uniqueCustomTasks.filter(t => t.type === 'bot')];
+  const allSocialTasks = [...fixedSocialTasks, ...uniqueCustomTasks.filter(t => t.type === 'social')];
 
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
@@ -224,7 +229,6 @@ function App() {
                         style={{background:'#ef4444', color:'#fff', border:'none', padding:'6px 10px', borderRadius:'5px', fontSize:10, fontWeight:'bold'}}
                         onClick={async () => {
                           if(window.confirm(`Delete "${t.name}"?`)) {
-                            // Use firebaseKey which is the actual database node name
                             const targetKey = t.firebaseKey || t.id;
                             await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${targetKey}.json`, { method: 'DELETE' });
                             alert("Task Removed from Database!");
