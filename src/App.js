@@ -148,33 +148,33 @@ function App() {
   const rewardPrizes = ["1 TON", "0.8 TON", "0.6 TON", "0.4 TON", "0.3 TON", "0.2 TON", "0.2 TON", "0.1 TON", "0.1 TON", "0.1 TON"];
 
   const styles = {
-    main: { backgroundColor: '#1a237e', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
-    header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #3f51b5' },
+    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
+    header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
-    vipCard: { background: '#3f51b5', color: '#fff', border: '2px solid #fff', textAlign: 'center', padding: '20px', borderRadius: '20px', marginBottom: '15px' },
+    vipCard: { background: '#000', color: '#fff', border: '3px solid #fff', textAlign: 'center', padding: '20px', borderRadius: '20px', marginBottom: '15px' },
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
-    // ပုံထဲကအတိုင်း Input box style
-    inputGroup: { background: '#f5f5f5', borderRadius: '12px', padding: '12px', marginBottom: '12px', border: '1px solid #eee' },
-    label: { fontSize: '12px', color: '#666', fontWeight: 'bold', display: 'block', marginBottom: '5px' },
-    input: { width: '100%', border: 'none', background: 'transparent', fontSize: '16px', fontWeight: 'bold', outline: 'none', padding: '0' },
-    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '2px solid #3f51b5' }
+    // ပုံထဲကလို Input UI ပုံစံသစ်
+    inputGroup: { background: '#f5f5f5', borderRadius: '12px', padding: '10px', marginBottom: '12px', border: '1px solid #eee' },
+    label: { fontSize: '11px', color: '#666', fontWeight: 'bold', display: 'block', marginBottom: '5px' },
+    inputRaw: { width: '100%', border: 'none', background: 'transparent', fontSize: '15px', fontWeight: 'bold', outline: 'none', padding: '2px 0' },
+    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' }
   };
 
   return (
     <div style={styles.main}>
       <div style={styles.header}>
         <div style={{display:'flex', justifyContent:'center', alignItems:'center', gap:5}}>
-            <small style={{color: '#3f51b5', fontWeight:'bold'}}>TOTAL BALANCE</small>
-            {isVip && <span style={{fontSize:10, background:'#3f51b5', color:'#fff', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP</span>}
+            <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
+            {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP</span>}
         </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
       </div>
 
       {activeNav === 'earn' && (
         <>
-          <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center', border:'2px solid #3f51b5'}}>
+          <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
              <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
-             <button style={{...styles.btn, background: '#3f51b5', color: '#fff'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -203,41 +203,37 @@ function App() {
 
       {activeNav === 'withdraw' && (
         <>
+          {/* BUY VIP CARD - ပုံထဲကအတိုင်း Withdraw ထဲမှာထည့်ထားပါတယ် */}
           <div style={styles.vipCard}>
-             <h3 style={{margin: '0 0 10px 0'}}>GET VIP ACCESS ⭐</h3>
-             <p style={{fontSize: '12px', margin: '0 0 15px 0'}}>Withdraw instantly and earn more rewards!</p>
-             <button style={{...styles.btn, background: '#fff', color: '#1a237e'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>UPGRADE NOW</button>
+             <h3 style={{margin: '0 0 10px 0', color: '#facc15'}}>BUY VIP ⭐</h3>
+             <p style={{fontSize: '12px', margin: '0 0 15px 0'}}>Instant Withdraw & 3x Rewards!</p>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>BUY NOW - 1 TON</button>
           </div>
 
           <div style={styles.card}>
-            <h3 style={{marginTop:0, marginBottom:15}}>Withdraw TON</h3>
+            <h3 style={{marginTop:0}}>Withdraw TON</h3>
             
-            {/* Amount Box */}
             <div style={styles.inputGroup}>
                 <label style={styles.label}>AMOUNT</label>
-                <input style={styles.input} type="number" placeholder="Min 0.1 TON" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+                <input style={styles.inputRaw} placeholder="Min 0.1 TON" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             </div>
 
-            {/* Address Box */}
             <div style={styles.inputGroup}>
                 <label style={styles.label}>ADDRESS</label>
-                <input style={styles.input} placeholder="Paste TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+                <input style={styles.inputRaw} placeholder="Enter TON Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             </div>
 
-            {/* Memo Box */}
             <div style={styles.inputGroup}>
                 <label style={styles.label}>MEMO (OPTIONAL)</label>
-                <input style={styles.input} placeholder="Enter Memo" value={withdrawMemo} onChange={e => setWithdrawMemo(e.target.value)} />
+                <input style={styles.inputRaw} placeholder="Enter Memo" value={withdrawMemo} onChange={e => setWithdrawMemo(e.target.value)} />
             </div>
 
-            <button style={{...styles.btn, background: '#1a237e'}} onClick={() => {
+            <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
                 if(amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdrawal is ${APP_CONFIG.MIN_WITHDRAW} TON`);
                 if(amt > balance) return alert(`Insufficient balance!`);
-                if(!withdrawAddress) return alert("Please enter Address!");
-
                 const newBal = Number((balance - amt).toFixed(5));
-                const entry = { amount: withdrawAmount, address: withdrawAddress, memo: withdrawMemo || "None", timestamp: Date.now(), date: new Date().toLocaleString() };
+                const entry = { amount: withdrawAmount, address: withdrawAddress, memo: withdrawMemo || 'None', timestamp: Date.now(), date: new Date().toLocaleString() };
                 const newHistory = [entry, ...withdrawHistory];
                 setBalance(newBal);
                 setWithdrawHistory(newHistory);
@@ -245,8 +241,18 @@ function App() {
                   method: 'PATCH',
                   body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
                 });
-                alert("Withdrawal Request Sent!");
-            }}>CONFIRM WITHDRAW</button>
+                alert("Withdrawal Request Sent.");
+            }}>WITHDRAW</button>
+          </div>
+
+          <div style={styles.card}>
+            <h4>History</h4>
+            {withdrawHistory.map((h, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
+                <div style={{fontSize:11}}><b>{h.amount} TON</b><br/>{h.date}</div>
+                <div style={{ color: checkStatus(h.timestamp) === 'Success' ? 'green' : 'orange', fontWeight: 'bold', fontSize: '12px' }}>{checkStatus(h.timestamp)}</div>
+              </div>
+            ))}
           </div>
         </>
       )}
@@ -265,7 +271,8 @@ function App() {
       {activeNav === 'profile' && (
         <div style={styles.card}>
           <h3>Profile</h3>
-          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE"}</b></div>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></div>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
           <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
         </div>
@@ -273,8 +280,8 @@ function App() {
 
       <div style={styles.nav}>
         {['earn', 'invite', 'leaderboard', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#3f51b5' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
-            {n.toUpperCase()}
+          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
+            {n === 'leaderboard' ? 'RANK' : n.toUpperCase()}
           </button>
         ))}
       </div>
