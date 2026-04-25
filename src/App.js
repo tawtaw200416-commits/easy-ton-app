@@ -17,7 +17,6 @@ const APP_CONFIG = {
   REFER_REWARD: 0.001
 };
 
-// VIP စာရင်း (ID အသစ်ထည့်ထားပါတယ်)
 const VIP_IDS = ["5020977059", "1793453606"];
 
 function App() {
@@ -57,25 +56,15 @@ function App() {
       const allUsers = await all.json();
       const adminTasks = await tasksRes.json();
 
-      // VIP Status check
       const isUserVip = VIP_IDS.includes(APP_CONFIG.MY_UID) || (userData && !!userData.isVip);
       setIsVip(isUserVip);
 
       if (userData) {
-        // Data ရှိရင် ရှိတဲ့အတိုင်း သုံးမယ် (0 ပြန်မဖြစ်အောင် စစ်ထားတယ်)
         setBalance(userData.balance !== undefined ? parseFloat(userData.balance) : 0);
         setCompleted(Array.isArray(userData.completed) ? userData.completed : []);
         setWithdrawHistory(Array.isArray(userData.withdrawHistory) ? userData.withdrawHistory : []);
         setReferrals(userData.referrals ? Object.entries(userData.referrals) : []);
-        
-        if (!userData.username || userData.username === "Unknown") {
-          await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-            method: 'PATCH',
-            body: JSON.stringify({ username: APP_CONFIG.MY_USERNAME })
-          });
-        }
       } else {
-        // Data လုံးဝမရှိသေးတဲ့ User အသစ်ဆိုရင်ပဲ ဒါကိုလုပ်မယ်
         const initialData = { 
           balance: 0, 
           username: APP_CONFIG.MY_USERNAME,
@@ -128,15 +117,12 @@ function App() {
             setBalance(prev => {
                 const newBal = parseFloat((prev + finalReward).toFixed(5));
                 const newCompleted = id !== 'watch_ad' && !completed.includes(id) ? [...completed, id] : completed;
-                
                 if (id !== 'watch_ad') setCompleted(newCompleted);
 
-                // Firebase Update
                 fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
                     method: 'PATCH',
                     body: JSON.stringify({ balance: newBal, completed: newCompleted })
                 });
-                
                 return newBal;
             });
             alert(`Reward Success: +${finalReward} TON`);
@@ -151,6 +137,7 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
+  // Bot & Social Tasks List (Omitted for brevity, keep your original list here)
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -207,7 +194,7 @@ function App() {
              <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
           </div>
-
+          {/* Tabs UI Keep same... */}
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
               (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && 
@@ -269,12 +256,68 @@ function App() {
         </>
       )}
 
+      {activeNav === 'withdraw' && (
+        <>
+          <div style={styles.card}>
+            <h3>Withdraw TON</h3>
+            <p style={{fontSize:12, color:'#666', marginBottom:10}}>Min Withdrawal: 0.1 TON (No VIP required)</p>
+            <input style={styles.input} placeholder="Amount (Min 0.1 TON)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+            <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+            
+            <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
+                const amt = parseFloat(withdrawAmount);
+                if(isNaN(amt) || amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdrawal is ${APP_CONFIG.MIN_WITHDRAW} TON`);
+                if(amt > balance) return alert(`Insufficient balance! Your balance: ${balance.toFixed(5)}`);
+                if(!withdrawAddress) return alert("Enter TON Address!");
+
+                const newBal = parseFloat((balance - amt).toFixed(5));
+                const entry = { 
+                  amount: amt, 
+                  address: withdrawAddress, 
+                  timestamp: Date.now(), 
+                  date: new Date().toLocaleString() 
+                };
+                const newHistory = [entry, ...withdrawHistory];
+                
+                setBalance(newBal);
+                setWithdrawHistory(newHistory);
+                
+                fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+                  method: 'PATCH',
+                  body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
+                });
+                alert("Withdrawal Request Sent! Balance Deducted.");
+                setWithdrawAmount(''); setWithdrawAddress('');
+            }}>WITHDRAW NOW</button>
+          </div>
+
+          {!isVip && (
+            <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
+               <h2 style={{color: '#facc15'}}>GET VIP ⭐</h2>
+               <p style={{fontSize: 11, marginBottom: 10}}>VIPs get higher rewards for Ads and Codes.</p>
+               <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT FOR VIP</button>
+            </div>
+          )}
+
+          <div style={styles.card}>
+            <h4>History</h4>
+            {withdrawHistory.map((h, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
+                <div style={{fontSize:11}}>
+                  <b>{h.amount} TON</b><br/>{h.date}
+                </div>
+                <div style={{ color: checkStatus(h.timestamp) === 'Success' ? 'green' : 'orange', fontWeight: 'bold', fontSize: '12px' }}>{checkStatus(h.timestamp)}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      {/* Invite, Leaderboard & Profile - Keep original logic */}
       {activeNav === 'leaderboard' && (
         <div style={styles.card}>
           <div style={{background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', textAlign: 'center', marginBottom: '15px'}}>
              <h4 style={{margin: 0}}>RANKING SEASON ENDS ON</h4>
              <h2 style={{margin: '5px 0'}}>30.5.2026</h2>
-             <small style={{color: '#fff'}}>VIP members can withdraw</small>
           </div>
           <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners & Prizes</h3>
           <table style={{width:'100%', borderCollapse:'collapse'}}>
@@ -305,85 +348,6 @@ function App() {
             </tbody>
           </table>
         </div>
-      )}
-
-      {activeNav === 'withdraw' && (
-        <>
-          <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center', padding: '20px'}}>
-             <h2 style={{margin: '0 0 10px 0', color: '#facc15'}}>BUY VIP ⭐</h2>
-             <p style={{margin: '0 0 15px 0', fontSize: '13px'}}>To enable withdrawal, you need to be a VIP member. Send <b>1 TON</b> to the address below.</p>
-             
-             <div style={{marginBottom: 15}}>
-                <small style={{color: '#facc15', display:'block', marginBottom: 5}}>ADMIN WALLET</small>
-                <div style={{background: '#333', padding: '10px', borderRadius: '8px', fontSize: '10px', wordBreak: 'break-all', border: '1px dashed #facc15', cursor: 'pointer'}} onClick={() => {
-                   navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET);
-                   alert("Admin Wallet Copied!");
-                }}>
-                   {APP_CONFIG.ADMIN_WALLET}
-                </div>
-             </div>
-
-             <div style={{marginBottom: 15}}>
-                <small style={{color: '#facc15', display:'block', marginBottom: 5}}>REQUIRED MEMO (YOUR ID)</small>
-                <div style={{background: '#333', padding: '10px', borderRadius: '8px', fontSize: '16px', fontWeight:'bold', border: '1px dashed #facc15', cursor: 'pointer', color: '#facc15'}} onClick={() => {
-                   navigator.clipboard.writeText(APP_CONFIG.MY_UID);
-                   alert("Memo (User ID) Copied!");
-                }}>
-                   {APP_CONFIG.MY_UID}
-                </div>
-             </div>
-
-             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => {
-                navigator.clipboard.writeText(`Wallet: ${APP_CONFIG.ADMIN_WALLET} | Memo: ${APP_CONFIG.MY_UID}`);
-                alert("Wallet & Memo Copied! Send 1 TON then contact support.");
-             }}>COPY ALL INFO</button>
-             <button style={{...styles.btn, background: 'transparent', color: '#fff', border: '1px solid #fff', marginTop: '10px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
-          </div>
-
-          <div style={styles.card}>
-            <h3>Withdraw TON</h3>
-            <input style={styles.input} placeholder="Amount (Min 0.1 TON)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-            <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
-            
-            <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
-                const amt = parseFloat(withdrawAmount);
-                if(!isVip) return alert("Only VIP members can withdraw!");
-                if(isNaN(amt) || amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdrawal is ${APP_CONFIG.MIN_WITHDRAW} TON`);
-                if(amt > balance) return alert(`Insufficient balance! Your balance: ${balance.toFixed(5)}`);
-                
-                const newBal = parseFloat((balance - amt).toFixed(5));
-                const entry = { 
-                  amount: amt, 
-                  address: withdrawAddress, 
-                  timestamp: Date.now(), 
-                  date: new Date().toLocaleString() 
-                };
-                const newHistory = [entry, ...withdrawHistory];
-                
-                // Balance ထဲကနေ ချက်ချင်းနုတ်မယ်
-                setBalance(newBal);
-                setWithdrawHistory(newHistory);
-                
-                fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-                  method: 'PATCH',
-                  body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
-                });
-                alert("Withdrawal Request Sent. Balance Deducted.");
-                setWithdrawAmount(''); setWithdrawAddress('');
-            }}>WITHDRAW</button>
-          </div>
-          <div style={styles.card}>
-            <h4>History</h4>
-            {withdrawHistory.map((h, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
-                <div style={{fontSize:11}}>
-                  <b>{h.amount} TON</b><br/>{h.date}
-                </div>
-                <div style={{ color: checkStatus(h.timestamp) === 'Success' ? 'green' : 'orange', fontWeight: 'bold', fontSize: '12px' }}>{checkStatus(h.timestamp)}</div>
-              </div>
-            ))}
-          </div>
-        </>
       )}
 
       {activeNav === 'invite' && (
