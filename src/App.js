@@ -29,7 +29,6 @@ function App() {
   
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
-  const [withdrawMemo, setWithdrawMemo] = useState(''); // Memo input added
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
   const [adminTaskName, setAdminTaskName] = useState('');
@@ -56,7 +55,6 @@ function App() {
       const adminTasks = await tasksRes.json();
 
       if (userData) {
-        // Balance ကို data ရှိမှ set လုပ်ပါမယ်
         if (userData.balance !== undefined) setBalance(Number(userData.balance));
         const vipStatus = !!userData.isVip || APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606";
         setIsVip(vipStatus);
@@ -71,7 +69,6 @@ function App() {
           });
         }
       } else {
-        // User အသစ်ဆိုရင် balance 0 နဲ့ စဖွင့်ပေးမယ်
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PUT',
           body: JSON.stringify({ 
@@ -302,13 +299,31 @@ function App() {
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center', padding: '20px'}}>
              <h2 style={{margin: '0 0 10px 0', color: '#facc15'}}>BUY VIP ⭐</h2>
              <p style={{margin: '0 0 15px 0', fontSize: '13px'}}>To enable withdrawal, you need to be a VIP member. Send <b>1 TON</b> to the address below.</p>
-             <div style={{background: '#333', padding: '10px', borderRadius: '8px', fontSize: '10px', marginBottom: '15px', wordBreak: 'break-all', border: '1px dashed #facc15'}}>
-                {APP_CONFIG.ADMIN_WALLET}
+             
+             <div style={{marginBottom: 15}}>
+                <small style={{color: '#facc15', display:'block', marginBottom: 5}}>ADMIN WALLET</small>
+                <div style={{background: '#333', padding: '10px', borderRadius: '8px', fontSize: '10px', wordBreak: 'break-all', border: '1px dashed #facc15', cursor: 'pointer'}} onClick={() => {
+                   navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET);
+                   alert("Admin Wallet Copied!");
+                }}>
+                   {APP_CONFIG.ADMIN_WALLET}
+                </div>
              </div>
+
+             <div style={{marginBottom: 15}}>
+                <small style={{color: '#facc15', display:'block', marginBottom: 5}}>REQUIRED MEMO (YOUR ID)</small>
+                <div style={{background: '#333', padding: '10px', borderRadius: '8px', fontSize: '16px', fontWeight:'bold', border: '1px dashed #facc15', cursor: 'pointer', color: '#facc15'}} onClick={() => {
+                   navigator.clipboard.writeText(APP_CONFIG.MY_UID);
+                   alert("Memo (User ID) Copied!");
+                }}>
+                   {APP_CONFIG.MY_UID}
+                </div>
+             </div>
+
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => {
-                navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET);
-                alert("Admin Wallet Copied! Send 1 TON then contact support.");
-             }}>COPY WALLET ADDRESS</button>
+                navigator.clipboard.writeText(`Wallet: ${APP_CONFIG.ADMIN_WALLET} | Memo: ${APP_CONFIG.MY_UID}`);
+                alert("Wallet & Memo Copied! Send 1 TON then contact support.");
+             }}>COPY ALL INFO</button>
              <button style={{...styles.btn, background: 'transparent', color: '#fff', border: '1px solid #fff', marginTop: '10px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
           </div>
 
@@ -316,7 +331,6 @@ function App() {
             <h3>Withdraw TON</h3>
             <input style={styles.input} placeholder="Amount (Min 0.1 TON)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
-            <input style={styles.input} placeholder="Memo (Optional/Required for Exchange)" value={withdrawMemo} onChange={e => setWithdrawMemo(e.target.value)} />
             
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
@@ -328,7 +342,6 @@ function App() {
                 const entry = { 
                   amount: withdrawAmount, 
                   address: withdrawAddress, 
-                  memo: withdrawMemo,
                   timestamp: Date.now(), 
                   date: new Date().toLocaleString() 
                 };
@@ -342,7 +355,7 @@ function App() {
                   body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
                 });
                 alert("Withdrawal Request Sent. Balance Deducted.");
-                setWithdrawAmount(''); setWithdrawAddress(''); setWithdrawMemo('');
+                setWithdrawAmount(''); setWithdrawAddress('');
             }}>WITHDRAW</button>
           </div>
           <div style={styles.card}>
@@ -351,7 +364,6 @@ function App() {
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
                 <div style={{fontSize:11}}>
                   <b>{h.amount} TON</b><br/>{h.date}
-                  {h.memo && <div style={{color: '#666'}}>Memo: {h.memo}</div>}
                 </div>
                 <div style={{ color: checkStatus(h.timestamp) === 'Success' ? 'green' : 'orange', fontWeight: 'bold', fontSize: '12px' }}>{checkStatus(h.timestamp)}</div>
               </div>
