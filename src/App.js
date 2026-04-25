@@ -9,13 +9,12 @@ const APP_CONFIG = {
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
-  WATCH_REWARD: 0.0008,       // Normal User
-  VIP_WATCH_REWARD: 0.0025,    // VIP User
-  CODE_REWARD: 0.0008,         // Promo Code Reward
+  WATCH_REWARD: 0.0008,
+  VIP_WATCH_REWARD: 0.0025,
+  CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001
 };
 
-// VIP Users List
 const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
 
 function App() {
@@ -43,13 +42,7 @@ function App() {
     return (Date.now() - timestamp >= 300000) ? "Success" : "Pending";
   };
 
-  useEffect(() => {
-    localStorage.setItem(`ton_bal_${APP_CONFIG.MY_UID}`, balance.toString());
-    localStorage.setItem(`comp_tasks_${APP_CONFIG.MY_UID}`, JSON.stringify(completed));
-    localStorage.setItem(`wd_hist_${APP_CONFIG.MY_UID}`, JSON.stringify(withdrawHistory));
-    localStorage.setItem(`refs_${APP_CONFIG.MY_UID}`, JSON.stringify(referrals));
-  }, [balance, completed, withdrawHistory, referrals]);
-
+  // Fetch Data function
   const fetchData = useCallback(async () => {
     try {
       const [u, t] = await Promise.all([
@@ -66,11 +59,25 @@ function App() {
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
       }
-      if (tasksData) setCustomTasks(Object.values(tasksData));
+      if (tasksData) {
+        setCustomTasks(Object.values(tasksData));
+      }
     } catch (e) { console.error(e); }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  // Initial Fetch & Auto-sync every 30 seconds to catch new admin tasks
+  useEffect(() => { 
+    fetchData(); 
+    const interval = setInterval(fetchData, 30000); 
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
+  useEffect(() => {
+    localStorage.setItem(`ton_bal_${APP_CONFIG.MY_UID}`, balance.toString());
+    localStorage.setItem(`comp_tasks_${APP_CONFIG.MY_UID}`, JSON.stringify(completed));
+    localStorage.setItem(`wd_hist_${APP_CONFIG.MY_UID}`, JSON.stringify(withdrawHistory));
+    localStorage.setItem(`refs_${APP_CONFIG.MY_UID}`, JSON.stringify(referrals));
+  }, [balance, completed, withdrawHistory, referrals]);
 
   const processReward = (id, rewardAmount) => {
     let finalReward = rewardAmount;
@@ -107,8 +114,8 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // Bot Tasks - Exactly 7 items as requested
-  const botTasks = [
+  // Fixed 7 Bot Tasks
+  const fixedBotTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
     { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
@@ -118,8 +125,8 @@ function App() {
     { id: 'b7', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=1793453606" }
   ];
 
-  // Social Tasks - Removed "EASYTONFREE💎💎"
-  const socialTasks = [
+  // Fixed Social Tasks
+  const fixedSocialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
     { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" },
@@ -128,9 +135,12 @@ function App() {
     { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
     { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
     { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
-    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-    { id: 's11', name: "REFER FREE", link: "https://t.me/easytonfree" }
+    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
   ];
+
+  // Combine Fixed + Custom Admin Tasks
+  const allBotTasks = [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')];
+  const allSocialTasks = [...fixedSocialTasks, ...customTasks.filter(t => t.type === 'social')];
 
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
@@ -166,13 +176,13 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && botTasks.map((t, i) => (
+            {activeTab === 'bot' && allBotTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
               </div>
             ))}
-            {activeTab === 'social' && socialTasks.map((t, i) => (
+            {activeTab === 'social' && allSocialTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
@@ -197,7 +207,8 @@ function App() {
                    if(!adminTaskName || !adminTaskLink) return alert("Fill all fields");
                    const id = 't_'+Date.now();
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
-                   alert("Task Saved!"); fetchData();
+                   alert("Task Saved!"); 
+                   fetchData(); // Admin Save လုပ်ပြီးတာနဲ့ data အသစ်ချက်ချင်းဆွဲ
                 }}>SAVE TASK</button>
                 <input style={styles.input} placeholder="New Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <button style={{...styles.btn, background: 'purple'}} onClick={async () => {
@@ -211,6 +222,7 @@ function App() {
         </>
       )}
 
+      {/* Rest of the code remains same (Withdraw, Invite, Profile, Nav) */}
       {activeNav === 'withdraw' && (
         <>
           <div style={styles.card}>
