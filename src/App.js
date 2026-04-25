@@ -260,7 +260,7 @@ function App() {
         <>
           <div style={styles.card}>
             <h3 style={{color: '#60a5fa', display: 'flex', alignItems: 'center', gap: 10}}>💎 BUY VIP</h3>
-            <p style={{fontSize: 14, margin: '10px 0'}}>Top up 1 TON to get VIP</p>
+            <p style={{fontSize: 14, margin: '10px 0'}}>Top up 1TON to get VIP</p>
             
             <div style={styles.blueBox}>
                 <p style={{fontSize: 12, marginBottom: 5}}>Admin Wallet: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
@@ -309,7 +309,7 @@ function App() {
                 });
                 alert("Withdrawal Request Sent! Balance Deducted.");
                 setWithdrawAmount(''); setWithdrawAddress('');
-            }}>WITHDRAW NOW</button>
+            }}>WITHDRAW</button>
           </div>
 
           <div style={styles.card}>
@@ -333,7 +333,7 @@ function App() {
              <h2 style={{margin: '5px 0'}}>30.5.2026</h2>
           </div>
           <h3 style={{textAlign:'center', marginBottom:5}}>🏆 Top 10 Earners & Prizes</h3>
-          <p style={{textAlign:'center', fontSize: '12px', color: '#666', marginBottom: 15}}>For VIP customers</p>
+          <p style={{textAlign:'center', fontSize: '14px', fontWeight: 'bold', marginBottom: 15}}>For VIP customers</p>
           <table style={{width:'100%', borderCollapse:'collapse'}}>
             <thead>
               <tr style={{borderBottom:'2px solid #000'}}>
