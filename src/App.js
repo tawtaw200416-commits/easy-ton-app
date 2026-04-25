@@ -12,13 +12,13 @@ const APP_CONFIG = {
   MIN_WITHDRAW: 0.1,
   WATCH_REWARD: 0.0009,
   VIP_WATCH_REWARD: 0.0025,
-  CODE_REWARD: 0.0008,     // Promo Code reward for everyone
+  CODE_REWARD: 0.0008,     
+  VIP_CODE_REWARD: 0.0008, // Promo Code ကို 0.0008 ပဲ ပေးရန် Fix လုပ်ထားသည်
   REFER_REWARD: 0.001
 };
 
 function App() {
   const [balance, setBalance] = useState(0.0000);
-  const [totalEarned, setTotalEarned] = useState(0.0000); // For Ranking stability
   const [isVip, setIsVip] = useState(false);
   const [completed, setCompleted] = useState([]);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
@@ -52,7 +52,6 @@ function App() {
 
       if (userData) {
         setBalance(Number(userData.balance || 0));
-        setTotalEarned(Number(userData.totalEarned || 0));
         const vipStatus = !!userData.isVip || APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606";
         setIsVip(vipStatus);
         setCompleted(userData.completed || []);
@@ -70,9 +69,8 @@ function App() {
           method: 'PUT',
           body: JSON.stringify({ 
             balance: 0, 
-            totalEarned: 0,
             username: APP_CONFIG.MY_USERNAME,
-            isVip: (APP_CONFIG.MY_UID === "1793453606"), 
+            isVip: (APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606"), 
             completed: [], 
             withdrawHistory: [] 
           })
@@ -84,9 +82,9 @@ function App() {
           .map(([id, data]) => ({ 
             id: id, 
             username: data.username || "No Name",
-            score: typeof data === 'object' ? (data.totalEarned || 0) : 0 // Rank by totalEarned
+            balance: typeof data === 'object' ? (data.balance || 0) : 0 
           }))
-          .sort((a, b) => b.score - a.score)
+          .sort((a, b) => b.balance - a.balance)
           .slice(0, 10);
         setLeaderboard(sorted);
       }
@@ -98,10 +96,11 @@ function App() {
   const processReward = (id, rewardAmount) => {
     let finalReward = rewardAmount;
     
-    if (id === 'watch_ad') {
+    // Promo Code အတွက် Reward ကို 0.0008 သို့ သတ်မှတ်ခြင်း
+    if (id.startsWith('c_')) {
+      finalReward = APP_CONFIG.CODE_REWARD;
+    } else if (id === 'watch_ad') {
       finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
-    } else if (id.startsWith('c_')) {
-      finalReward = APP_CONFIG.CODE_REWARD; // Always 0.0008 for promo codes
     }
 
     if (window.Adsgram) {
@@ -110,16 +109,14 @@ function App() {
         .then((result) => {
           if (result.done) {
             const newBal = Number((balance + finalReward).toFixed(5));
-            const newTotal = Number((totalEarned + finalReward).toFixed(5));
             const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
             
             setBalance(newBal);
-            setTotalEarned(newTotal);
             if (id !== 'watch_ad') setCompleted(newCompleted);
 
             fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
               method: 'PATCH',
-              body: JSON.stringify({ balance: newBal, totalEarned: newTotal, completed: newCompleted })
+              body: JSON.stringify({ balance: newBal, completed: newCompleted })
             });
             alert(`Reward Success: +${finalReward} TON`);
           }
@@ -175,7 +172,7 @@ function App() {
     <div style={styles.main}>
       <div style={styles.header}>
         <div style={{display:'flex', justifyContent:'center', alignItems:'center', gap:5}}>
-            <small style={{color: '#facc15'}}>CURRENT BALANCE</small>
+            <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
             {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP</span>}
         </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
@@ -237,14 +234,14 @@ function App() {
           <div style={{background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', textAlign: 'center', marginBottom: '15px'}}>
              <h4 style={{margin: 0}}>RANKING SEASON ENDS ON</h4>
              <h2 style={{margin: '5px 0'}}>30.5.2026</h2>
+             <small style={{color: '#fff'}}>VIP members can withdraw</small>
           </div>
-
-          <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners</h3>
+          <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners & Prizes</h3>
           <table style={{width:'100%', borderCollapse:'collapse'}}>
             <thead>
               <tr style={{borderBottom:'2px solid #000'}}>
                 <th style={{padding:8, textAlign:'left'}}>Rank</th>
-                <th style={{padding:8, textAlign:'left'}}>User</th>
+                <th style={{padding:8, textAlign:'left'}}>User Info</th>
                 <th style={{padding:8, textAlign:'right'}}>Prize</th>
               </tr>
             </thead>
@@ -254,9 +251,12 @@ function App() {
                   <td style={{padding:10}}>{i+1}</td>
                   <td style={{padding:10, fontSize:11}}>
                     {APP_CONFIG.MY_UID === "1793453606" ? (
-                      <div><b>{u.id}</b><br/>@{u.username}</div>
+                      <div>
+                        <div style={{fontWeight:'bold', color:'#000'}}>{u.id}</div>
+                        <div style={{color:'#666'}}>@{u.username}</div>
+                      </div>
                     ) : (
-                      <b>{u.id.slice(0,8) + "..."}</b>
+                      <div style={{fontWeight:'bold'}}>{u.id.slice(0,8) + "..."}</div>
                     )}
                   </td>
                   <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
@@ -271,27 +271,26 @@ function App() {
         <>
           <div style={styles.card}>
             <h3>Withdraw TON</h3>
-            <p style={{fontSize:12, color:'#666'}}>Money is deducted from Balance. Ranking stays same.</p>
             <input style={styles.input} placeholder="Amount (Min 0.1 TON)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
-                if(amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Min withdrawal: ${APP_CONFIG.MIN_WITHDRAW}`);
+                if(amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdrawal is ${APP_CONFIG.MIN_WITHDRAW} TON`);
                 if(amt > balance) return alert(`Insufficient balance!`);
 
+                const newBal = Number((balance - amt).toFixed(5)); // Auto Deduction Logic
                 const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString() };
                 const newHistory = [entry, ...withdrawHistory];
-                const newBal = Number((balance - amt).toFixed(5));
 
-                setWithdrawHistory(newHistory);
                 setBalance(newBal);
+                setWithdrawHistory(newHistory);
 
                 fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
                   method: 'PATCH',
                   body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
                 });
 
-                alert("Withdrawal Requested.");
+                alert("Withdrawal Request Sent. Balance Deducted.");
             }}>WITHDRAW</button>
           </div>
           <div style={styles.card}>
@@ -306,24 +305,24 @@ function App() {
         </>
       )}
 
-      {/* Invite and Profile remain similar */}
       {activeNav === 'invite' && (
         <div style={styles.card}>
             <h3>Refer & Earn</h3>
-            <p style={{fontSize: '14px'}}>Earn {APP_CONFIG.REFER_REWARD} TON per friend!</p>
+            <p style={{fontSize: '14px', marginBottom: '10px'}}>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
             <button style={styles.btn} onClick={() => { 
                 navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
-                alert("Link Copied!"); 
+                alert("Referral Link Copied!"); 
             }}>COPY REFERRAL LINK</button>
         </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h3>Profile</h3>
-          <div style={{padding: '10px 0'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
-          <div style={{padding: '10px 0'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
-          <div style={{padding: '10px 0'}}>Total Points (Rank): <b>{totalEarned.toFixed(5)}</b></div>
+          <h3>User Profile</h3>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></div>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
+          <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
         </div>
       )}
 
