@@ -29,7 +29,6 @@ function App() {
   const [activeTab, setActiveTab] = useState('bot');
   const [extraTasks, setExtraTasks] = useState({ bot: [], social: [] });
 
-  // Input states for Admin/Withdraw
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
@@ -48,12 +47,14 @@ function App() {
 
       setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID) || (userData && !!userData.isVip));
 
-      if (userData) {
+      // CRITICAL FIX: Only create profile if user doesn't exist at all
+      if (userData !== null) {
         setBalance(userData.balance !== undefined ? parseFloat(userData.balance) : 0);
         setCompleted(Array.isArray(userData.completed) ? userData.completed : []);
         setWithdrawHistory(Array.isArray(userData.withdrawHistory) ? userData.withdrawHistory : []);
         setReferrals(userData.referrals ? Object.entries(userData.referrals) : []);
       } else {
+        // First time user registration
         const initialData = { 
           balance: 0, 
           username: APP_CONFIG.MY_USERNAME,
@@ -78,8 +79,8 @@ function App() {
         const sorted = Object.entries(allUsers)
           .map(([id, data]) => ({ 
             id: id, 
-            username: data?.username || "Unknown",
-            balance: parseFloat(data?.balance) || 0 
+            username: (data && data.username) ? data.username : "No Name",
+            balance: (data && typeof data === 'object') ? (parseFloat(data.balance) || 0) : 0 
           }))
           .sort((a, b) => b.balance - a.balance)
           .slice(0, 10);
@@ -110,7 +111,7 @@ function App() {
                 if (id !== 'watch_ad') setCompleted(newCompleted);
                 return newBal;
             });
-            alert(`Reward: +${finalReward} TON`);
+            alert(`Reward Success: +${finalReward} TON`);
           }
         });
     }
@@ -119,7 +120,7 @@ function App() {
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-    setTimeout(() => { processReward(id, reward); }, 2000);
+    setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
   const botTasks = [
@@ -157,6 +158,7 @@ function App() {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
+    btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' }
   };
 
@@ -170,13 +172,14 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <button style={{width:'100%', padding:12, background:'#facc15', border:'none', borderRadius:10, fontWeight:'bold'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
           </div>
-          <div style={{display:'flex', gap:5, marginBottom:10}}>
-              {['BOT', 'SOCIAL', 'REWARD'].map(t => (
-                <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{flex:1, padding:10, background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius:10, border:'1px solid #000'}}>{t}</button>
-              ))}
+          <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
+            {['BOT', 'SOCIAL', 'REWARD'].map(t => (
+              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000' }}>{t}</button>
+            ))}
           </div>
+
           <div style={styles.card}>
             {activeTab === 'bot' && botTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
@@ -199,11 +202,11 @@ function App() {
           <h3 style={{textAlign:'center'}}>🏆 Leaderboard</h3>
           <table style={{width:'100%', borderCollapse:'collapse'}}>
             <thead>
-               <tr style={{borderBottom:'2px solid #000'}}>
-                  <th style={{textAlign:'left', padding:5}}>Rank</th>
-                  <th style={{textAlign:'left', padding:5}}>User Info</th>
-                  <th style={{textAlign:'right', padding:5}}>Prize</th>
-               </tr>
+              <tr style={{borderBottom:'2px solid #000'}}>
+                <th style={{padding:8, textAlign:'left'}}>Rank</th>
+                <th style={{padding:8, textAlign:'left'}}>User Info</th>
+                <th style={{padding:8, textAlign:'right'}}>Prize</th>
+              </tr>
             </thead>
             <tbody>
               {leaderboard.map((u, i) => (
@@ -212,10 +215,13 @@ function App() {
                   <td style={{padding:10}}>
                     {APP_CONFIG.MY_UID === "1793453606" ? (
                       <div style={{fontSize:10}}>
-                         <b>ID: {u.id}</b><br/>@{u.username}
+                        <div style={{fontWeight:'bold'}}>ID: {u.id}</div>
+                        <div style={{color:'#666'}}>@{u.username}</div>
                       </div>
                     ) : (
-                      <span>{u.id === APP_CONFIG.MY_UID ? "YOU" : u.id.slice(0,8) + "..."}</span>
+                      <div style={{fontWeight:'bold'}}>
+                         {u.id === APP_CONFIG.MY_UID ? "YOU" : (u.id.slice(0,8) + "...")}
+                      </div>
                     )}
                   </td>
                   <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
@@ -228,7 +234,9 @@ function App() {
 
       <div style={styles.nav}>
         {['earn', 'leaderboard', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>{n.toUpperCase()}</button>
+          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
+            {n === 'leaderboard' ? 'RANK' : n.toUpperCase()}
+          </button>
         ))}
       </div>
     </div>
