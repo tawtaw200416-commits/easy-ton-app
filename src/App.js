@@ -112,36 +112,9 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // BOT TASKS - ပေးထားတဲ့ ၆ ခု သီးသန့် (အဟောင်းများ အကုန်ဖျက်ပြီး)
-  const fixedBotTasks = [
-    { id: 'nb_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-    { id: 'nb_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-    { id: 'nb_3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-    { id: 'nb_4', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=3f47e34c" },
-    { id: 'nb_5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
-    { id: 'nb_6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
-  ];
-
-  // SOCIAL TASKS - ပေးထားတဲ့ ၁၄ ခု သီးသန့် (အဟောင်းများ အကုန်ဖျက်ပြီး)
-  const fixedSocialTasks = [
-    { id: 'ns_1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-    { id: 'ns_2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-    { id: 'ns_3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
-    { id: 'ns_4', name: "@M9460", link: "https://t.me/M9460" },
-    { id: 'ns_5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
-    { id: 'ns_6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
-    { id: 'ns_7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
-    { id: 'ns_8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
-    { id: 'ns_9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
-    { id: 'ns_10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-    { id: 'ns_11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
-    { id: 'ns_12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
-    { id: 'ns_13', name: "@zrbtua", link: "https://t.me/zrbtua" },
-    { id: 'ns_14', name: "@perviu1million", link: "https://t.me/perviu1million" }
-  ];
-
-  const allBotTasks = [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')];
-  const allSocialTasks = [...fixedSocialTasks, ...customTasks.filter(t => t.type === 'social')];
+  // Fixed Tasks အကုန်လုံးကို ဖယ်ရှားလိုက်ပါပြီ
+  const allBotTasks = customTasks.filter(t => t.type === 'bot');
+  const allSocialTasks = customTasks.filter(t => t.type === 'social');
 
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
@@ -177,18 +150,22 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && allBotTasks.map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
-                <span style={{fontWeight:'bold'}}>{t.name}</span>
-                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
-              </div>
-            ))}
-            {activeTab === 'social' && allSocialTasks.map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
-                <span style={{fontWeight:'bold'}}>{t.name}</span>
-                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
-              </div>
-            ))}
+            {activeTab === 'bot' && (
+              allBotTasks.length > 0 ? allBotTasks.map((t, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
+                  <span style={{fontWeight:'bold'}}>{t.name}</span>
+                  <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
+                </div>
+              )) : <p style={{textAlign:'center', color:'#999'}}>No Bot Tasks available.</p>
+            )}
+            {activeTab === 'social' && (
+              allSocialTasks.length > 0 ? allSocialTasks.map((t, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
+                  <span style={{fontWeight:'bold'}}>{t.name}</span>
+                  <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
+                </div>
+              )) : <p style={{textAlign:'center', color:'#999'}}>No Social Tasks available.</p>
+            )}
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
@@ -209,6 +186,7 @@ function App() {
                    const id = 't_'+Date.now();
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
                    alert("Task Saved!"); 
+                   setAdminTaskName(''); setAdminTaskLink('');
                    fetchData();
                 }}>SAVE TASK</button>
                 <input style={styles.input} placeholder="New Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
@@ -216,6 +194,7 @@ function App() {
                    if(!adminPromoCode) return alert("Enter code");
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.CODE_REWARD }) });
                    alert("Promo Code Created!");
+                   setAdminPromoCode('');
                 }}>CREATE CODE</button>
               </div>
             )}
