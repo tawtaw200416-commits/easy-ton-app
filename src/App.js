@@ -9,21 +9,23 @@ const APP_CONFIG = {
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
-  WATCH_REWARD: 0.0009,       // VIP မဟုတ်သူအတွက်
-  VIP_WATCH_REWARD: 0.003,    // VIP အတွက်
-  CODE_REWARD: 0.001,         // Reward Code အတွက်
+  WATCH_REWARD: 0.0008,       // Normal User
+  VIP_WATCH_REWARD: 0.0025,    // VIP User
+  CODE_REWARD: 0.0008,         // Promo Code Reward
   REFER_REWARD: 0.001
 };
 
+// VIP Users List
+const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
+
 function App() {
   const [balance, setBalance] = useState(() => Number(localStorage.getItem(`ton_bal_${APP_CONFIG.MY_UID}`)) || 0.0000);
-  const [isVip, setIsVip] = useState(false);
+  const [isVip, setIsVip] = useState(VIP_IDS.includes(APP_CONFIG.MY_UID));
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem(`comp_tasks_${APP_CONFIG.MY_UID}`)) || []);
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem(`wd_hist_${APP_CONFIG.MY_UID}`)) || []);
   const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem(`refs_${APP_CONFIG.MY_UID}`)) || []);
   
   const [customTasks, setCustomTasks] = useState([]);
-  const [leaderboard, setLeaderboard] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   
@@ -50,41 +52,32 @@ function App() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [u, t, all] = await Promise.all([
+      const [u, t] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`)
+        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`)
       ]);
       const userData = await u.json();
       const tasksData = await t.json();
-      const allUsers = await all.json();
 
       if (userData) {
         setBalance(Number(userData.balance || 0));
-        setIsVip(!!userData.isVip);
+        setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID) || !!userData.isVip);
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
       }
       if (tasksData) setCustomTasks(Object.values(tasksData));
-
-      if (allUsers) {
-        const sorted = Object.entries(allUsers)
-          .map(([id, data]) => ({ id, balance: data.balance || 0 }))
-          .sort((a, b) => b.balance - a.balance)
-          .slice(0, 10);
-        setLeaderboard(sorted);
-      }
     } catch (e) { console.error(e); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const processReward = (id, rewardAmount) => {
-    // Watch Ads အတွက် Reward Logic
     let finalReward = rewardAmount;
     if (id === 'watch_ad') {
       finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
+    } else if (id.startsWith('c_')) {
+      finalReward = APP_CONFIG.CODE_REWARD;
     }
 
     if (window.Adsgram) {
@@ -111,8 +104,6 @@ function App() {
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-    
-    // Reward code သို့မဟုတ် အခြား task reward ဖြစ်လျှင် Ads အရင်ပြမည်
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
@@ -154,7 +145,7 @@ function App() {
       <div style={styles.header}>
         <div style={{display:'flex', justifyContent:'center', alignItems:'center', gap:5}}>
             <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
-            {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP</span>}
+            {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP ⭐</span>}
         </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
       </div>
@@ -202,12 +193,14 @@ function App() {
                   <option value="social">SOCIAL</option>
                 </select>
                 <button style={{...styles.btn, background: 'green', marginBottom: '15px'}} onClick={async () => {
+                   if(!adminTaskName || !adminTaskLink) return alert("Fill all fields");
                    const id = 't_'+Date.now();
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
                    alert("Task Saved!"); fetchData();
                 }}>SAVE TASK</button>
                 <input style={styles.input} placeholder="New Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <button style={{...styles.btn, background: 'purple'}} onClick={async () => {
+                   if(!adminPromoCode) return alert("Enter code");
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.CODE_REWARD }) });
                    alert("Promo Code Created!");
                 }}>CREATE CODE</button>
@@ -215,30 +208,6 @@ function App() {
             )}
           </div>
         </>
-      )}
-
-      {activeNav === 'leaderboard' && (
-        <div style={styles.card}>
-          <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners</h3>
-          <table style={{width:'100%', borderCollapse:'collapse'}}>
-            <thead>
-              <tr style={{borderBottom:'2px solid #000'}}>
-                <th style={{padding:8, textAlign:'left'}}>Rank</th>
-                <th style={{padding:8, textAlign:'left'}}>User</th>
-                <th style={{padding:8, textAlign:'right'}}>Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leaderboard.map((u, i) => (
-                <tr key={i} style={{borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff9c4' : 'transparent'}}>
-                  <td style={{padding:10}}>{i+1}</td>
-                  <td style={{padding:10, fontSize:12}}>{u.id.slice(0,8)}...</td>
-                  <td style={{padding:10, textAlign:'right', fontWeight:'bold'}}>{Number(u.balance).toFixed(4)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       )}
 
       {activeNav === 'withdraw' && (
@@ -257,12 +226,14 @@ function App() {
 
           <div style={styles.card}>
             <h3>Withdraw TON</h3>
+            <p style={{fontSize:'12px', color:'#666', marginBottom:'10px'}}>Min withdrawal: 0.1 TON</p>
             <input style={styles.input} placeholder="Amount (Min 0.1 TON)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
                 if(amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdrawal is ${APP_CONFIG.MIN_WITHDRAW} TON`);
                 if(amt > balance) return alert(`Insufficient balance!`);
+                if(!withdrawAddress) return alert("Enter Address");
 
                 const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString() };
                 const newHistory = [entry, ...withdrawHistory];
@@ -327,9 +298,9 @@ function App() {
       )}
 
       <div style={styles.nav}>
-        {['earn', 'invite', 'leaderboard', 'withdraw', 'profile'].map(n => (
+        {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
-            {n === 'leaderboard' ? 'RANK' : n.toUpperCase()}
+            {n.toUpperCase()}
           </button>
         ))}
       </div>
