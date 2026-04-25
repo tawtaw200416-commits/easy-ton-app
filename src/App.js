@@ -41,30 +41,26 @@ function App() {
     return (Date.now() - timestamp >= 300000) ? "Success" : "Pending";
   };
 
-  // 1. Data Fetching Logic ကို ပိုပြီး စိတ်ချရအောင် ပြင်ဆင်ခြင်း
+  // ၁။ Data Fetching Logic (Firebase နဲ့ အမြဲ Sync လုပ်ပေးမည်)
   const fetchData = useCallback(async () => {
     try {
-      // ပထမဆုံး Firebase ကနေ User ရှိ/မရှိ အရင်စစ်မယ်
       const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
       const userData = await res.json();
 
       const isManualVip = APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606";
 
       if (userData !== null) {
-        // ရှိပြီးသား User ဖြစ်ရင် Firebase က data ကိုပဲ သုံးမယ်၊ 0 လုံးဝ (လုံးဝ) မဖြစ်စေရပါ
         setBalance(Number(userData.balance || 0));
         setIsVip(isManualVip || !!userData.isVip);
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
         
-        // Login ဝင်တိုင်း Username ကို Update ပေးမယ်
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PATCH',
           body: JSON.stringify({ username: APP_CONFIG.MY_USERNAME, isVip: isManualVip || userData.isVip })
         });
       } else {
-        // Firebase မှာ User လုံးဝမရှိသေးမှသာ (User အသစ်မှသာ) အစကနေ စဆောက်မယ်
         const newUser = { 
           balance: 0, 
           isVip: isManualVip, 
@@ -80,7 +76,7 @@ function App() {
         setIsVip(isManualVip);
       }
 
-      // Leaderboard ဆွဲတဲ့အပိုင်း
+      // Leaderboard ဆွဲခြင်း
       const allRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`);
       const allUsers = await allRes.json();
       if (allUsers) {
@@ -103,42 +99,47 @@ function App() {
     fetchData(); 
   }, [fetchData]);
 
-  // Rewards Process အပိုင်း (Update balance with Firebase)
-  const processReward = (id, rewardAmount) => {
+  // ၂။ Reward Process (TON Balance တက်လာစေမည့် အဓိကနေရာ)
+  const processReward = async (id, rewardAmount) => {
     let finalReward = rewardAmount;
     if (id === 'watch_ad') {
       finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
     }
 
+    // Adsgram စစ်ဆေးခြင်း
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
       AdController.show()
         .then(async (result) => {
           if (result.done) {
-            // Balance ကို အရင်ဆုံး Firebase ကနေ နောက်ဆုံးအခြေအနေကို ထပ်ယူပြီးမှ ပေါင်းရင် ပိုစိတ်ချရပါတယ်
+            // Firebase မှ နောက်ဆုံး balance ကိုယူ၍ ပေါင်းခြင်း
             const freshRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}/balance.json`);
             const freshBal = await freshRes.json();
             
-            const newBal = Number(( (freshBal || balance) + finalReward).toFixed(5));
-            const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
+            const newBal = Number(((freshBal || 0) + finalReward).toFixed(5));
+            const newCompleted = (id !== 'watch_ad' && !completed.includes(id)) ? [...completed, id] : completed;
             
-            setBalance(newBal);
-            if (id !== 'watch_ad') setCompleted(newCompleted);
-
+            // Firebase သို့ update ပို့ခြင်း
             await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
               method: 'PATCH',
               body: JSON.stringify({ balance: newBal, completed: newCompleted })
             });
+
+            setBalance(newBal);
+            if (id !== 'watch_ad') setCompleted(newCompleted);
             alert(`Reward Success: +${finalReward} TON`);
           }
-        });
+        })
+        .catch(() => alert("Ads not loaded. Please try again."));
+    } else {
+        alert("Adsgram not initialized.");
     }
   };
 
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-    setTimeout(() => { processReward(id, reward); }, 1500);
+    setTimeout(() => { processReward(id, reward); }, 2000);
   };
 
   const botTasks = [
@@ -153,19 +154,7 @@ function App() {
 
   const socialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-    { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" },
-    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
-    { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
-    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
-    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
-    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
-    { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
-    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-    { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
-    { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
-    { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
-    { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
+    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
   ];
 
   const rewardPrizes = ["1 TON", "0.8 TON", "0.6 TON", "0.4 TON", "0.3 TON", "0.2 TON", "0.2 TON", "0.1 TON", "0.1 TON", "0.1 TON"];
@@ -234,20 +223,6 @@ function App() {
                    });
                    alert("Promo Code Created!"); setAdminPromoCode('');
                 }}>CREATE CODE</button>
-                
-                <hr style={{margin: '20px 0'}}/>
-                <h4>Add Global Task</h4>
-                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
-                <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
-                <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
-                  <option value="bot">BOT</option>
-                  <option value="social">SOCIAL</option>
-                </select>
-                <button style={{...styles.btn, background: 'green'}} onClick={async () => {
-                   const id = 't_'+Date.now();
-                   await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
-                   alert("Global Task Saved!"); fetchData();
-                }}>SAVE TASK</button>
               </div>
             )}
           </div>
@@ -261,7 +236,6 @@ function App() {
              <h2 style={{margin: '5px 0'}}>30.5.2026</h2>
              <small style={{color: '#fff'}}>VIP members can withdraw</small>
           </div>
-
           <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners</h3>
           <table style={{width:'100%', borderCollapse:'collapse'}}>
             <thead>
@@ -276,14 +250,10 @@ function App() {
                 <tr key={i} style={{borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff9c4' : 'transparent'}}>
                   <td style={{padding:10}}>{i+1}</td>
                   <td style={{padding:10, fontSize:11}}>
-                    {u.id === APP_CONFIG.MY_UID || APP_CONFIG.MY_UID === "1793453606" ? (
-                      <div>
+                    <div>
                         <b>{u.id}</b><br/>
                         <span style={{color: '#6366f1'}}>@{u.username}</span>
-                      </div>
-                    ) : (
-                      <span>{u.id.slice(0, 6) + "..."}</span>
-                    )}
+                    </div>
                   </td>
                   <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
                 </tr>
@@ -301,8 +271,6 @@ function App() {
             <div style={{background: '#f0f9ff', padding: '10px', borderRadius: '10px', border: '1px solid #0ea5e9', marginBottom: '15px'}}>
               <p style={{fontSize: '11px', margin: '5px 0'}}>Admin Wallet: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
               <button style={{...styles.btn, background: '#0ea5e9', padding: '8px', fontSize: '12px'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Wallet Copied!"); }}>COPY WALLET</button>
-              <p style={{fontSize: '11px', margin: '10px 0 5px 0'}}>Memo (Your ID): <b>{APP_CONFIG.MY_UID}</b></p>
-              <button style={{...styles.btn, background: '#0ea5e9', padding: '8px', fontSize: '12px'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Memo Copied!"); }}>COPY MEMO</button>
             </div>
             <button style={{...styles.btn, background: '#0ea5e9'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>VERIFY PAYMENT</button>
           </div>
@@ -316,60 +284,32 @@ function App() {
                 if(amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdrawal is ${APP_CONFIG.MIN_WITHDRAW} TON`);
                 if(amt > balance) return alert(`Insufficient balance!`);
 
-                const freshRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}/balance.json`);
-                const freshBal = await freshRes.json();
-                if(amt > freshBal) return alert(`Insufficient balance on Server!`);
-
                 const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString() };
                 const newHistory = [entry, ...withdrawHistory];
-                const newBal = Number((freshBal - amt).toFixed(5));
-
-                setWithdrawHistory(newHistory);
-                setBalance(newBal);
+                const newBal = Number((balance - amt).toFixed(5));
 
                 await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
                   method: 'PATCH',
                   body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
                 });
 
+                setBalance(newBal);
+                setWithdrawHistory(newHistory);
                 alert("Withdrawal Request Sent.");
             }}>WITHDRAW</button>
-          </div>
-          <div style={styles.card}>
-            <h4>History</h4>
-            {withdrawHistory.map((h, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
-                <div style={{fontSize:11}}><b>{h.amount} TON</b><br/>{h.date}</div>
-                <div style={{ color: checkStatus(h.timestamp) === 'Success' ? 'green' : 'orange', fontWeight: 'bold', fontSize: '12px' }}>{checkStatus(h.timestamp)}</div>
-              </div>
-            ))}
           </div>
         </>
       )}
 
       {activeNav === 'invite' && (
-        <>
-            <div style={styles.card}>
-                <h3>Refer & Earn</h3>
-                <p style={{fontSize: '14px', marginBottom: '10px'}}>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
-                <button style={styles.btn} onClick={() => { 
-                    navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
-                    alert("Referral Link Copied!"); 
-                }}>COPY REFERRAL LINK</button>
-            </div>
-            
-            <div style={styles.card}>
-                <h3>Invite History</h3>
-                <div style={{maxHeight: '200px', overflowY: 'auto'}}>
-                    {referrals.length > 0 ? referrals.map((r, i) => (
-                        <div key={i} style={{fontSize: '12px', padding: '10px 0', borderBottom: '1px solid #eee', display:'flex', justifyContent:'space-between'}}>
-                            <span>User ID: {r.id || r}</span>
-                            <span style={{color:'green', fontWeight:'bold'}}>+{APP_CONFIG.REFER_REWARD} TON</span>
-                        </div>
-                    )) : <p style={{fontSize: '13px', color: '#999', textAlign:'center'}}>No friends invited yet.</p>}
-                </div>
-            </div>
-        </>
+        <div style={styles.card}>
+            <h3>Refer & Earn</h3>
+            <p style={{fontSize: '14px', marginBottom: '10px'}}>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
+            <button style={styles.btn} onClick={() => { 
+                navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
+                alert("Referral Link Copied!"); 
+            }}>COPY REFERRAL LINK</button>
+        </div>
       )}
 
       {activeNav === 'profile' && (
@@ -378,7 +318,6 @@ function App() {
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></div>
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
-          <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
         </div>
       )}
 
