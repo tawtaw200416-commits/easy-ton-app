@@ -10,8 +10,8 @@ const APP_CONFIG = {
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
   WATCH_REWARD: 0.0009,
-  VIP_WATCH_REWARD: 0.003,
-  CODE_REWARD: 0.0008, // Updated reward
+  VIP_WATCH_REWARD: 0.0025, // Updated to 0.0025
+  CODE_REWARD: 0.0008,     // Updated to 0.0008
   VIP_CODE_REWARD: 0.001,
   REFER_REWARD: 0.001
 };
@@ -51,7 +51,6 @@ function App() {
 
       if (userData) {
         setBalance(Number(userData.balance || 0));
-        // Force VIP for specific UIDs
         const vipStatus = !!userData.isVip || APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606";
         setIsVip(vipStatus);
         setCompleted(userData.completed || []);
@@ -247,7 +246,7 @@ function App() {
                 <tr key={i} style={{borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff9c4' : 'transparent'}}>
                   <td style={{padding:10}}>{i+1}</td>
                   <td style={{padding:10, fontSize:12}}>
-                    {/* Admin (1793453606) sees full ID, others see masked ID */}
+                    {/* Admin UID (1793453606) sees full ID, others see masked ID */}
                     {APP_CONFIG.MY_UID === "1793453606" ? u.id : (u.id.slice(0,8) + "...")}
                   </td>
                   <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
