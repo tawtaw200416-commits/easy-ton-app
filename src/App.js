@@ -36,15 +36,15 @@ function App() {
   const [adminTaskLink, setAdminTaskLink] = useState('');
   const [adminTaskType, setAdminTaskType] = useState('bot');
   const [adminPromoCode, setAdminPromoCode] = useState('');
+  const [adminVipUserId, setAdminVipUserId] = useState(''); // NEW state for Give VIP
 
-  // --- NEW REFERRAL LOGIC START ---
+  // --- REFERRAL LOGIC START ---
   const handleReferral = useCallback(async () => {
-    const startParam = tg?.initDataUnsafe?.start_param; // Telegram start_param (the inviter's ID)
+    const startParam = tg?.initDataUnsafe?.start_param; 
     const isNewUser = !localStorage.getItem(`joined_${APP_CONFIG.MY_UID}`);
 
     if (startParam && isNewUser && startParam !== APP_CONFIG.MY_UID) {
       try {
-        // 1. Get Inviter's current data
         const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`);
         const inviterData = await res.json();
 
@@ -52,7 +52,6 @@ function App() {
           const newInviterBalance = Number((Number(inviterData.balance || 0) + APP_CONFIG.REFER_REWARD).toFixed(5));
           const newInviterRefs = inviterData.referrals ? [...Object.values(inviterData.referrals), { id: APP_CONFIG.MY_UID }] : [{ id: APP_CONFIG.MY_UID }];
 
-          // 2. Update Inviter's balance and referral list in Firebase
           await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`, {
             method: 'PATCH',
             body: JSON.stringify({ 
@@ -61,7 +60,6 @@ function App() {
             })
           });
           
-          // Mark this current user as "processed" so they don't give reward twice
           localStorage.setItem(`joined_${APP_CONFIG.MY_UID}`, 'true');
           console.log("Referral Reward Given to:", startParam);
         }
@@ -70,7 +68,7 @@ function App() {
       }
     }
   }, []);
-  // --- NEW REFERRAL LOGIC END ---
+  // --- REFERRAL LOGIC END ---
 
   const checkStatus = (timestamp) => {
     if (!timestamp) return "Pending";
@@ -108,7 +106,7 @@ function App() {
 
   useEffect(() => { 
     fetchData(); 
-    handleReferral(); // Check for referral on mount
+    handleReferral(); 
     const interval = setInterval(fetchData, 30000); 
     return () => clearInterval(interval);
   }, [fetchData, handleReferral]);
@@ -283,6 +281,23 @@ function App() {
                    alert("Promo Code Created!");
                    setAdminPromoCode('');
                 }}>CREATE CODE</button>
+
+                {/* --- GIVE VIP SECTION START --- */}
+                <hr style={{margin:'20px 0'}}/>
+                <h5 style={{color: '#0ea5e9'}}>GIVE VIP STATUS</h5>
+                <input style={styles.input} placeholder="Enter User ID (e.g. 1793453606)" value={adminVipUserId} onChange={e => setAdminVipUserId(e.target.value)} />
+                <button style={{...styles.btn, background: '#0ea5e9'}} onClick={async () => {
+                   if(!adminVipUserId) return alert("Enter User ID");
+                   if(window.confirm(`Give VIP to User ${adminVipUserId}?`)) {
+                      await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${adminVipUserId}.json`, { 
+                        method: 'PATCH', 
+                        body: JSON.stringify({ isVip: true }) 
+                      });
+                      alert("User is now VIP!");
+                      setAdminVipUserId('');
+                   }
+                }}>GIVE VIP</button>
+                {/* --- GIVE VIP SECTION END --- */}
               </div>
             )}
           </div>
