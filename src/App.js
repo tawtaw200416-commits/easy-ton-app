@@ -13,7 +13,7 @@ const APP_CONFIG = {
   WATCH_REWARD: 0.0009,
   VIP_WATCH_REWARD: 0.0025,
   CODE_REWARD: 0.0008,     
-  VIP_CODE_REWARD: 0.0008, // Promo Code ကို 0.0008 ပဲ ပေးရန် Fix လုပ်ထားသည်
+  VIP_CODE_REWARD: 0.0008, 
   REFER_REWARD: 0.001
 };
 
@@ -36,7 +36,6 @@ function App() {
   const [adminTaskType, setAdminTaskType] = useState('bot');
   const [adminPromoCode, setAdminPromoCode] = useState('');
   
-  // Admin ကနေတိုးထားတဲ့ Tasks တွေသိမ်းဖို့ State
   const [extraTasks, setExtraTasks] = useState({ bot: [], social: [] });
 
   const checkStatus = (timestamp) => {
@@ -49,7 +48,7 @@ function App() {
       const [u, all, tasksRes] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
         fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/admin_tasks.json`) // Admin တိုးတဲ့ task တွေဖတ်မယ်
+        fetch(`${APP_CONFIG.FIREBASE_URL}/admin_tasks.json`)
       ]);
       const userData = await u.json();
       const allUsers = await all.json();
@@ -61,26 +60,7 @@ function App() {
         setIsVip(vipStatus);
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
-        // Invite History အတွက် referrals data ကိုယူမယ်
         setReferrals(userData.referrals ? Object.entries(userData.referrals) : []);
-        
-        if (!userData.username) {
-          await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-            method: 'PATCH',
-            body: JSON.stringify({ username: APP_CONFIG.MY_USERNAME })
-          });
-        }
-      } else {
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-          method: 'PUT',
-          body: JSON.stringify({ 
-            balance: 0, 
-            username: APP_CONFIG.MY_USERNAME,
-            isVip: (APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606"), 
-            completed: [], 
-            withdrawHistory: [] 
-          })
-        });
       }
 
       if (adminTasks) {
@@ -108,28 +88,24 @@ function App() {
 
   const processReward = (id, rewardAmount) => {
     let finalReward = rewardAmount;
-    if (id.startsWith('c_')) {
-      finalReward = APP_CONFIG.CODE_REWARD;
-    } else if (id === 'watch_ad') {
-      finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
-    }
+    if (id.startsWith('c_')) finalReward = APP_CONFIG.CODE_REWARD;
+    else if (id === 'watch_ad') finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
 
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-      AdController.show()
-        .then((result) => {
-          if (result.done) {
-            const newBal = Number((balance + finalReward).toFixed(5));
-            const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
-            setBalance(newBal);
-            if (id !== 'watch_ad') setCompleted(newCompleted);
-            fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-              method: 'PATCH',
-              body: JSON.stringify({ balance: newBal, completed: newCompleted })
-            });
-            alert(`Reward Success: +${finalReward} TON`);
-          }
-        });
+      AdController.show().then((result) => {
+        if (result.done) {
+          const newBal = Number((balance + finalReward).toFixed(5));
+          const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
+          setBalance(newBal);
+          if (id !== 'watch_ad') setCompleted(newCompleted);
+          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+            method: 'PATCH',
+            body: JSON.stringify({ balance: newBal, completed: newCompleted })
+          });
+          alert(`Reward Success: +${finalReward} TON`);
+        }
+      });
     }
   };
 
@@ -139,7 +115,6 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // မူရင်း Tasks စာရင်း
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -148,7 +123,7 @@ function App() {
     { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
     { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
     { id: 'b7', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-    ...extraTasks.bot // Admin ကတိုးထားတာတွေကို ပေါင်းပြမယ်
+    ...extraTasks.bot
   ];
 
   const socialTasks = [
@@ -166,7 +141,7 @@ function App() {
     { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
     { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
     { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" },
-    ...extraTasks.social // Admin ကတိုးထားတာတွေကို ပေါင်းပြမယ်
+    ...extraTasks.social
   ];
 
   const rewardPrizes = ["1 TON", "0.8 TON", "0.6 TON", "0.4 TON", "0.3 TON", "0.2 TON", "0.2 TON", "0.1 TON", "0.1 TON", "0.1 TON"];
@@ -355,13 +330,21 @@ function App() {
       )}
 
       {activeNav === 'profile' && (
-        <div style={styles.card}>
-          <h3>User Profile</h3>
-          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></div>
-          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
-          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
-          <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
-        </div>
+        <>
+          <div style={{...styles.card, background: '#000', color: '#fff', border: '3px solid #facc15', textAlign: 'center', padding: '20px'}}>
+             <h3 style={{margin: '0 0 10px 0', color: '#facc15'}}>BUY VIP ⭐</h3>
+             <p style={{fontSize: '12px', margin: '0 0 15px 0'}}>Get 3x Rewards, Instant Withdraw & Exclusive Tasks!</p>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>BUY NOW - 1 TON</button>
+          </div>
+
+          <div style={styles.card}>
+            <h3>User Profile</h3>
+            <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></div>
+            <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
+            <div style={{padding: '12px 0', borderBottom: '1px solid #eee', color: '#059669'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
+            <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
+          </div>
+        </>
       )}
 
       <div style={styles.nav}>
