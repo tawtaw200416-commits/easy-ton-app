@@ -107,7 +107,7 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // Fixed to exactly 7 Bot tasks
+  // Bot Tasks - Exactly 7 items
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -118,7 +118,7 @@ function App() {
     { id: 'b7', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=1793453606" }
   ];
 
-  // Social tasks excluding @easytonfree as requested
+  // Social Tasks - Removed EASYTONFREE💎💎
   const socialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
@@ -127,7 +127,9 @@ function App() {
     { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
     { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
     { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
-    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" }
+    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+    { id: 's11', name: "REFER FREE", link: "https://t.me/easytonfree" }
   ];
 
   const styles = {
