@@ -112,32 +112,32 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // Bot List အသစ် (၆ ခု)
+  // BOT TASKS - ပေးထားတဲ့ ၆ ခု သီးသန့် (အဟောင်းများ အကုန်ဖျက်ပြီး)
   const fixedBotTasks = [
-    { id: 'b_new1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-    { id: 'b_new2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-    { id: 'b_new3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-    { id: 'b_new4', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=3f47e34c" },
-    { id: 'b_new5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
-    { id: 'b_new6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
+    { id: 'nb_1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'nb_2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'nb_3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'nb_4', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=3f47e34c" },
+    { id: 'nb_5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'nb_6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
   ];
 
-  // Social List အသစ် (၁၄ ခု)
+  // SOCIAL TASKS - ပေးထားတဲ့ ၁၄ ခု သီးသန့် (အဟောင်းများ အကုန်ဖျက်ပြီး)
   const fixedSocialTasks = [
-    { id: 'sn_1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-    { id: 'sn_2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-    { id: 'sn_3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
-    { id: 'sn_4', name: "@M9460", link: "https://t.me/M9460" },
-    { id: 'sn_5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
-    { id: 'sn_6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
-    { id: 'sn_7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
-    { id: 'sn_8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
-    { id: 'sn_9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
-    { id: 'sn_10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-    { id: 'sn_11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
-    { id: 'sn_12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
-    { id: 'sn_13', name: "@zrbtua", link: "https://t.me/zrbtua" },
-    { id: 'sn_14', name: "@perviu1million", link: "https://t.me/perviu1million" }
+    { id: 'ns_1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 'ns_2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 'ns_3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 'ns_4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 'ns_5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 'ns_6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 'ns_7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 'ns_8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+    { id: 'ns_9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
+    { id: 'ns_10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+    { id: 'ns_11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
+    { id: 'ns_12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
+    { id: 'ns_13', name: "@zrbtua", link: "https://t.me/zrbtua" },
+    { id: 'ns_14', name: "@perviu1million", link: "https://t.me/perviu1million" }
   ];
 
   const allBotTasks = [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')];
