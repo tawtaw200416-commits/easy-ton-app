@@ -17,7 +17,7 @@ const APP_CONFIG = {
   REFER_REWARD: 0.001
 };
 
-// Updated VIP list including the new ID
+// Updated VIP list including 5020977059
 const VIP_IDS = ["5020977059", "1793453606"];
 
 function App() {
@@ -47,7 +47,7 @@ function App() {
       const allUsers = await allRes.json();
       const adminTasks = await tasksRes.json();
 
-      // IMPORTANT: If user exists, USE EXISTING DATA. Don't overwrite.
+      // FIXED: Only update state if data exists, do NOT overwrite with initial values
       if (userData) {
         setBalance(userData.balance !== undefined ? parseFloat(userData.balance) : 0);
         setCompleted(Array.isArray(userData.completed) ? userData.completed : []);
@@ -55,7 +55,7 @@ function App() {
         setReferrals(userData.referrals ? Object.entries(userData.referrals) : []);
         setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID) || !!userData.isVip);
       } else {
-        // Only create new profile if it's a first-time user
+        // Only run for first-time users
         const initialData = { 
           balance: 0, 
           username: APP_CONFIG.MY_USERNAME,
@@ -70,13 +70,13 @@ function App() {
         setIsVip(initialData.isVip);
       }
 
-      // Fix Leaderboard display
+      // FIXED: Better leaderboard sorting and data validation
       if (allUsers) {
         const sorted = Object.entries(allUsers)
-          .filter(([id, data]) => data && typeof data === 'object') // Filter out nulls
+          .filter(([id, data]) => data && typeof data === 'object')
           .map(([id, data]) => ({ 
             id: id, 
-            username: data.username || "Unknown",
+            username: data.username || "User",
             balance: parseFloat(data.balance) || 0 
           }))
           .sort((a, b) => b.balance - a.balance)
@@ -99,14 +99,11 @@ function App() {
     fetchData(); 
   }, [fetchData]);
 
-  // Use this function to save data whenever balance changes
-  const saveUserData = async (newBal, newComp) => {
-    try {
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-            method: 'PATCH',
-            body: JSON.stringify({ balance: newBal, completed: newComp })
-        });
-    } catch (err) { console.error("Save error:", err); }
+  const saveToFirebase = async (newBal, newComp) => {
+    await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+        method: 'PATCH',
+        body: JSON.stringify({ balance: newBal, completed: newComp })
+    });
   };
 
   const processReward = (id, rewardAmount) => {
@@ -126,8 +123,8 @@ function App() {
             
             setBalance(newBal);
             if (id !== 'watch_ad') setCompleted(newCompleted);
-            saveUserData(newBal, newCompleted);
-            alert(`Success: +${finalReward} TON`);
+            saveToFirebase(newBal, newCompleted);
+            alert(`Reward: +${finalReward} TON`);
           }
         });
     }
@@ -163,7 +160,7 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Ad - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
           </div>
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -173,7 +170,7 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && [...extraTasks.bot].map((t, i) => (
+            {(activeTab === 'bot' || activeTab === 'social') && [...extraTasks[activeTab]].map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
@@ -195,12 +192,12 @@ function App() {
              <h4 style={{margin: 0}}>RANKING SEASON ENDS ON</h4>
              <h2 style={{margin: '5px 0'}}>30.5.2026</h2>
           </div>
-          <h3 style={{textAlign:'center', marginBottom:5}}>🏆 Top 10 Earners</h3>
+          <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners</h3>
           <table style={{width:'100%', borderCollapse:'collapse'}}>
             <thead>
               <tr style={{borderBottom:'2px solid #000'}}>
                 <th style={{padding:8, textAlign:'left'}}>Rank</th>
-                <th style={{padding:8, textAlign:'left'}}>User</th>
+                <th style={{padding:8, textAlign:'left'}}>User Info</th>
                 <th style={{padding:8, textAlign:'right'}}>Prize</th>
               </tr>
             </thead>
@@ -217,7 +214,7 @@ function App() {
                   </td>
                   <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
                 </tr>
-              )) : <tr><td colSpan="3" style={{textAlign:'center', padding:20}}>Loading Rank...</td></tr>}
+              )) : <tr><td colSpan="3" style={{textAlign:'center', padding:20}}>Loading Ranks...</td></tr>}
             </tbody>
           </table>
         </div>
