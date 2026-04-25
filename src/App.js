@@ -52,19 +52,23 @@ function App() {
         fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`),
         fetch(`${APP_CONFIG.FIREBASE_URL}/admin_tasks.json`)
       ]);
+      
       const userData = await u.json();
       const allUsers = await all.json();
       const adminTasks = await tasksRes.json();
 
+      // VIP Check
       const isUserVip = VIP_IDS.includes(APP_CONFIG.MY_UID) || (userData && !!userData.isVip);
       setIsVip(isUserVip);
 
+      // User Data Loading & Syncing
       if (userData) {
         setBalance(userData.balance !== undefined ? parseFloat(userData.balance) : 0);
         setCompleted(Array.isArray(userData.completed) ? userData.completed : []);
         setWithdrawHistory(Array.isArray(userData.withdrawHistory) ? userData.withdrawHistory : []);
         setReferrals(userData.referrals ? Object.entries(userData.referrals) : []);
       } else {
+        // Only create new profile if it doesn't exist at all
         const initialData = { 
           balance: 0, 
           username: APP_CONFIG.MY_USERNAME,
@@ -89,7 +93,7 @@ function App() {
         const sorted = Object.entries(allUsers)
           .map(([id, data]) => ({ 
             id: id, 
-            username: (typeof data === 'object' && data.username) ? data.username : "No Name",
+            username: (data && data.username) ? data.username : "No Name",
             balance: (data && typeof data === 'object') ? (parseFloat(data.balance) || 0) : 0 
           }))
           .sort((a, b) => b.balance - a.balance)
@@ -137,6 +141,7 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
+  // Static Tasks
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -350,10 +355,12 @@ function App() {
                     {APP_CONFIG.MY_UID === "1793453606" ? (
                       <div>
                         <div style={{fontWeight:'bold', color:'#000'}}>{u.id}</div>
-                        <div style={{color:'#666'}}>@{u.username}</div>
+                        <div style={{color:'#666', fontSize: '10px'}}>@{u.username}</div>
                       </div>
                     ) : (
-                      <div style={{fontWeight:'bold'}}>{u.id.slice(0,8) + "..."}</div>
+                      <div style={{fontWeight:'bold'}}>
+                         {u.id === APP_CONFIG.MY_UID ? u.id : (u.id.slice(0,8) + "...")}
+                      </div>
                     )}
                   </td>
                   <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
@@ -393,6 +400,7 @@ function App() {
           <h3>User Profile</h3>
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></div>
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Username: <b>@{APP_CONFIG.MY_USERNAME}</b></div>
           <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
           <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
         </div>
