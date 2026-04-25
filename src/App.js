@@ -55,11 +55,18 @@ function App() {
       const adminTasks = await tasksRes.json();
 
       if (userData) {
-        if (userData.balance !== undefined) setBalance(Number(userData.balance));
-        const vipStatus = !!userData.isVip || APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606";
+        // Balance အရင် update လုပ်မယ်
+        const currentBal = typeof userData.balance === 'number' ? userData.balance : Number(userData.balance || 0);
+        setBalance(currentBal);
+        
+        // VIP Check (အသစ်ထည့်ထားတဲ့ ID ပါဝင်ပါတယ်)
+        const vipList = ["5020977059", "1793453606"];
+        const vipStatus = !!userData.isVip || vipList.includes(APP_CONFIG.MY_UID);
         setIsVip(vipStatus);
-        setCompleted(userData.completed || []);
-        setWithdrawHistory(userData.withdrawHistory || []);
+
+        // Completed tasks logic ပြင်ဆင်ခြင်း
+        setCompleted(Array.isArray(userData.completed) ? userData.completed : []);
+        setWithdrawHistory(Array.isArray(userData.withdrawHistory) ? userData.withdrawHistory : []);
         setReferrals(userData.referrals ? Object.entries(userData.referrals) : []);
         
         if (!userData.username) {
@@ -69,16 +76,20 @@ function App() {
           });
         }
       } else {
+        // User အသစ်ဆိုရင် အောက်ပါအတိုင်းစမယ်
+        const vipList = ["5020977059", "1793453606"];
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PUT',
           body: JSON.stringify({ 
             balance: 0, 
             username: APP_CONFIG.MY_USERNAME,
-            isVip: (APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606"), 
+            isVip: vipList.includes(APP_CONFIG.MY_UID), 
             completed: [], 
             withdrawHistory: [] 
           })
         });
+        setBalance(0);
+        setIsVip(vipList.includes(APP_CONFIG.MY_UID));
       }
 
       if (adminTasks) {
@@ -93,13 +104,13 @@ function App() {
           .map(([id, data]) => ({ 
             id: id, 
             username: data.username || "No Name",
-            balance: (data && typeof data === 'object') ? (data.balance || 0) : 0 
+            balance: typeof data.balance === 'number' ? data.balance : Number(data.balance || 0)
           }))
           .sort((a, b) => b.balance - a.balance)
           .slice(0, 10);
         setLeaderboard(sorted);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Fetch Error:", e); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -118,9 +129,12 @@ function App() {
         .then((result) => {
           if (result.done) {
             const newBal = Number((balance + finalReward).toFixed(5));
-            const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
+            const isTask = id !== 'watch_ad';
+            const newCompleted = (isTask && !completed.includes(id)) ? [...completed, id] : completed;
+            
             setBalance(newBal);
-            if (id !== 'watch_ad') setCompleted(newCompleted);
+            if (isTask) setCompleted(newCompleted);
+
             fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
               method: 'PATCH',
               body: JSON.stringify({ balance: newBal, completed: newCompleted })
@@ -295,7 +309,6 @@ function App() {
 
       {activeNav === 'withdraw' && (
         <>
-          {/* BUY VIP CARD */}
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center', padding: '20px'}}>
              <h2 style={{margin: '0 0 10px 0', color: '#facc15'}}>BUY VIP ⭐</h2>
              <p style={{margin: '0 0 15px 0', fontSize: '13px'}}>To enable withdrawal, you need to be a VIP member. Send <b>1 TON</b> to the address below.</p>
