@@ -37,6 +37,41 @@ function App() {
   const [adminTaskType, setAdminTaskType] = useState('bot');
   const [adminPromoCode, setAdminPromoCode] = useState('');
 
+  // --- NEW REFERRAL LOGIC START ---
+  const handleReferral = useCallback(async () => {
+    const startParam = tg?.initDataUnsafe?.start_param; // Telegram start_param (the inviter's ID)
+    const isNewUser = !localStorage.getItem(`joined_${APP_CONFIG.MY_UID}`);
+
+    if (startParam && isNewUser && startParam !== APP_CONFIG.MY_UID) {
+      try {
+        // 1. Get Inviter's current data
+        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`);
+        const inviterData = await res.json();
+
+        if (inviterData) {
+          const newInviterBalance = Number((Number(inviterData.balance || 0) + APP_CONFIG.REFER_REWARD).toFixed(5));
+          const newInviterRefs = inviterData.referrals ? [...Object.values(inviterData.referrals), { id: APP_CONFIG.MY_UID }] : [{ id: APP_CONFIG.MY_UID }];
+
+          // 2. Update Inviter's balance and referral list in Firebase
+          await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`, {
+            method: 'PATCH',
+            body: JSON.stringify({ 
+              balance: newInviterBalance, 
+              referrals: newInviterRefs 
+            })
+          });
+          
+          // Mark this current user as "processed" so they don't give reward twice
+          localStorage.setItem(`joined_${APP_CONFIG.MY_UID}`, 'true');
+          console.log("Referral Reward Given to:", startParam);
+        }
+      } catch (e) {
+        console.error("Referral Error:", e);
+      }
+    }
+  }, []);
+  // --- NEW REFERRAL LOGIC END ---
+
   const checkStatus = (timestamp) => {
     if (!timestamp) return "Pending";
     return (Date.now() - timestamp >= 300000) ? "Success" : "Pending";
@@ -73,9 +108,10 @@ function App() {
 
   useEffect(() => { 
     fetchData(); 
+    handleReferral(); // Check for referral on mount
     const interval = setInterval(fetchData, 30000); 
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, handleReferral]);
 
   useEffect(() => {
     localStorage.setItem(`ton_bal_${APP_CONFIG.MY_UID}`, balance.toString());
@@ -141,7 +177,6 @@ function App() {
     { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
   ];
 
-  // Logic to prevent duplicate tasks based on name or link
   const uniqueCustomTasks = customTasks.filter(ct => 
     !fixedBotTasks.some(ft => ft.name === ct.name || ft.link === ct.link) &&
     !fixedSocialTasks.some(ft => ft.name === ct.name || ft.link === ct.link)
