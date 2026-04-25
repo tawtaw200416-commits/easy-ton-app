@@ -5,7 +5,7 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
-  MY_USERNAME: tg?.initDataUnsafe?.user?.username || "Unknown", // Added to capture username
+  MY_USERNAME: tg?.initDataUnsafe?.user?.username || "Unknown",
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
@@ -50,28 +50,31 @@ function App() {
       const userData = await u.json();
       const allUsers = await all.json();
 
+      // VIP manual activation for 5020977059
+      const isManualVip = APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606";
+
       if (userData) {
         setBalance(Number(userData.balance || 0));
-        setIsVip(!!userData.isVip);
+        setIsVip(isManualVip || !!userData.isVip);
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
         
-        // Update username silently in database so Admin can see it
+        // Sync username silently
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PATCH',
-          body: JSON.stringify({ username: APP_CONFIG.MY_USERNAME })
+          body: JSON.stringify({ username: APP_CONFIG.MY_USERNAME, isVip: isManualVip || userData.isVip })
         });
       } else {
-        // Initialize new user with username
+        // Only create if user is truly new to avoid overwriting existing data
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-          method: 'PUT',
+          method: 'PATCH', // Changed to PATCH to avoid overwriting everything to 0
           body: JSON.stringify({ 
             balance: 0, 
-            isVip: false, 
+            isVip: isManualVip, 
+            username: APP_CONFIG.MY_USERNAME,
             completed: [], 
-            withdrawHistory: [], 
-            username: APP_CONFIG.MY_USERNAME 
+            withdrawHistory: [] 
           })
         });
       }
@@ -81,13 +84,13 @@ function App() {
           .map(([id, data]) => ({ 
             id: id, 
             balance: typeof data === 'object' ? (data.balance || 0) : 0,
-            username: typeof data === 'object' ? (data.username || "No Username") : "No Username"
+            username: typeof data === 'object' ? (data.username || "No User") : "No User"
           }))
           .sort((a, b) => b.balance - a.balance)
           .slice(0, 10);
         setLeaderboard(sorted);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Sync Error:", e); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -125,6 +128,7 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
+  // ... (botTasks and socialTasks remain the same)
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -246,7 +250,7 @@ function App() {
              <small style={{color: '#fff'}}>VIP members can withdraw</small>
           </div>
 
-          <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners & Prizes</h3>
+          <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners</h3>
           <table style={{width:'100%', borderCollapse:'collapse'}}>
             <thead>
               <tr style={{borderBottom:'2px solid #000'}}>
@@ -260,7 +264,6 @@ function App() {
                 <tr key={i} style={{borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff9c4' : 'transparent'}}>
                   <td style={{padding:10}}>{i+1}</td>
                   <td style={{padding:10, fontSize:11}}>
-                    {/* ADMIN ONLY: Show Full ID and Full Username */}
                     {APP_CONFIG.MY_UID === "1793453606" ? (
                       <div>
                         <b>{u.id}</b><br/>
@@ -278,6 +281,7 @@ function App() {
         </div>
       )}
 
+      {/* Withdraw, Invite, Profile sections stay same but logic handles 0 issues */}
       {activeNav === 'withdraw' && (
         <>
           <div style={styles.card}>
