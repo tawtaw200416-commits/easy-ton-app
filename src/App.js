@@ -112,9 +112,30 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // Fixed Tasks အကုန်လုံးကို ဖယ်ရှားလိုက်ပါပြီ
-  const allBotTasks = customTasks.filter(t => t.type === 'bot');
-  const allSocialTasks = customTasks.filter(t => t.type === 'social');
+  const fixedBotTasks = [
+    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
+    { id: 'b7', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=1793453606" }
+  ];
+
+  const fixedSocialTasks = [
+    { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
+  ];
+
+  const allBotTasks = [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')];
+  const allSocialTasks = [...fixedSocialTasks, ...customTasks.filter(t => t.type === 'social')];
 
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
@@ -150,22 +171,18 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && (
-              allBotTasks.length > 0 ? allBotTasks.map((t, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
-                  <span style={{fontWeight:'bold'}}>{t.name}</span>
-                  <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
-                </div>
-              )) : <p style={{textAlign:'center', color:'#999'}}>No Bot Tasks available.</p>
-            )}
-            {activeTab === 'social' && (
-              allSocialTasks.length > 0 ? allSocialTasks.map((t, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
-                  <span style={{fontWeight:'bold'}}>{t.name}</span>
-                  <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
-                </div>
-              )) : <p style={{textAlign:'center', color:'#999'}}>No Social Tasks available.</p>
-            )}
+            {activeTab === 'bot' && allBotTasks.map((t, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
+                <span style={{fontWeight:'bold'}}>{t.name}</span>
+                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
+              </div>
+            ))}
+            {activeTab === 'social' && allSocialTasks.map((t, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
+                <span style={{fontWeight:'bold'}}>{t.name}</span>
+                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
+              </div>
+            ))}
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
@@ -189,6 +206,27 @@ function App() {
                    setAdminTaskName(''); setAdminTaskLink('');
                    fetchData();
                 }}>SAVE TASK</button>
+
+                <div style={{marginTop: '20px', borderTop: '2px dashed #ccc', paddingTop: '10px'}}>
+                  <h5>Manage Custom Tasks (Delete)</h5>
+                  {customTasks.length > 0 ? customTasks.map((t, i) => (
+                    <div key={i} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px', background:'#f9f9f9', borderRadius:'8px', marginBottom:'5px', border:'1px solid #ddd'}}>
+                      <span style={{fontSize:12}}><b>[{t.type.toUpperCase()}]</b> {t.name}</span>
+                      <button 
+                        style={{background:'#ef4444', color:'#fff', border:'none', padding:'4px 8px', borderRadius:'5px', fontSize:10, fontWeight:'bold'}}
+                        onClick={async () => {
+                          if(window.confirm("Delete this task?")) {
+                            await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${t.id}.json`, { method: 'DELETE' });
+                            alert("Task Deleted!");
+                            fetchData();
+                          }
+                        }}
+                      >DELETE</button>
+                    </div>
+                  )) : <p style={{fontSize:11, color:'#999'}}>No custom tasks to delete.</p>}
+                </div>
+
+                <hr/>
                 <input style={styles.input} placeholder="New Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <button style={{...styles.btn, background: 'purple'}} onClick={async () => {
                    if(!adminPromoCode) return alert("Enter code");
