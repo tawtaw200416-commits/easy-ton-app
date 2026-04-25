@@ -89,7 +89,7 @@ function App() {
         const sorted = Object.entries(allUsers)
           .map(([id, data]) => ({ 
             id: id, 
-            username: data.username || "No Name",
+            username: (typeof data === 'object' && data.username) ? data.username : "No Name",
             balance: (data && typeof data === 'object') ? (parseFloat(data.balance) || 0) : 0 
           }))
           .sort((a, b) => b.balance - a.balance)
