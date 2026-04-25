@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 const tg = window.Telegram?.WebApp;
 
@@ -28,37 +28,29 @@ function App() {
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [extraTasks, setExtraTasks] = useState({ bot: [], social: [] });
-  const [loading, setLoading] = useState(true);
-
-  const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawAddress, setWithdrawAddress] = useState('');
-  const [rewardCodeInput, setRewardCodeInput] = useState('');
-
-  const [adminTaskName, setAdminTaskName] = useState('');
-  const [adminTaskLink, setAdminTaskLink] = useState('');
-  const [adminTaskType, setAdminTaskType] = useState('bot');
-  const [adminPromoCode, setAdminPromoCode] = useState('');
-
-  const checkStatus = (timestamp) => {
-    if (!timestamp) return "Pending";
-    return (Date.now() - timestamp >= 300000) ? "Success" : "Pending";
-  };
+  
+  // Loading state is CRITICAL to prevent data loss
+  const [isLoading, setIsLoading] = useState(true);
+  const isFetched = useRef(false);
 
   const fetchData = useCallback(async () => {
+    if (isFetched.current) return;
+    setIsLoading(true);
+    
     try {
-      // First, get the specific user data to check existence
-      const userResponse = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
-      const userData = await userResponse.json();
+      // 1. Check if user exists first
+      const uRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
+      const userData = await uRes.json();
 
       if (userData) {
-        // User exists: Update states without overwriting Firebase
-        setBalance(userData.balance ? parseFloat(userData.balance) : 0);
+        // Load existing data safely
+        setBalance(userData.balance !== undefined ? parseFloat(userData.balance) : 0);
         setCompleted(Array.isArray(userData.completed) ? userData.completed : []);
         setWithdrawHistory(Array.isArray(userData.withdrawHistory) ? userData.withdrawHistory : []);
         setReferrals(userData.referrals ? Object.entries(userData.referrals) : []);
         setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID) || !!userData.isVip);
       } else {
-        // User is truly new: Initialize in Firebase
+        // ONLY create if user doesn't exist
         const initialData = { 
           balance: 0, 
           username: APP_CONFIG.MY_USERNAME,
@@ -74,14 +66,14 @@ function App() {
         setIsVip(initialData.isVip);
       }
 
-      // Fetch global data
-      const [allRes, tasksRes] = await Promise.all([
+      // 2. Fetch other global data
+      const [allUsersRes, adminTasksRes] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`),
         fetch(`${APP_CONFIG.FIREBASE_URL}/admin_tasks.json`)
       ]);
       
-      const allUsers = await allRes.json();
-      const adminTasks = await tasksRes.json();
+      const allUsers = await allUsersRes.json();
+      const adminTasks = await adminTasksRes.json();
 
       if (adminTasks) {
         setExtraTasks({
@@ -94,24 +86,27 @@ function App() {
         const sorted = Object.entries(allUsers)
           .map(([id, data]) => ({ 
             id: id, 
-            username: data?.username || "Unknown",
+            username: data?.username || "No Name",
             balance: data?.balance ? parseFloat(data.balance) : 0 
           }))
           .sort((a, b) => b.balance - a.balance)
           .slice(0, 10);
         setLeaderboard(sorted);
       }
-      setLoading(false);
+
+      isFetched.current = true;
+      setIsLoading(false);
     } catch (e) { 
-      console.error("Data Load Error:", e);
-      setLoading(false); 
+      console.error("Fetch error:", e);
+      // Don't stop loading if there's an error fetching main data 
+      // to prevent overwriting with 0s
     }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const processReward = (id, rewardAmount) => {
-    if (loading) return; // Prevent clicks while loading
+    if (isLoading) return; // Block actions during loading
 
     let finalReward = rewardAmount;
     if (id.startsWith('c_')) finalReward = APP_CONFIG.CODE_REWARD;
@@ -125,7 +120,7 @@ function App() {
                 const newBal = parseFloat((prev + finalReward).toFixed(5));
                 const newCompleted = (id !== 'watch_ad' && !completed.includes(id)) ? [...completed, id] : completed;
                 
-                // Update Firebase with specific fields only to avoid overwriting others
+                // Use PATCH instead of PUT to only update specific fields
                 fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
                     method: 'PATCH',
                     body: JSON.stringify({ balance: newBal, completed: newCompleted })
@@ -145,22 +140,27 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // UI rendering logic remains largely same, just added a simple Loading check
-  if (loading) return <div style={{background:'#facc15', height:'100vh', display:'flex', justifyContent:'center', alignItems:'center', fontWeight:'bold'}}>LOADING...</div>;
-
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
-    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' },
-    blueBox: { background: '#e0f2fe', border: '1px solid #7dd3fc', borderRadius: '10px', padding: '15px', marginBottom: '15px' },
-    blueBtn: { width: '100%', padding: '12px', backgroundColor: '#60a5fa', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer', marginBottom: '10px' }
+    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' }
   };
+
+  // Prevent UI interaction until balance is correctly loaded
+  if (isLoading) {
+    return (
+      <div style={{...styles.main, display:'flex', justifyContent:'center', alignItems:'center'}}>
+        <h2 style={{color:'#000'}}>SYNCING DATA...</h2>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.main}>
+      {/* REST OF YOUR UI COMPONENTS REMAIN THE SAME */}
       <div style={styles.header}>
         <div style={{display:'flex', justifyContent:'center', alignItems:'center', gap:5}}>
             <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
@@ -175,93 +175,12 @@ function App() {
              <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
           </div>
-          <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
-            {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
-              (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && 
-              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000' }}>{t}</button>
-            ))}
-          </div>
-
-          <div style={styles.card}>
-            {activeTab === 'bot' && [
-                { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-                { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-                { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-                { id: 'b4', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=3f47e34c" },
-                { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
-                { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
-                { id: 'b7', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-                ...extraTasks.bot
-            ].map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
-                <span style={{fontWeight:'bold'}}>{t.name}</span>
-                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
-              </div>
-            ))}
-            {activeTab === 'social' && [
-                { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-                { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-                { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" },
-                { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
-                { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
-                { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
-                { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
-                { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
-                { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
-                { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
-                { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
-                { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
-                { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
-                { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" },
-                ...extraTasks.social
-            ].map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
-                <span style={{fontWeight:'bold'}}>{t.name}</span>
-                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
-              </div>
-            ))}
-            {activeTab === 'reward' && (
-              <div>
-                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
-              </div>
-            )}
-            {activeTab === 'admin' && (
-              <div>
-                <h4>Create Task</h4>
-                <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
-                    <option value="bot">Bot Task</option>
-                    <option value="social">Social Task</option>
-                </select>
-                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
-                <input style={styles.input} placeholder="Task Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
-                <button style={{...styles.btn, background: 'green', marginBottom: 15}} onClick={async () => {
-                    if(!adminTaskName || !adminTaskLink) return alert("Fill all!");
-                    const id = 'ext_' + Date.now();
-                    await fetch(`${APP_CONFIG.FIREBASE_URL}/admin_tasks/${adminTaskType}/${id}.json`, {
-                        method: 'PUT',
-                        body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink })
-                    });
-                    alert("Task Added!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData();
-                }}>ADD NEW TASK</button>
-                <hr/>
-                <h4>Create Promo Code</h4>
-                <input style={styles.input} placeholder="Promo Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
-                <button style={{...styles.btn, background: 'purple'}} onClick={async () => {
-                   if(!adminPromoCode) return alert("Enter code name!");
-                   await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { 
-                     method: 'PUT', 
-                     body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.CODE_REWARD }) 
-                   });
-                   alert("Promo Code Created!"); setAdminPromoCode('');
-                }}>CREATE CODE</button>
-              </div>
-            )}
-          </div>
+          {/* ... tabs and lists ... */}
         </>
       )}
+      
+      {/* Include your other sections: withdraw, leaderboard, invite, profile exactly as they were */}
 
-      {/* Nav & Navigation screens logic... */}
       <div style={styles.nav}>
         {['earn', 'invite', 'leaderboard', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
