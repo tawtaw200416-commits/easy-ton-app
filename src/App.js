@@ -150,6 +150,7 @@ function App() {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
+    vipCard: { background: '#000', color: '#fff', border: '3px solid #fff', textAlign: 'center', padding: '20px', borderRadius: '20px', marginBottom: '15px' },
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' }
@@ -273,6 +274,13 @@ function App() {
 
       {activeNav === 'withdraw' && (
         <>
+          {/* BUY VIP CARD FOR WITHDRAW SECTION */}
+          <div style={styles.vipCard}>
+             <h3 style={{margin: '0 0 10px 0', color: '#facc15'}}>BUY VIP ⭐</h3>
+             <p style={{fontSize: '12px', margin: '0 0 15px 0'}}>Get 3x Rewards, Instant Withdraw & Exclusive Tasks!</p>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>BUY NOW - 1 TON</button>
+          </div>
+
           <div style={styles.card}>
             <h3>Withdraw TON</h3>
             <input style={styles.input} placeholder="Amount (Min 0.1 TON)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
@@ -331,9 +339,10 @@ function App() {
 
       {activeNav === 'profile' && (
         <>
-          <div style={{...styles.card, background: '#000', color: '#fff', border: '3px solid #facc15', textAlign: 'center', padding: '20px'}}>
+          {/* BUY VIP CARD FOR PROFILE SECTION */}
+          <div style={styles.vipCard}>
              <h3 style={{margin: '0 0 10px 0', color: '#facc15'}}>BUY VIP ⭐</h3>
-             <p style={{fontSize: '12px', margin: '0 0 15px 0'}}>Get 3x Rewards, Instant Withdraw & Exclusive Tasks!</p>
+             <p style={{fontSize: '12px', margin: '0 0 15px 0'}}>Upgrade to VIP and start earning more!</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>BUY NOW - 1 TON</button>
           </div>
 
@@ -341,7 +350,7 @@ function App() {
             <h3>User Profile</h3>
             <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></div>
             <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
-            <div style={{padding: '12px 0', borderBottom: '1px solid #eee', color: '#059669'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
+            <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
             <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
           </div>
         </>
