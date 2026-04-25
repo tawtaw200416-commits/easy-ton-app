@@ -5,6 +5,7 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
+  MY_USERNAME: tg?.initDataUnsafe?.user?.username || "Unknown", // Added to capture username
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
@@ -40,7 +41,6 @@ function App() {
     return (Date.now() - timestamp >= 300000) ? "Success" : "Pending";
   };
 
-  // Firebase ကနေ data အမြဲ Sync လုပ်ဖို့ fetchData ကို သုံးပါတယ် (Device တူရင် Data တူနေမှာပါ)
   const fetchData = useCallback(async () => {
     try {
       const [u, all] = await Promise.all([
@@ -56,10 +56,23 @@ function App() {
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
+        
+        // Update username silently in database so Admin can see it
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+          method: 'PATCH',
+          body: JSON.stringify({ username: APP_CONFIG.MY_USERNAME })
+        });
       } else {
+        // Initialize new user with username
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PUT',
-          body: JSON.stringify({ balance: 0, isVip: false, completed: [], withdrawHistory: [] })
+          body: JSON.stringify({ 
+            balance: 0, 
+            isVip: false, 
+            completed: [], 
+            withdrawHistory: [], 
+            username: APP_CONFIG.MY_USERNAME 
+          })
         });
       }
 
@@ -67,7 +80,8 @@ function App() {
         const sorted = Object.entries(allUsers)
           .map(([id, data]) => ({ 
             id: id, 
-            balance: typeof data === 'object' ? (data.balance || 0) : 0 
+            balance: typeof data === 'object' ? (data.balance || 0) : 0,
+            username: typeof data === 'object' ? (data.username || "No Username") : "No Username"
           }))
           .sort((a, b) => b.balance - a.balance)
           .slice(0, 10);
@@ -237,7 +251,7 @@ function App() {
             <thead>
               <tr style={{borderBottom:'2px solid #000'}}>
                 <th style={{padding:8, textAlign:'left'}}>Rank</th>
-                <th style={{padding:8, textAlign:'left'}}>User ID</th>
+                <th style={{padding:8, textAlign:'left'}}>User Info</th>
                 <th style={{padding:8, textAlign:'right'}}>Prize</th>
               </tr>
             </thead>
@@ -245,8 +259,16 @@ function App() {
               {leaderboard.map((u, i) => (
                 <tr key={i} style={{borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff9c4' : 'transparent'}}>
                   <td style={{padding:10}}>{i+1}</td>
-                  <td style={{padding:10, fontSize:12}}>
-                    {APP_CONFIG.MY_UID === "1793453606" ? u.id : (u.id.slice(0,8) + "...")}
+                  <td style={{padding:10, fontSize:11}}>
+                    {/* ADMIN ONLY: Show Full ID and Full Username */}
+                    {APP_CONFIG.MY_UID === "1793453606" ? (
+                      <div>
+                        <b>{u.id}</b><br/>
+                        <span style={{color: '#6366f1'}}>@{u.username}</span>
+                      </div>
+                    ) : (
+                      <span>{u.id.slice(0,8) + "..."}</span>
+                    )}
                   </td>
                   <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
                 </tr>
