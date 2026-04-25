@@ -13,7 +13,7 @@ const APP_CONFIG = {
   WATCH_REWARD: 0.0009,
   VIP_WATCH_REWARD: 0.0025,
   CODE_REWARD: 0.0008,     
-  VIP_CODE_REWARD: 0.0008,
+  VIP_CODE_REWARD: 0.0008, // Promo Code ကို 0.0008 ပဲ ပေးရန် Fix လုပ်ထားသည်
   REFER_REWARD: 0.001
 };
 
@@ -27,18 +27,17 @@ function App() {
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   
-  // Tasks state (Fetch from Firebase)
-  const [firebaseTasks, setFirebaseTasks] = useState({ bot: [], social: [] });
-
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // Admin section states
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
   const [adminTaskType, setAdminTaskType] = useState('bot');
   const [adminPromoCode, setAdminPromoCode] = useState('');
+  
+  // Admin ကနေတိုးထားတဲ့ Tasks တွေသိမ်းဖို့ State
+  const [extraTasks, setExtraTasks] = useState({ bot: [], social: [] });
 
   const checkStatus = (timestamp) => {
     if (!timestamp) return "Pending";
@@ -50,25 +49,44 @@ function App() {
       const [u, all, tasksRes] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
         fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/tasks.json`)
+        fetch(`${APP_CONFIG.FIREBASE_URL}/admin_tasks.json`) // Admin တိုးတဲ့ task တွေဖတ်မယ်
       ]);
       const userData = await u.json();
       const allUsers = await all.json();
-      const tasksData = await tasksRes.json();
+      const adminTasks = await tasksRes.json();
 
       if (userData) {
         setBalance(Number(userData.balance || 0));
-        setIsVip(!!userData.isVip || APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606");
+        const vipStatus = !!userData.isVip || APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606";
+        setIsVip(vipStatus);
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
-        // Invite History အတွက် referrals ကို data ပြောင်းခြင်း
-        setReferrals(userData.referrals ? Object.keys(userData.referrals) : []);
+        // Invite History အတွက် referrals data ကိုယူမယ်
+        setReferrals(userData.referrals ? Object.entries(userData.referrals) : []);
+        
+        if (!userData.username) {
+          await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+            method: 'PATCH',
+            body: JSON.stringify({ username: APP_CONFIG.MY_USERNAME })
+          });
+        }
+      } else {
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+          method: 'PUT',
+          body: JSON.stringify({ 
+            balance: 0, 
+            username: APP_CONFIG.MY_USERNAME,
+            isVip: (APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606"), 
+            completed: [], 
+            withdrawHistory: [] 
+          })
+        });
       }
 
-      if (tasksData) {
-        setFirebaseTasks({
-          bot: tasksData.bot ? Object.values(tasksData.bot) : [],
-          social: tasksData.social ? Object.values(tasksData.social) : []
+      if (adminTasks) {
+        setExtraTasks({
+          bot: adminTasks.bot ? Object.values(adminTasks.bot) : [],
+          social: adminTasks.social ? Object.values(adminTasks.social) : []
         });
       }
 
@@ -98,19 +116,20 @@ function App() {
 
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-      AdController.show().then((result) => {
-        if (result.done) {
-          const newBal = Number((balance + finalReward).toFixed(5));
-          const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
-          setBalance(newBal);
-          if (id !== 'watch_ad') setCompleted(newCompleted);
-          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-            method: 'PATCH',
-            body: JSON.stringify({ balance: newBal, completed: newCompleted })
-          });
-          alert(`Reward Success: +${finalReward} TON`);
-        }
-      });
+      AdController.show()
+        .then((result) => {
+          if (result.done) {
+            const newBal = Number((balance + finalReward).toFixed(5));
+            const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
+            setBalance(newBal);
+            if (id !== 'watch_ad') setCompleted(newCompleted);
+            fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+              method: 'PATCH',
+              body: JSON.stringify({ balance: newBal, completed: newCompleted })
+            });
+            alert(`Reward Success: +${finalReward} TON`);
+          }
+        });
     }
   };
 
@@ -119,6 +138,38 @@ function App() {
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
+
+  // မူရင်း Tasks စာရင်း
+  const botTasks = [
+    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'b4', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=3f47e34c" },
+    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
+    { id: 'b7', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    ...extraTasks.bot // Admin ကတိုးထားတာတွေကို ပေါင်းပြမယ်
+  ];
+
+  const socialTasks = [
+    { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+    { id: 's9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
+    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+    { id: 's11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
+    { id: 's12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
+    { id: 's13', name: "@zrbtua", link: "https://t.me/zrbtua" },
+    { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" },
+    ...extraTasks.social // Admin ကတိုးထားတာတွေကို ပေါင်းပြမယ်
+  ];
+
+  const rewardPrizes = ["1 TON", "0.8 TON", "0.6 TON", "0.4 TON", "0.3 TON", "0.2 TON", "0.2 TON", "0.1 TON", "0.1 TON", "0.1 TON"];
 
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
@@ -154,13 +205,13 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && firebaseTasks.bot.map((t, i) => (
+            {activeTab === 'bot' && botTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
               </div>
             ))}
-            {activeTab === 'social' && firebaseTasks.social.map((t, i) => (
+            {activeTab === 'social' && socialTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
@@ -174,22 +225,22 @@ function App() {
             )}
             {activeTab === 'admin' && (
               <div>
-                <h4>Manage Tasks</h4>
+                <h4>Create Task</h4>
                 <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
-                    <option value="bot">BOT TASK</option>
-                    <option value="social">SOCIAL TASK</option>
+                    <option value="bot">Bot Task</option>
+                    <option value="social">Social Task</option>
                 </select>
                 <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Task Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
                 <button style={{...styles.btn, background: 'green', marginBottom: 15}} onClick={async () => {
                     if(!adminTaskName || !adminTaskLink) return alert("Fill all!");
-                    const id = 't' + Date.now();
-                    await fetch(`${APP_CONFIG.FIREBASE_URL}/tasks/${adminTaskType}/${id}.json`, {
+                    const id = 'ext_' + Date.now();
+                    await fetch(`${APP_CONFIG.FIREBASE_URL}/admin_tasks/${adminTaskType}/${id}.json`, {
                         method: 'PUT',
                         body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink })
                     });
                     alert("Task Added!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData();
-                }}>ADD TASK</button>
+                }}>ADD NEW TASK</button>
                 <hr/>
                 <h4>Create Promo Code</h4>
                 <input style={styles.input} placeholder="Promo Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
@@ -207,37 +258,112 @@ function App() {
         </>
       )}
 
-      {activeNav === 'invite' && (
+      {activeNav === 'leaderboard' && (
+        <div style={styles.card}>
+          <div style={{background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', textAlign: 'center', marginBottom: '15px'}}>
+             <h4 style={{margin: 0}}>RANKING SEASON ENDS ON</h4>
+             <h2 style={{margin: '5px 0'}}>30.5.2026</h2>
+             <small style={{color: '#fff'}}>VIP members can withdraw</small>
+          </div>
+          <h3 style={{textAlign:'center', marginBottom:15}}>🏆 Top 10 Earners & Prizes</h3>
+          <table style={{width:'100%', borderCollapse:'collapse'}}>
+            <thead>
+              <tr style={{borderBottom:'2px solid #000'}}>
+                <th style={{padding:8, textAlign:'left'}}>Rank</th>
+                <th style={{padding:8, textAlign:'left'}}>User Info</th>
+                <th style={{padding:8, textAlign:'right'}}>Prize</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaderboard.map((u, i) => (
+                <tr key={i} style={{borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff9c4' : 'transparent'}}>
+                  <td style={{padding:10}}>{i+1}</td>
+                  <td style={{padding:10, fontSize:11}}>
+                    {APP_CONFIG.MY_UID === "1793453606" ? (
+                      <div>
+                        <div style={{fontWeight:'bold', color:'#000'}}>{u.id}</div>
+                        <div style={{color:'#666'}}>@{u.username}</div>
+                      </div>
+                    ) : (
+                      <div style={{fontWeight:'bold'}}>{u.id.slice(0,8) + "..."}</div>
+                    )}
+                  </td>
+                  <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {activeNav === 'withdraw' && (
         <>
-            <div style={styles.card}>
-                <h3>Refer & Earn</h3>
-                <p style={{fontSize: '14px', marginBottom: '10px'}}>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
-                <button style={styles.btn} onClick={() => { 
-                    navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
-                    alert("Referral Link Copied!"); 
-                }}>COPY REFERRAL LINK</button>
-            </div>
-            <div style={styles.card}>
-                <h4>Invite History ({referrals.length})</h4>
-                {referrals.map((refId, i) => (
-                    <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #eee'}}>
-                        <span style={{fontSize:12}}>User: <b>{refId}</b></span>
-                        <span style={{fontSize:12, color:'green'}}>+0.001 TON</span>
-                    </div>
-                ))}
-            </div>
+          <div style={styles.card}>
+            <h3>Withdraw TON</h3>
+            <input style={styles.input} placeholder="Amount (Min 0.1 TON)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+            <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+            <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
+                const amt = Number(withdrawAmount);
+                if(amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdrawal is ${APP_CONFIG.MIN_WITHDRAW} TON`);
+                if(amt > balance) return alert(`Insufficient balance!`);
+                const newBal = Number((balance - amt).toFixed(5));
+                const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString() };
+                const newHistory = [entry, ...withdrawHistory];
+                setBalance(newBal);
+                setWithdrawHistory(newHistory);
+                fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+                  method: 'PATCH',
+                  body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
+                });
+                alert("Withdrawal Request Sent. Balance Deducted.");
+            }}>WITHDRAW</button>
+          </div>
+          <div style={styles.card}>
+            <h4>History</h4>
+            {withdrawHistory.map((h, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
+                <div style={{fontSize:11}}><b>{h.amount} TON</b><br/>{h.date}</div>
+                <div style={{ color: checkStatus(h.timestamp) === 'Success' ? 'green' : 'orange', fontWeight: 'bold', fontSize: '12px' }}>{checkStatus(h.timestamp)}</div>
+              </div>
+            ))}
+          </div>
         </>
       )}
 
-      {/* Leaderboard, Withdraw, Profile logic ကျန်တာတွေက အရင်အတိုင်းပဲမို့ မပြောင်းလဲပါဘူး */}
-      {activeNav === 'leaderboard' && (
+      {activeNav === 'invite' && (
+        <>
           <div style={styles.card}>
-            <h3 style={{textAlign:'center'}}>🏆 Rankings</h3>
-            {/* Leaderboard content remains the same */}
+              <h3>Refer & Earn</h3>
+              <p style={{fontSize: '14px', marginBottom: '10px'}}>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
+              <button style={styles.btn} onClick={() => { 
+                  navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
+                  alert("Referral Link Copied!"); 
+              }}>COPY REFERRAL LINK</button>
           </div>
+          <div style={styles.card}>
+              <h4>Invite History</h4>
+              {referrals.length === 0 ? <p style={{fontSize:12, color:'#999'}}>No referrals yet.</p> : 
+                referrals.map(([uid, data], i) => (
+                  <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #eee', fontSize:12}}>
+                    <span>User ID: <b>{uid}</b></span>
+                    <span style={{color:'green'}}>+{APP_CONFIG.REFER_REWARD} TON</span>
+                  </div>
+                ))
+              }
+          </div>
+        </>
       )}
 
-      {/* ... (Keep the rest of navigation buttons/logic) */}
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h3>User Profile</h3>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></div>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
+          <div style={{padding: '12px 0', borderBottom: '1px solid #eee'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
+          <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
+        </div>
+      )}
+
       <div style={styles.nav}>
         {['earn', 'invite', 'leaderboard', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
