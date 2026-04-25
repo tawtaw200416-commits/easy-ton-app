@@ -29,6 +29,7 @@ function App() {
   
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
+  const [withdrawMemo, setWithdrawMemo] = useState(''); // Memo input added
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
   const [adminTaskName, setAdminTaskName] = useState('');
@@ -55,7 +56,8 @@ function App() {
       const adminTasks = await tasksRes.json();
 
       if (userData) {
-        setBalance(Number(userData.balance || 0));
+        // Balance ကို data ရှိမှ set လုပ်ပါမယ်
+        if (userData.balance !== undefined) setBalance(Number(userData.balance));
         const vipStatus = !!userData.isVip || APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606";
         setIsVip(vipStatus);
         setCompleted(userData.completed || []);
@@ -69,6 +71,7 @@ function App() {
           });
         }
       } else {
+        // User အသစ်ဆိုရင် balance 0 နဲ့ စဖွင့်ပေးမယ်
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PUT',
           body: JSON.stringify({ 
@@ -93,7 +96,7 @@ function App() {
           .map(([id, data]) => ({ 
             id: id, 
             username: data.username || "No Name",
-            balance: typeof data === 'object' ? (data.balance || 0) : 0 
+            balance: (data && typeof data === 'object') ? (data.balance || 0) : 0 
           }))
           .sort((a, b) => b.balance - a.balance)
           .slice(0, 10);
@@ -295,7 +298,7 @@ function App() {
 
       {activeNav === 'withdraw' && (
         <>
-          {/* BUY VIP CARD - ပုံထဲကအတိုင်း အပေါ်ဆုံးမှာထည့်ထားပါတယ် */}
+          {/* BUY VIP CARD */}
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center', padding: '20px'}}>
              <h2 style={{margin: '0 0 10px 0', color: '#facc15'}}>BUY VIP ⭐</h2>
              <p style={{margin: '0 0 15px 0', fontSize: '13px'}}>To enable withdrawal, you need to be a VIP member. Send <b>1 TON</b> to the address below.</p>
@@ -313,28 +316,43 @@ function App() {
             <h3>Withdraw TON</h3>
             <input style={styles.input} placeholder="Amount (Min 0.1 TON)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+            <input style={styles.input} placeholder="Memo (Optional/Required for Exchange)" value={withdrawMemo} onChange={e => setWithdrawMemo(e.target.value)} />
+            
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
                 if(!isVip) return alert("Only VIP members can withdraw!");
                 if(amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdrawal is ${APP_CONFIG.MIN_WITHDRAW} TON`);
                 if(amt > balance) return alert(`Insufficient balance!`);
+                
                 const newBal = Number((balance - amt).toFixed(5));
-                const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString() };
+                const entry = { 
+                  amount: withdrawAmount, 
+                  address: withdrawAddress, 
+                  memo: withdrawMemo,
+                  timestamp: Date.now(), 
+                  date: new Date().toLocaleString() 
+                };
                 const newHistory = [entry, ...withdrawHistory];
+                
                 setBalance(newBal);
                 setWithdrawHistory(newHistory);
+                
                 fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
                   method: 'PATCH',
                   body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
                 });
                 alert("Withdrawal Request Sent. Balance Deducted.");
+                setWithdrawAmount(''); setWithdrawAddress(''); setWithdrawMemo('');
             }}>WITHDRAW</button>
           </div>
           <div style={styles.card}>
             <h4>History</h4>
             {withdrawHistory.map((h, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
-                <div style={{fontSize:11}}><b>{h.amount} TON</b><br/>{h.date}</div>
+                <div style={{fontSize:11}}>
+                  <b>{h.amount} TON</b><br/>{h.date}
+                  {h.memo && <div style={{color: '#666'}}>Memo: {h.memo}</div>}
+                </div>
                 <div style={{ color: checkStatus(h.timestamp) === 'Success' ? 'green' : 'orange', fontWeight: 'bold', fontSize: '12px' }}>{checkStatus(h.timestamp)}</div>
               </div>
             ))}
