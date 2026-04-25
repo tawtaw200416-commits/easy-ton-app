@@ -17,6 +17,7 @@ const APP_CONFIG = {
   REFER_REWARD: 0.001
 };
 
+// Added 5020977059 to VIP list
 const VIP_IDS = ["5020977059", "1793453606"];
 
 function App() {
@@ -57,18 +58,17 @@ function App() {
       const allUsers = await all.json();
       const adminTasks = await tasksRes.json();
 
-      // VIP Check
+      // Check VIP status from list or DB
       const isUserVip = VIP_IDS.includes(APP_CONFIG.MY_UID) || (userData && !!userData.isVip);
       setIsVip(isUserVip);
 
-      // User Data Loading & Syncing
+      // Restore data if user exists, else create profile
       if (userData) {
         setBalance(userData.balance !== undefined ? parseFloat(userData.balance) : 0);
         setCompleted(Array.isArray(userData.completed) ? userData.completed : []);
         setWithdrawHistory(Array.isArray(userData.withdrawHistory) ? userData.withdrawHistory : []);
         setReferrals(userData.referrals ? Object.entries(userData.referrals) : []);
       } else {
-        // Only create new profile if it doesn't exist at all
         const initialData = { 
           balance: 0, 
           username: APP_CONFIG.MY_USERNAME,
@@ -141,7 +141,6 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // Static Tasks
   const botTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
