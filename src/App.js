@@ -5,13 +5,14 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
+  MY_USERNAME: tg?.initDataUnsafe?.user?.username || "Unknown",
   ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
   WATCH_REWARD: 0.0009,
-  VIP_WATCH_REWARD: 0.0025, // Updated to 0.0025
-  CODE_REWARD: 0.0008,     // Updated to 0.0008
+  VIP_WATCH_REWARD: 0.0025,
+  CODE_REWARD: 0.0008,     
   VIP_CODE_REWARD: 0.001,
   REFER_REWARD: 0.001
 };
@@ -56,10 +57,24 @@ function App() {
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
+        
+        // Update username if missing
+        if (!userData.username) {
+          await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+            method: 'PATCH',
+            body: JSON.stringify({ username: APP_CONFIG.MY_USERNAME })
+          });
+        }
       } else {
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PUT',
-          body: JSON.stringify({ balance: 0, isVip: (APP_CONFIG.MY_UID === "5020977059"), completed: [], withdrawHistory: [] })
+          body: JSON.stringify({ 
+            balance: 0, 
+            username: APP_CONFIG.MY_USERNAME,
+            isVip: (APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606"), 
+            completed: [], 
+            withdrawHistory: [] 
+          })
         });
       }
 
@@ -67,6 +82,7 @@ function App() {
         const sorted = Object.entries(allUsers)
           .map(([id, data]) => ({ 
             id: id, 
+            username: data.username || "No Name",
             balance: typeof data === 'object' ? (data.balance || 0) : 0 
           }))
           .sort((a, b) => b.balance - a.balance)
@@ -78,6 +94,7 @@ function App() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // ... (processReward, handleTaskReward, botTasks, socialTasks are the same as before)
   const processReward = (id, rewardAmount) => {
     let finalReward = rewardAmount;
     if (id === 'watch_ad') {
@@ -151,6 +168,7 @@ function App() {
 
   return (
     <div style={styles.main}>
+      {/* Header and other Nav sections remain same */}
       <div style={styles.header}>
         <div style={{display:'flex', justifyContent:'center', alignItems:'center', gap:5}}>
             <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
@@ -224,6 +242,7 @@ function App() {
         </>
       )}
 
+      {/* Leaderboard modified for Admin View */}
       {activeNav === 'leaderboard' && (
         <div style={styles.card}>
           <div style={{background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', textAlign: 'center', marginBottom: '15px'}}>
@@ -237,7 +256,7 @@ function App() {
             <thead>
               <tr style={{borderBottom:'2px solid #000'}}>
                 <th style={{padding:8, textAlign:'left'}}>Rank</th>
-                <th style={{padding:8, textAlign:'left'}}>User ID</th>
+                <th style={{padding:8, textAlign:'left'}}>User Info</th>
                 <th style={{padding:8, textAlign:'right'}}>Prize</th>
               </tr>
             </thead>
@@ -245,9 +264,15 @@ function App() {
               {leaderboard.map((u, i) => (
                 <tr key={i} style={{borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff9c4' : 'transparent'}}>
                   <td style={{padding:10}}>{i+1}</td>
-                  <td style={{padding:10, fontSize:12}}>
-                    {/* Admin UID (1793453606) sees full ID, others see masked ID */}
-                    {APP_CONFIG.MY_UID === "1793453606" ? u.id : (u.id.slice(0,8) + "...")}
+                  <td style={{padding:10, fontSize:11}}>
+                    {APP_CONFIG.MY_UID === "1793453606" ? (
+                      <div>
+                        <div style={{fontWeight:'bold', color:'#000'}}>{u.id}</div>
+                        <div style={{color:'#666'}}>@{u.username}</div>
+                      </div>
+                    ) : (
+                      <div style={{fontWeight:'bold'}}>{u.id.slice(0,8) + "..."}</div>
+                    )}
                   </td>
                   <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
                 </tr>
@@ -257,6 +282,7 @@ function App() {
         </div>
       )}
 
+      {/* Withdraw, Invite, Profile, and Nav sections remain same */}
       {activeNav === 'withdraw' && (
         <>
           <div style={styles.card}>
