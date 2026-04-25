@@ -16,7 +16,6 @@ const APP_CONFIG = {
   REFER_REWARD: 0.001
 };
 
-// 5020977059 ကို VIP စာရင်းထဲ ထည့်သွင်းပြီးပါပြီ
 const VIP_IDS = ["5020977059", "1793453606"];
 
 function App() {
@@ -46,26 +45,28 @@ function App() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [u, all, tasksRes] = await Promise.all([
-        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
+      const response = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
+      const userData = await response.json();
+
+      const [allRes, tasksRes] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`),
         fetch(`${APP_CONFIG.FIREBASE_URL}/admin_tasks.json`)
       ]);
       
-      const userData = await u.json();
-      const allUsers = await all.json();
+      const allUsers = await allRes.json();
       const adminTasks = await tasksRes.json();
 
       setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID) || (userData && !!userData.isVip));
 
-      // **DATA PERSISTENCE FIX**: ရှိပြီးသား User ဆိုရင် data ကို overwrite လုံးဝမလုပ်ပါ
-      if (userData !== null) {
+      // DATA PERSISTENCE CHECK
+      if (userData !== null && typeof userData === 'object') {
+        // If user exists, load existing data
         setBalance(userData.balance !== undefined ? parseFloat(userData.balance) : 0);
         setCompleted(Array.isArray(userData.completed) ? userData.completed : []);
         setWithdrawHistory(Array.isArray(userData.withdrawHistory) ? userData.withdrawHistory : []);
         setReferrals(userData.referrals ? Object.entries(userData.referrals) : []);
       } else {
-        // User အသစ်ဆိုမှသာ Profile အသစ်ဆောက်ပါမယ်
+        // Only create new profile if user doesn't exist (Prevent 0 reset)
         const initialData = { 
           balance: 0, 
           username: APP_CONFIG.MY_USERNAME,
