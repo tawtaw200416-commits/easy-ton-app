@@ -42,7 +42,6 @@ function App() {
     return (Date.now() - timestamp >= 300000) ? "Success" : "Pending";
   };
 
-  // Fetch Data function
   const fetchData = useCallback(async () => {
     try {
       const [u, t] = await Promise.all([
@@ -65,7 +64,6 @@ function App() {
     } catch (e) { console.error(e); }
   }, []);
 
-  // Initial Fetch & Auto-sync every 30 seconds to catch new admin tasks
   useEffect(() => { 
     fetchData(); 
     const interval = setInterval(fetchData, 30000); 
@@ -114,31 +112,34 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // Fixed 7 Bot Tasks
+  // Bot List အသစ် (၆ ခု)
   const fixedBotTasks = [
-    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-    { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-    { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
-    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
-    { id: 'b7', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=1793453606" }
+    { id: 'b_new1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'b_new2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'b_new3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'b_new4', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=3f47e34c" },
+    { id: 'b_new5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b_new6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
   ];
 
-  // Fixed Social Tasks
+  // Social List အသစ် (၁၄ ခု)
   const fixedSocialTasks = [
-    { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-    { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" },
-    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
-    { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
-    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
-    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
-    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
-    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
+    { id: 'sn_1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 'sn_2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 'sn_3', name: "@cryptogold_online_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 'sn_4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 'sn_5', name: "@USDTcloudminer_channel", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 'sn_6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 'sn_7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 'sn_8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+    { id: 'sn_9', name: "@kombo_crypta", link: "https://t.me/kombo_crypta" },
+    { id: 'sn_10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+    { id: 'sn_11', name: "@WORLDBESTCRYTO1", link: "https://t.me/WORLDBESTCRYTO1" },
+    { id: 'sn_12', name: "@MONEYHUB9_69", link: "https://t.me/MONEYHUB9_69" },
+    { id: 'sn_13', name: "@zrbtua", link: "https://t.me/zrbtua" },
+    { id: 'sn_14', name: "@perviu1million", link: "https://t.me/perviu1million" }
   ];
 
-  // Combine Fixed + Custom Admin Tasks
   const allBotTasks = [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')];
   const allSocialTasks = [...fixedSocialTasks, ...customTasks.filter(t => t.type === 'social')];
 
@@ -208,7 +209,7 @@ function App() {
                    const id = 't_'+Date.now();
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
                    alert("Task Saved!"); 
-                   fetchData(); // Admin Save လုပ်ပြီးတာနဲ့ data အသစ်ချက်ချင်းဆွဲ
+                   fetchData();
                 }}>SAVE TASK</button>
                 <input style={styles.input} placeholder="New Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <button style={{...styles.btn, background: 'purple'}} onClick={async () => {
@@ -222,7 +223,6 @@ function App() {
         </>
       )}
 
-      {/* Rest of the code remains same (Withdraw, Invite, Profile, Nav) */}
       {activeNav === 'withdraw' && (
         <>
           <div style={styles.card}>
