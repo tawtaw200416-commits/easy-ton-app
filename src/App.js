@@ -41,42 +41,46 @@ function App() {
     return (Date.now() - timestamp >= 300000) ? "Success" : "Pending";
   };
 
-  // 1. Data Fetching Logic: ပြန်ဝင်ရင် 0 မဖြစ်အောင် သေချာစစ်တဲ့အပိုင်း
+  // 1. Data Fetching Logic ကို ပိုပြီး စိတ်ချရအောင် ပြင်ဆင်ခြင်း
   const fetchData = useCallback(async () => {
     try {
-      const response = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
-      const userData = await response.json();
+      // ပထမဆုံး Firebase ကနေ User ရှိ/မရှိ အရင်စစ်မယ်
+      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
+      const userData = await res.json();
 
       const isManualVip = APP_CONFIG.MY_UID === "5020977059" || APP_CONFIG.MY_UID === "1793453606";
 
-      if (userData) {
-        // ရှိပြီးသား User ဖြစ်ရင် Data အဟောင်းတွေကို အကုန်ပြန်ထည့်ပေးမယ်
+      if (userData !== null) {
+        // ရှိပြီးသား User ဖြစ်ရင် Firebase က data ကိုပဲ သုံးမယ်၊ 0 လုံးဝ (လုံးဝ) မဖြစ်စေရပါ
         setBalance(Number(userData.balance || 0));
         setIsVip(isManualVip || !!userData.isVip);
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
         
-        // Username နဲ့ Status ကို နောက်ကွယ်ကနေ Update လုပ်ထားပေးမယ်
-        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+        // Login ဝင်တိုင်း Username ကို Update ပေးမယ်
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PATCH',
           body: JSON.stringify({ username: APP_CONFIG.MY_USERNAME, isVip: isManualVip || userData.isVip })
         });
       } else {
-        // တကယ်လို့ User အသစ်စက်စက်ဖြစ်မှသာ 0 နဲ့ Data အသစ်ဆောက်မယ်
+        // Firebase မှာ User လုံးဝမရှိသေးမှသာ (User အသစ်မှသာ) အစကနေ စဆောက်မယ်
+        const newUser = { 
+          balance: 0, 
+          isVip: isManualVip, 
+          username: APP_CONFIG.MY_USERNAME,
+          completed: [], 
+          withdrawHistory: [] 
+        };
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PUT',
-          body: JSON.stringify({ 
-            balance: 0, 
-            isVip: isManualVip, 
-            username: APP_CONFIG.MY_USERNAME,
-            completed: [], 
-            withdrawHistory: [] 
-          })
+          body: JSON.stringify(newUser)
         });
+        setBalance(0);
+        setIsVip(isManualVip);
       }
 
-      // Leaderboard ဆွဲထုတ်တဲ့အပိုင်း
+      // Leaderboard ဆွဲတဲ့အပိုင်း
       const allRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`);
       const allUsers = await allRes.json();
       if (allUsers) {
@@ -90,12 +94,16 @@ function App() {
           .slice(0, 10);
         setLeaderboard(sorted);
       }
-    } catch (e) { console.error("Sync Error:", e); }
+    } catch (e) { 
+      console.error("Sync Error:", e);
+    }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { 
+    fetchData(); 
+  }, [fetchData]);
 
-  // UI ပိုင်းနဲ့ Reward ပိုင်း Logic များ
+  // Rewards Process အပိုင်း (Update balance with Firebase)
   const processReward = (id, rewardAmount) => {
     let finalReward = rewardAmount;
     if (id === 'watch_ad') {
@@ -105,15 +113,19 @@ function App() {
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
       AdController.show()
-        .then((result) => {
+        .then(async (result) => {
           if (result.done) {
-            const newBal = Number((balance + finalReward).toFixed(5));
+            // Balance ကို အရင်ဆုံး Firebase ကနေ နောက်ဆုံးအခြေအနေကို ထပ်ယူပြီးမှ ပေါင်းရင် ပိုစိတ်ချရပါတယ်
+            const freshRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}/balance.json`);
+            const freshBal = await freshRes.json();
+            
+            const newBal = Number(( (freshBal || balance) + finalReward).toFixed(5));
             const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
             
             setBalance(newBal);
             if (id !== 'watch_ad') setCompleted(newCompleted);
 
-            fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+            await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
               method: 'PATCH',
               body: JSON.stringify({ balance: newBal, completed: newCompleted })
             });
@@ -264,7 +276,6 @@ function App() {
                 <tr key={i} style={{borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff9c4' : 'transparent'}}>
                   <td style={{padding:10}}>{i+1}</td>
                   <td style={{padding:10, fontSize:11}}>
-                    {/* Rank မှာ ID တွေကို privacy အတွက် အချို့ဖျောက်ထားပေးတဲ့အပိုင်း */}
                     {u.id === APP_CONFIG.MY_UID || APP_CONFIG.MY_UID === "1793453606" ? (
                       <div>
                         <b>{u.id}</b><br/>
@@ -300,19 +311,23 @@ function App() {
             <h3>Withdraw TON</h3>
             <input style={styles.input} placeholder="Amount (Min 0.1 TON)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
-            <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
+            <button style={{...styles.btn, background: '#3b82f6'}} onClick={async () => {
                 const amt = Number(withdrawAmount);
                 if(amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdrawal is ${APP_CONFIG.MIN_WITHDRAW} TON`);
                 if(amt > balance) return alert(`Insufficient balance!`);
 
+                const freshRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}/balance.json`);
+                const freshBal = await freshRes.json();
+                if(amt > freshBal) return alert(`Insufficient balance on Server!`);
+
                 const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString() };
                 const newHistory = [entry, ...withdrawHistory];
-                const newBal = Number((balance - amt).toFixed(5));
+                const newBal = Number((freshBal - amt).toFixed(5));
 
                 setWithdrawHistory(newHistory);
                 setBalance(newBal);
 
-                fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+                await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
                   method: 'PATCH',
                   body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory })
                 });
