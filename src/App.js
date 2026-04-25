@@ -14,83 +14,81 @@ const APP_CONFIG = {
   VIP_WATCH_REWARD: 0.003,
   CODE_REWARD: 0.0008, 
   REFER_REWARD: 0.001,
-  SPECIAL_VIP_ID: "5020977059" // အစ်ကိုပြောတဲ့ Special VIP ID
+  SPECIAL_VIP_ID: "5020977059" // အစ်ကို့ Special VIP ID
 };
 
 function App() {
-  const [balance, setBalance] = useState(0);
+  const [balance, setBalance] = useState(0.0000);
   const [isVip, setIsVip] = useState(false);
   const [completed, setCompleted] = useState([]);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
+  const [referrals, setReferrals] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
-  const [isLoading, setIsLoading] = useState(true);
   
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
+  const [adminTaskName, setAdminTaskName] = useState('');
+  const [adminTaskLink, setAdminTaskLink] = useState('');
+  const [adminTaskType, setAdminTaskType] = useState('bot');
   const [adminPromoCode, setAdminPromoCode] = useState('');
 
+  // DATA FETCHING LOGIC (ပြင်ဆင်ထားသော အပိုင်း)
   const fetchData = useCallback(async () => {
     try {
-      setIsLoading(true);
-      // ၁။ User Data ကို အရင်စစ်မယ်
-      const uRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
-      const userData = await uRes.json();
+      const [u, all] = await Promise.all([
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`)
+      ]);
+      const userData = await u.json();
+      const allUsers = await all.json();
 
-      const isSpecialUser = APP_CONFIG.MY_UID === APP_CONFIG.SPECIAL_VIP_ID;
+      // ၁။ VIP Logic: Database မှာရှိရင်ဖြစ်ဖြစ်၊ Special ID ဖြစ်ရင်ဖြစ်ဖြစ် VIP ⭐ ပေးမယ်
+      const isSpecial = APP_CONFIG.MY_UID === APP_CONFIG.SPECIAL_VIP_ID;
+      setIsVip(isSpecial || (userData && !!userData.isVip));
 
+      // ၂။ User ရှိပြီးသားဆိုရင် Data အဟောင်းကိုပဲ ဆွဲတင်မယ် (Overwrite မလုပ်တော့ဘူး)
       if (userData) {
-        // ရှိပြီးသား User ဆိုရင် Data အဟောင်းကိုပဲ ဆက်သုံးမယ် (0 မဖြစ်စေရ)
         setBalance(Number(userData.balance || 0));
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
-        // Special ID ဖြစ်ရင် database မှာ VIP မဖြစ်သေးရင်တောင် App မှာ VIP ပေးမယ်
-        setIsVip(isSpecialUser || !!userData.isVip);
+        setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
 
-        // Database မှာ VIP အခြေအနေကို Update လုပ်ထားပေးမယ်
-        if (isSpecialUser && !userData.isVip) {
-          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-            method: 'PATCH',
-            body: JSON.stringify({ isVip: true })
-          });
+        // Special ID အတွက် Database မှာပါ VIP true ဖြစ်အောင် တစ်ခါတည်း update လုပ်ပေးမယ်
+        if (isSpecial && !userData.isVip) {
+            fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+                method: 'PATCH',
+                body: JSON.stringify({ isVip: true })
+            });
         }
       } else {
-        // User အသစ်စက်စက်မှသာ စာရင်းစဖွင့်မယ်
-        const initialData = { 
-          balance: 0, 
-          isVip: isSpecialUser, 
-          completed: [], 
-          withdrawHistory: [] 
-        };
+        // User အသစ်စက်စက်မှသာ စာရင်းသွင်းမယ်
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PUT',
-          body: JSON.stringify(initialData)
+          body: JSON.stringify({ 
+              balance: 0, 
+              isVip: isSpecial, 
+              completed: [], 
+              withdrawHistory: [] 
+          })
         });
-        setBalance(0);
-        setIsVip(isSpecialUser);
       }
 
-      // ၂။ Leaderboard Data ဆွဲမယ်
-      const lRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`);
-      const allUsers = await lRes.json();
+      // Leaderboard
       if (allUsers) {
         const sorted = Object.entries(allUsers)
           .map(([id, data]) => ({ 
-            id, 
+            id: id, 
             balance: typeof data === 'object' ? (data.balance || 0) : 0 
           }))
           .sort((a, b) => b.balance - a.balance)
           .slice(0, 10);
         setLeaderboard(sorted);
       }
-    } catch (e) {
-      console.error("Data Load Error:", e);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (e) { console.error("Fetch Error:", e); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -103,21 +101,23 @@ function App() {
 
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-      AdController.show().then((result) => {
-        if (result.done) {
-          const newBal = Number((balance + finalReward).toFixed(5));
-          const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
-          
-          setBalance(newBal);
-          if (id !== 'watch_ad') setCompleted(newCompleted);
+      AdController.show()
+        .then((result) => {
+          if (result.done) {
+            const newBal = Number((balance + finalReward).toFixed(5));
+            const newCompleted = id !== 'watch_ad' ? [...completed, id] : completed;
+            
+            setBalance(newBal);
+            if (id !== 'watch_ad') setCompleted(newCompleted);
 
-          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-            method: 'PATCH',
-            body: JSON.stringify({ balance: newBal, completed: newCompleted })
-          });
-          alert(`Reward Success: +${finalReward} TON`);
-        }
-      });
+            // Data အဟောင်းမပျောက်အောင် PATCH ပဲ သုံးပါတယ်
+            fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+              method: 'PATCH',
+              body: JSON.stringify({ balance: newBal, completed: newCompleted })
+            });
+            alert(`Reward Success: +${finalReward} TON`);
+          }
+        });
     }
   };
 
@@ -127,10 +127,31 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // Loading ဖြစ်နေရင် UI မပြသေးဘဲ စောင့်ခိုင်းမယ် (Balance Reset ဖြစ်တာကို ကာကွယ်ဖို့)
-  if (isLoading) {
-    return <div style={{...styles.main, display:'flex', justifyContent:'center', alignItems:'center'}}><h2>SYNCING DATA...</h2></div>;
-  }
+  const botTasks = [
+    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'b4', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=3f47e34c" },
+    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
+  ];
+
+  const socialTasks = [
+    { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 's3', name: "@easytonfree", link: "https://t.me/easytonfree" }
+  ];
+
+  const rewardPrizes = ["1 TON", "0.8 TON", "0.6 TON", "0.4 TON", "0.3 TON", "0.2 TON", "0.2 TON", "0.1 TON", "0.1 TON", "0.1 TON"];
+
+  const styles = {
+    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
+    header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
+    card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
+    btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
+    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
+    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' }
+  };
 
   return (
     <div style={styles.main}>
@@ -157,49 +178,36 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && [
-              { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot" },
-              { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot" },
-              { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot" },
-              { id: 'b4', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot" },
-              { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot" },
-              { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot" }
-            ].map((t, i) => (
+            {activeTab === 'bot' && botTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
               </div>
             ))}
-
-            {activeTab === 'social' && [
-              { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
-              { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
-              { id: 's3', name: "@easytonfree", link: "https://t.me/easytonfree" }
-            ].map((t, i) => (
+            {activeTab === 'social' && socialTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
               </div>
             ))}
-
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
                 <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
               </div>
             )}
-
             {activeTab === 'admin' && (
               <div>
                 <h4>Create Promo Code</h4>
-                <input style={styles.input} placeholder="Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
+                <input style={styles.input} placeholder="Promo Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <button style={{...styles.btn, background: 'purple'}} onClick={async () => {
-                   if(!adminPromoCode) return alert("Enter code!");
+                   if(!adminPromoCode) return alert("Enter code name!");
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { 
-                     method: 'PUT', body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.CODE_REWARD }) 
+                     method: 'PUT', 
+                     body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.CODE_REWARD }) 
                    });
-                   alert("Code Created!"); setAdminPromoCode('');
-                }}>SAVE CODE</button>
+                   alert("Promo Code Created!"); setAdminPromoCode('');
+                }}>CREATE CODE</button>
               </div>
             )}
           </div>
@@ -214,6 +222,7 @@ function App() {
               <tr style={{borderBottom:'2px solid #000'}}>
                 <th style={{padding:8, textAlign:'left'}}>Rank</th>
                 <th style={{padding:8, textAlign:'left'}}>User ID</th>
+                <th style={{padding:8, textAlign:'right'}}>Prize</th>
               </tr>
             </thead>
             <tbody>
@@ -223,6 +232,7 @@ function App() {
                   <td style={{padding:10, fontSize:12}}>
                     {APP_CONFIG.MY_UID === APP_CONFIG.ADMIN_ID ? u.id : (u.id.slice(0,8) + "...")}
                   </td>
+                  <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
                 </tr>
               ))}
             </tbody>
@@ -233,11 +243,11 @@ function App() {
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3>Withdraw TON</h3>
-          <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} placeholder="Amount (Min 0.1 TON)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
           <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
           <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
               const amt = Number(withdrawAmount);
-              if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance) return alert("Insufficient balance or min limit!");
+              if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance) return alert("Error in amount!");
               const newBal = Number((balance - amt).toFixed(5));
               setBalance(newBal);
               fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
@@ -267,14 +277,5 @@ function App() {
     </div>
   );
 }
-
-const styles = {
-  main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
-  header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
-  card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
-  btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
-  input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
-  nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' }
-};
 
 export default App;
