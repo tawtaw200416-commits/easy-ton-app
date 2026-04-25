@@ -10,11 +10,10 @@ const APP_CONFIG = {
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
   WATCH_REWARD: 0.0009,
-  VIP_WATCH_REWARD: 0.003,
-  CODE_REWARD: 0.0007,
-  VIP_CODE_REWARD: 0.001,
+  VIP_WATCH_REWARD: 0.003, // Updated to 0.003
+  CODE_REWARD: 0.0008,     // Updated to 0.0008 (Same for all)
   REFER_REWARD: 0.001,
-  SPECIAL_VIP_ID: "5020977059" // Assigned VIP for this specific ID
+  SPECIAL_VIP_ID: "5020977059" 
 };
 
 function App() {
@@ -50,25 +49,26 @@ function App() {
       const userData = await u.json();
       const allUsers = await all.json();
 
-      // Check if user is special VIP or already VIP in database
-      const userIsVip = APP_CONFIG.MY_UID === APP_CONFIG.SPECIAL_VIP_ID || (userData && !!userData.isVip);
-
       if (userData) {
+        // Sync local state with Database (Ensures no data loss on different devices)
         setBalance(Number(userData.balance || 0));
-        setIsVip(userIsVip);
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
         
-        // Sync VIP status to DB if it's the special user but not yet updated in DB
+        // Special VIP check or database VIP check
+        const userVipStatus = APP_CONFIG.MY_UID === APP_CONFIG.SPECIAL_VIP_ID || !!userData.isVip;
+        setIsVip(userVipStatus);
+
+        // If it's a special ID but DB doesn't have it as VIP, update DB
         if (APP_CONFIG.MY_UID === APP_CONFIG.SPECIAL_VIP_ID && !userData.isVip) {
-            fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+            await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
                 method: 'PATCH',
                 body: JSON.stringify({ isVip: true })
             });
         }
       } else {
-        // Create new user while maintaining the special VIP status
+        // First time user registration
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PUT',
           body: JSON.stringify({ 
@@ -206,7 +206,7 @@ function App() {
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, isVip ? APP_CONFIG.VIP_CODE_REWARD : APP_CONFIG.CODE_REWARD)}>CLAIM</button>
+                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
               </div>
             )}
             {activeTab === 'admin' && (
@@ -217,7 +217,7 @@ function App() {
                    if(!adminPromoCode) return alert("Enter code name!");
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { 
                      method: 'PUT', 
-                     body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.VIP_CODE_REWARD }) 
+                     body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.CODE_REWARD }) 
                    });
                    alert("Promo Code Created!"); setAdminPromoCode('');
                 }}>CREATE CODE</button>
@@ -263,7 +263,6 @@ function App() {
                 <tr key={i} style={{borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff9c4' : 'transparent'}}>
                   <td style={{padding:10}}>{i+1}</td>
                   <td style={{padding:10, fontSize:12}}>
-                    {/* Admin (1793453606) sees the FULL ID, others see masked ID */}
                     {APP_CONFIG.MY_UID === "1793453606" ? u.id : (u.id.slice(0,8) + "...")}
                   </td>
                   <td style={{padding:10, textAlign:'right', fontWeight:'bold', color: '#059669'}}>{rewardPrizes[i]}</td>
