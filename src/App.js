@@ -42,6 +42,7 @@ function App() {
   // Admin Search State
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
+  const [newBalanceInput, setNewBalanceInput] = useState(''); // Balance ပြင်ရန် state အသစ်
 
   const handleReferral = useCallback(async () => {
     const startParam = tg?.initDataUnsafe?.start_param; 
@@ -72,7 +73,6 @@ function App() {
     }
   }, []);
 
-  // --- ပြင်ဆင်ထားသော Status Check (Database status ကိုအရင်ကြည့်ပါမည်) ---
   const checkStatus = (historyItem) => {
     if (historyItem.status === "Success") return "Success";
     if (!historyItem.timestamp) return "Pending";
@@ -255,22 +255,48 @@ function App() {
             {activeTab === 'admin' && (
               <div>
                 <h4>Admin Control</h4>
-                {/* --- USER SEARCH SECTION --- */}
-                <h5 style={{color: '#f59e0b', marginBottom: '10px'}}>🔍 USER DATA CHECKER</h5>
+                {/* --- USER SEARCH & BALANCE MANAGER --- */}
+                <h5 style={{color: '#f59e0b', marginBottom: '10px'}}>🔍 USER DATA & BALANCE MANAGER</h5>
                 <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
                   <input style={{...styles.input, marginBottom: 0}} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                   <button style={{...styles.btn, width: '80px', background: '#f59e0b'}} onClick={async () => {
                       if(!searchUserId) return alert("Enter ID");
                       const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
                       const data = await res.json();
-                      if(data) setSearchedUser(data); else alert("User not found!");
+                      if(data) {
+                          setSearchedUser(data);
+                          setNewBalanceInput(data.balance || 0); // ရှာတွေ့တဲ့ user ရဲ့ balance ကို input မှာ ချက်ချင်းပြမယ်
+                      } else alert("User not found!");
                     }}>FIND</button>
                 </div>
 
-                {/* --- SEARCHED USER INFO & WITHDRAW MANAGER --- */}
                 {searchedUser && (
                   <div style={{background: '#fffbeb', padding: '10px', borderRadius: '10px', border: '1px solid #f59e0b', fontSize: '12px', marginBottom: '20px'}}>
-                    <p>💰 Balance: <b>{Number(searchedUser.balance || 0).toFixed(5)} TON</b></p>
+                    <p>💰 Current Balance: <b>{Number(searchedUser.balance || 0).toFixed(5)} TON</b></p>
+                    
+                    {/* Balance ပြင်ဆင်ရန် အပိုင်း */}
+                    <div style={{margin: '10px 0', padding: '10px', background: '#fff', borderRadius: '8px', border: '1px solid #ddd'}}>
+                        <label style={{fontWeight:'bold', display:'block', marginBottom:'5px'}}>Edit Balance:</label>
+                        <input 
+                            style={{...styles.input, marginBottom: '5px'}} 
+                            type="number" 
+                            value={newBalanceInput} 
+                            onChange={(e) => setNewBalanceInput(e.target.value)} 
+                        />
+                        <button 
+                            style={{...styles.btn, background: '#10b981', height: '35px', padding: '0'}} 
+                            onClick={async () => {
+                                if(newBalanceInput === '') return alert("Please enter amount");
+                                await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { 
+                                    method: 'PATCH', 
+                                    body: JSON.stringify({ balance: Number(newBalanceInput) }) 
+                                });
+                                alert("Balance Updated!");
+                                setSearchedUser({...searchedUser, balance: Number(newBalanceInput)});
+                            }}
+                        >UPDATE BALANCE</button>
+                    </div>
+
                     <p>⭐ VIP: <b>{searchedUser.isVip ? "YES" : "NO"}</b></p>
                     
                     {/* --- WITHDRAW MANAGER WITHIN SEARCH --- */}
@@ -291,7 +317,6 @@ function App() {
                                     body: JSON.stringify({ withdrawHistory: updatedHistory }) 
                                   });
                                   alert("Status updated to Success!");
-                                  // Refresh search view
                                   setSearchedUser({...searchedUser, withdrawHistory: updatedHistory});
                                 }}
                               >SET SUCCESS</button>
@@ -363,7 +388,6 @@ function App() {
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
                 if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Check Input/Balance");
-                // Withdraw Request တင်စဉ်မှာ 'Pending' status ထည့်ပေးထားပါသည်
                 const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString(), status: 'Pending' };
                 const newHistory = [entry, ...withdrawHistory];
                 const newBal = Number((balance - amt).toFixed(5));
