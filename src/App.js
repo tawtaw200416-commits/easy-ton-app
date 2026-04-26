@@ -42,7 +42,7 @@ function App() {
   // Admin Search State
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
-  const [newBalanceInput, setNewBalanceInput] = useState(''); // Balance ပြင်ရန် state အသစ်
+  const [newBalanceInput, setNewBalanceInput] = useState(''); 
 
   const handleReferral = useCallback(async () => {
     const startParam = tg?.initDataUnsafe?.start_param; 
@@ -265,16 +265,20 @@ function App() {
                       const data = await res.json();
                       if(data) {
                           setSearchedUser(data);
-                          setNewBalanceInput(data.balance || 0); // ရှာတွေ့တဲ့ user ရဲ့ balance ကို input မှာ ချက်ချင်းပြမယ်
+                          setNewBalanceInput(data.balance || 0); 
                       } else alert("User not found!");
                     }}>FIND</button>
                 </div>
 
                 {searchedUser && (
                   <div style={{background: '#fffbeb', padding: '10px', borderRadius: '10px', border: '1px solid #f59e0b', fontSize: '12px', marginBottom: '20px'}}>
-                    <p>💰 Current Balance: <b>{Number(searchedUser.balance || 0).toFixed(5)} TON</b></p>
+                    <div style={{display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '10px'}}>
+                         <p>💰 Balance: <b>{Number(searchedUser.balance || 0).toFixed(5)} TON</b></p>
+                         <p>📺 Ads Watched: <b>{searchedUser.adsWatched || 0} times</b></p>
+                         <p>✅ Tasks Done: <b>{searchedUser.completed ? searchedUser.completed.length : 0} tasks</b></p>
+                         <p>⭐ VIP Status: <b>{searchedUser.isVip ? "YES" : "NO"}</b></p>
+                    </div>
                     
-                    {/* Balance ပြင်ဆင်ရန် အပိုင်း */}
                     <div style={{margin: '10px 0', padding: '10px', background: '#fff', borderRadius: '8px', border: '1px solid #ddd'}}>
                         <label style={{fontWeight:'bold', display:'block', marginBottom:'5px'}}>Edit Balance:</label>
                         <input 
@@ -296,8 +300,6 @@ function App() {
                             }}
                         >UPDATE BALANCE</button>
                     </div>
-
-                    <p>⭐ VIP: <b>{searchedUser.isVip ? "YES" : "NO"}</b></p>
                     
                     {/* --- WITHDRAW MANAGER WITHIN SEARCH --- */}
                     <div style={{marginTop: '10px', borderTop: '1px solid #ddd', paddingTop: '10px'}}>
