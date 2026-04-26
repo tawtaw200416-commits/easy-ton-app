@@ -6,7 +6,8 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   ADSGRAM_BLOCK_ID: "27611", 
-  ADSTERRA_SMARTLINK: "https://profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
+  // Added Smartlink_1 Integration
+  ADSTERRA_SMARTLINK: "https://profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -42,7 +43,28 @@ function App() {
 
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
-  const [newBalanceInput, setNewBalanceInput] = useState('');
+  const [newBalanceInput, setNewBalanceInput] = useState(''); 
+
+  const handleReferral = useCallback(async () => {
+    const startParam = tg?.initDataUnsafe?.start_param; 
+    const isNewUser = !localStorage.getItem(`joined_${APP_CONFIG.MY_UID}`);
+
+    if (startParam && isNewUser && startParam !== APP_CONFIG.MY_UID) {
+      try {
+        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`);
+        const inviterData = await res.json();
+        if (inviterData) {
+          const newInviterBalance = Number((Number(inviterData.balance || 0) + APP_CONFIG.REFER_REWARD).toFixed(5));
+          const newInviterRefs = inviterData.referrals ? [...Object.values(inviterData.referrals), { id: APP_CONFIG.MY_UID }] : [{ id: APP_CONFIG.MY_UID }];
+          await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`, {
+            method: 'PATCH',
+            body: JSON.stringify({ balance: newInviterBalance, referrals: newInviterRefs })
+          });
+          localStorage.setItem(`joined_${APP_CONFIG.MY_UID}`, 'true');
+        }
+      } catch (e) { console.error("Referral Error:", e); }
+    }
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -52,7 +74,6 @@ function App() {
       ]);
       const userData = await u.json();
       const tasksData = await t.json();
-
       if (userData) {
         setBalance(Number(userData.balance || 0));
         setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID) || !!userData.isVip);
@@ -69,9 +90,10 @@ function App() {
 
   useEffect(() => { 
     fetchData(); 
+    handleReferral(); 
     const interval = setInterval(fetchData, 30000); 
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, handleReferral]);
 
   useEffect(() => {
     localStorage.setItem(`ton_bal_${APP_CONFIG.MY_UID}`, balance.toString());
@@ -80,12 +102,15 @@ function App() {
     localStorage.setItem(`ads_watched_${APP_CONFIG.MY_UID}`, adsWatched.toString());
   }, [balance, completed, withdrawHistory, adsWatched]);
 
+  // Updated Process Reward with Smartlink integration
   const processReward = (id, rewardAmount) => {
     let finalReward = rewardAmount;
     let isWatchAd = id === 'watch_ad';
 
     if (isWatchAd) {
       finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
+    } else if (id.startsWith('c_')) {
+      finalReward = APP_CONFIG.CODE_REWARD;
     }
 
     if (window.Adsgram) {
@@ -99,22 +124,36 @@ function App() {
             setBalance(newBal);
             if (isWatchAd) setAdsWatched(newAdsCount);
 
+            const newCompleted = !isWatchAd ? [...completed, id] : completed;
+            if (!isWatchAd) setCompleted(newCompleted);
+
             fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
               method: 'PATCH',
-              body: JSON.stringify({ balance: newBal, adsWatched: newAdsCount })
+              body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
             });
 
-            // Dual Ad: Open Adsterra link after Adsgram success
-            if (isWatchAd) window.open(APP_CONFIG.ADSTERRA_SMARTLINK, '_blank');
-            
-            alert(`Success: +${finalReward} TON`);
+            // Trigger Smartlink after rewarding
+            if (isWatchAd) {
+                window.open(APP_CONFIG.ADSTERRA_SMARTLINK, '_blank');
+            }
+
+            alert(`Reward Success: +${finalReward} TON`);
+            fetchData();
           }
         }).catch(() => {
+            // If Adsgram fails, still try to open Smartlink for revenue
             if (isWatchAd) window.open(APP_CONFIG.ADSTERRA_SMARTLINK, '_blank');
         });
     } else if (isWatchAd) {
+        // Direct Smartlink fallback if Adsgram script is missing
         window.open(APP_CONFIG.ADSTERRA_SMARTLINK, '_blank');
     }
+  };
+
+  const handleTaskReward = (id, reward, link) => {
+    if (completed.includes(id)) return alert("Already completed!");
+    if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
+    setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
   const styles = {
@@ -159,23 +198,25 @@ function App() {
                 <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
                   <input style={{...styles.input, marginBottom: 0}} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                   <button style={{...styles.btn, width: '80px', background: '#f59e0b'}} onClick={async () => {
+                      if(!searchUserId) return alert("Enter ID");
                       const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
                       const data = await res.json();
-                      if(data) { setSearchedUser(data); setNewBalanceInput(data.balance || 0); } else alert("Not found");
+                      if(data) {
+                          setSearchedUser(data);
+                          setNewBalanceInput(data.balance || 0); 
+                      } else alert("User not found!");
                     }}>FIND</button>
                 </div>
+
                 {searchedUser && (
-                  <div style={{background: '#fffbeb', padding: '10px', borderRadius: '10px', border: '1px solid #f59e0b', fontSize: '12px'}}>
+                  <div style={{background: '#fffbeb', padding: '10px', borderRadius: '10px', border: '1px solid #f59e0b', fontSize: '12px', marginBottom: '20px'}}>
                     <p>💰 Balance: <b>{Number(searchedUser.balance || 0).toFixed(5)} TON</b></p>
-                    <p>📺 Ads Watched: <b>{searchedUser.adsWatched || 0}</b></p>
-                    <input style={styles.input} type="number" value={newBalanceInput} onChange={(e) => setNewBalanceInput(e.target.value)} />
-                    <button style={{...styles.btn, background: '#10b981'}} onClick={async () => {
-                        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ balance: Number(newBalanceInput) }) });
-                        alert("Updated!");
-                    }}>UPDATE BALANCE</button>
-                    <button style={{...styles.btn, background: '#ef4444', marginTop: '5px'}} onClick={() => setSearchedUser(null)}>CLOSE</button>
+                    <p>📺 Ads Watched: <b>{searchedUser.adsWatched || 0} times</b></p>
+                    <p>⭐ VIP Status: <b>{searchedUser.isVip ? "YES" : "NO"}</b></p>
+                    <button style={{...styles.btn, height: '30px', padding: '0', background: '#ef4444', fontSize: '10px', marginTop: '10px'}} onClick={() => setSearchedUser(null)}>CLOSE INFO</button>
                   </div>
                 )}
+                {/* Tasks and Codes section remains here... */}
               </div>
             )}
           </div>
