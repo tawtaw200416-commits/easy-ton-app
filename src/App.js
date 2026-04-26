@@ -6,7 +6,8 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   ADSGRAM_BLOCK_ID: "27611", 
-  ADSTERRA_SMARTLINK: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
+  // မိတ်ဆွေရဲ့ Adsterra Smartlink ကို ဒီမှာ ထည့်ပေးထားပါတယ်
+  ADSTERRA_SMARTLINK: "https://profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -113,7 +114,7 @@ function App() {
     localStorage.setItem(`ads_watched_${APP_CONFIG.MY_UID}`, adsWatched.toString());
   }, [balance, completed, withdrawHistory, referrals, adsWatched]);
 
-  // COMBINED ADSGRAM + ADSTERRA PROCESS
+  // အဓိက ကြော်ငြာ Logic (Adsgram + Adsterra)
   const processReward = (id, rewardAmount) => {
     let finalReward = rewardAmount;
     let isWatchAd = id === 'watch_ad';
@@ -126,7 +127,7 @@ function App() {
         AdController.show()
           .then((result) => {
             if (result.done) {
-              // 1. Give Balance for Adsgram Success
+              // Adsgram ပြီးရင် ပိုက်ဆံပေါင်းမယ်
               const newBal = Number((balance + finalReward).toFixed(5));
               const newAdsCount = adsWatched + 1;
               setBalance(newBal);
@@ -137,19 +138,18 @@ function App() {
                 body: JSON.stringify({ balance: newBal, adsWatched: newAdsCount })
               });
 
-              // 2. Trigger Adsterra Smartlink immediately after Adsgram
+              // Adsgram ပြီးတာနဲ့ Adsterra Link ကို Tab အသစ်နဲ့ ဖွင့်ပေးမယ်
               window.open(APP_CONFIG.ADSTERRA_SMARTLINK, '_blank');
               
-              alert(`Adsgram Complete! Reward: +${finalReward} TON. Now Opening Adsterra Bonus...`);
+              alert(`Adsgram Done! +${finalReward} TON added. Bonus Ad Loading...`);
               fetchData();
             }
           })
-          .catch((err) => {
-            console.error("Adsgram Error, falling back to Adsterra:", err);
+          .catch(() => {
+            // Adsgram Error ဖြစ်ရင် Adsterra ကိုပဲ Direct ဖွင့်ပေးမယ်
             window.open(APP_CONFIG.ADSTERRA_SMARTLINK, '_blank');
           });
       } else {
-        // Fallback if Adsgram script is missing
         window.open(APP_CONFIG.ADSTERRA_SMARTLINK, '_blank');
       }
     } else if (id.startsWith('c_')) {
@@ -162,7 +162,7 @@ function App() {
         method: 'PATCH',
         body: JSON.stringify({ balance: newBal, completed: newCompleted })
       });
-      alert(`Promo Reward Success: +${finalReward} TON`);
+      alert(`Promo Success: +${finalReward} TON`);
     }
   };
 
@@ -250,8 +250,8 @@ function App() {
             {activeTab === 'admin' && (
               <div>
                 <h4>Admin Control</h4>
-                {/* Admin Logic same as before */}
-                <p style={{fontSize: 10, color: 'gray'}}>User ID: {APP_CONFIG.MY_UID}</p>
+                {/* Admin sections same as before */}
+                <p style={{fontSize: '10px', color: 'gray'}}>User ID: {APP_CONFIG.MY_UID}</p>
               </div>
             )}
           </div>
@@ -265,7 +265,7 @@ function App() {
             <input style={styles.input} placeholder="TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
-                if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Error");
+                if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Check Balance/Address");
                 alert("Withdraw Request Sent!");
             }}>WITHDRAW</button>
         </div>
