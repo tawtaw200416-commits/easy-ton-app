@@ -9,8 +9,8 @@ const APP_CONFIG = {
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
-  WATCH_REWARD: 0.0002, // Changed to 0.0002
-  VIP_WATCH_REWARD: 0.0006, // Changed to 0.0006
+  WATCH_REWARD: 0.0002, 
+  VIP_WATCH_REWARD: 0.0006, 
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001
 };
@@ -23,7 +23,7 @@ function App() {
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem(`comp_tasks_${APP_CONFIG.MY_UID}`)) || []);
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem(`wd_hist_${APP_CONFIG.MY_UID}`)) || []);
   const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem(`refs_${APP_CONFIG.MY_UID}`)) || []);
-  const [adsWatched, setAdsWatched] = useState(() => Number(localStorage.getItem(`ads_watched_${APP_CONFIG.MY_UID}`)) || 0); // New state for watch count
+  const [adsWatched, setAdsWatched] = useState(() => Number(localStorage.getItem(`ads_watched_${APP_CONFIG.MY_UID}`)) || 0);
   
   const [customTasks, setCustomTasks] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
@@ -72,9 +72,11 @@ function App() {
     }
   }, []);
 
-  const checkStatus = (timestamp) => {
-    if (!timestamp) return "Pending";
-    return (Date.now() - timestamp >= 300000) ? "Success" : "Pending";
+  // --- ပြင်ဆင်ထားသော Status Check (Database status ကိုအရင်ကြည့်ပါမည်) ---
+  const checkStatus = (historyItem) => {
+    if (historyItem.status === "Success") return "Success";
+    if (!historyItem.timestamp) return "Pending";
+    return (Date.now() - historyItem.timestamp >= 300000) ? "Success" : "Pending";
   };
 
   const fetchData = useCallback(async () => {
@@ -92,7 +94,7 @@ function App() {
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
-        setAdsWatched(userData.adsWatched || 0); // Fetch ads watched from DB
+        setAdsWatched(userData.adsWatched || 0);
       }
 
       if (tasksData) {
@@ -151,7 +153,7 @@ function App() {
               body: JSON.stringify({ 
                 balance: newBal, 
                 completed: newCompleted, 
-                adsWatched: newAdsCount // Save count to Firebase
+                adsWatched: newAdsCount
               })
             });
             alert(`Reward Success: +${finalReward} TON`);
@@ -264,15 +266,45 @@ function App() {
                       if(data) setSearchedUser(data); else alert("User not found!");
                     }}>FIND</button>
                 </div>
+
+                {/* --- SEARCHED USER INFO & WITHDRAW MANAGER --- */}
                 {searchedUser && (
                   <div style={{background: '#fffbeb', padding: '10px', borderRadius: '10px', border: '1px solid #f59e0b', fontSize: '12px', marginBottom: '20px'}}>
                     <p>💰 Balance: <b>{Number(searchedUser.balance || 0).toFixed(5)} TON</b></p>
                     <p>⭐ VIP: <b>{searchedUser.isVip ? "YES" : "NO"}</b></p>
-                    <p>📺 Watch Count: <b>{searchedUser.adsWatched || 0}</b></p>
-                    <p>✅ Tasks: <b>{searchedUser.completed ? searchedUser.completed.length : 0}</b></p>
-                    <button style={{...styles.btn, height: '25px', padding: '0', background: '#ef4444', fontSize: '10px'}} onClick={() => setSearchedUser(null)}>CLOSE INFO</button>
+                    
+                    {/* --- WITHDRAW MANAGER WITHIN SEARCH --- */}
+                    <div style={{marginTop: '10px', borderTop: '1px solid #ddd', paddingTop: '10px'}}>
+                      <p style={{fontWeight: 'bold', color: '#000'}}>Withdraw History:</p>
+                      {searchedUser.withdrawHistory && searchedUser.withdrawHistory.length > 0 ? (
+                        searchedUser.withdrawHistory.map((h, idx) => (
+                          <div key={idx} style={{background: '#fff', padding: '5px', margin: '5px 0', borderRadius: '5px', border: '1px solid #ccc'}}>
+                            <p>Amt: {h.amount} | Status: <b style={{color: h.status === 'Success' ? 'green' : 'orange'}}>{h.status || 'Pending'}</b></p>
+                            {h.status !== "Success" && (
+                              <button 
+                                style={{background: 'green', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer'}}
+                                onClick={async () => {
+                                  const updatedHistory = [...searchedUser.withdrawHistory];
+                                  updatedHistory[idx].status = "Success";
+                                  await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { 
+                                    method: 'PATCH', 
+                                    body: JSON.stringify({ withdrawHistory: updatedHistory }) 
+                                  });
+                                  alert("Status updated to Success!");
+                                  // Refresh search view
+                                  setSearchedUser({...searchedUser, withdrawHistory: updatedHistory});
+                                }}
+                              >SET SUCCESS</button>
+                            )}
+                          </div>
+                        ))
+                      ) : <p>No history found.</p>}
+                    </div>
+
+                    <button style={{...styles.btn, height: '30px', padding: '0', background: '#ef4444', fontSize: '10px', marginTop: '10px'}} onClick={() => setSearchedUser(null)}>CLOSE INFO</button>
                   </div>
                 )}
+                
                 <hr style={{margin: '15px 0', border: '1px dashed #ccc'}}/>
 
                 <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
@@ -331,7 +363,8 @@ function App() {
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
                 if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Check Input/Balance");
-                const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString() };
+                // Withdraw Request တင်စဉ်မှာ 'Pending' status ထည့်ပေးထားပါသည်
+                const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString(), status: 'Pending' };
                 const newHistory = [entry, ...withdrawHistory];
                 const newBal = Number((balance - amt).toFixed(5));
                 setWithdrawHistory(newHistory); setBalance(newBal);
@@ -344,7 +377,7 @@ function App() {
             {withdrawHistory.map((h, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
                 <div style={{fontSize:11}}><b>{h.amount} TON</b><br/>{h.date}</div>
-                <div style={{ color: checkStatus(h.timestamp) === 'Success' ? 'green' : 'orange', fontWeight: 'bold', fontSize: '12px' }}>{checkStatus(h.timestamp)}</div>
+                <div style={{ color: checkStatus(h) === 'Success' ? 'green' : 'orange', fontWeight: 'bold', fontSize: '12px' }}>{checkStatus(h)}</div>
               </div>
             ))}
           </div>
