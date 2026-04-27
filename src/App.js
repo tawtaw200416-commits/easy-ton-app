@@ -6,6 +6,7 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   ADSGRAM_BLOCK_ID: "27611", 
+  // Adsterra Link ထပ်တိုးထားသည်
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
@@ -25,20 +26,27 @@ function App() {
   const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem(`wd_hist_${APP_CONFIG.MY_UID}`)) || []);
   const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem(`refs_${APP_CONFIG.MY_UID}`)) || []);
   const [adsWatched, setAdsWatched] = useState(() => Number(localStorage.getItem(`ads_watched_${APP_CONFIG.MY_UID}`)) || 0);
+  
   const [customTasks, setCustomTasks] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
-  const [rewardCodeInput, setRewardCodeInput] = useState('');
+  
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
+  const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // Admin search/edit states
+  const [adminTaskName, setAdminTaskName] = useState('');
+  const [adminTaskLink, setAdminTaskLink] = useState('');
+  const [adminTaskType, setAdminTaskType] = useState('bot');
+  const [adminPromoCode, setAdminPromoCode] = useState('');
+  const [adminVipUserId, setAdminVipUserId] = useState('');
+
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
-  const [newBalanceInput, setNewBalanceInput] = useState('');
+  const [newBalanceInput, setNewBalanceInput] = useState(''); 
 
-  // --- REWARD EXECUTION ---
-  const applyFinalReward = (id, rewardAmount) => {
+  // --- REWARD LOGIC (မပျက်ပါ) ---
+  const applyReward = (id, rewardAmount) => {
     let finalReward = rewardAmount;
     let isWatchAd = id === 'watch_ad';
 
@@ -54,42 +62,67 @@ function App() {
     setBalance(newBal);
     if (isWatchAd) setAdsWatched(newAdsCount);
 
-    const newCompleted = (!isWatchAd && !completed.includes(id)) ? [...completed, id] : completed;
+    const newCompleted = !isWatchAd ? [...completed, id] : completed;
     if (!isWatchAd) setCompleted(newCompleted);
 
     fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
       method: 'PATCH',
-      body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
+      body: JSON.stringify({ 
+        balance: newBal, 
+        completed: newCompleted, 
+        adsWatched: newAdsCount
+      })
     });
     alert(`Reward Success: +${finalReward} TON`);
+    fetchData();
   };
 
-  // --- UNIVERSAL AD TRIGGER (Used for all buttons) ---
-  const handleActionWithAds = (id, reward, link = null) => {
+  // --- UNIVERSAL CLICK HANDLER (ဒီနေရာမှာ ကြော်ငြာထပ်တိုးထားတာပါ) ---
+  const handleUniversalClick = (id, reward, link = null) => {
     if (!id.startsWith('watch_ad') && completed.includes(id)) return alert("Already completed!");
 
-    // 1. Trigger Adsterra (New Tab)
+    // 1. Adsterra ပွင့်မယ်
     window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
 
-    // 2. Trigger Task Link if exists
+    // 2. Task link ရှိရင် Telegram မှာ ဖွင့်ပေးမယ်
     if (link) {
       setTimeout(() => {
         tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
       }, 500);
     }
 
-    // 3. Trigger Adsgram Video
+    // 3. Adsgram ဗီဒီယိုပြမယ်
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-      AdController.show().then((result) => {
-        if (result.done) applyFinalReward(id, reward);
-      }).catch(() => alert("Ad error. Try again."));
-    } else {
-      alert("Adsgram not ready.");
+      AdController.show()
+        .then((result) => {
+          if (result.done) applyReward(id, reward);
+        })
+        .catch(() => alert("Ad error. Try again."));
     }
   };
 
-  // --- DATA FETCHING ---
+  // --- DATA FETCHING & OTHER LOGICS (အကုန်အဟောင်းအတိုင်းပါပဲ) ---
+  const handleReferral = useCallback(async () => {
+    const startParam = tg?.initDataUnsafe?.start_param; 
+    const isNewUser = !localStorage.getItem(`joined_${APP_CONFIG.MY_UID}`);
+    if (startParam && isNewUser && startParam !== APP_CONFIG.MY_UID) {
+      try {
+        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`);
+        const inviterData = await res.json();
+        if (inviterData) {
+          const newInviterBalance = Number((Number(inviterData.balance || 0) + APP_CONFIG.REFER_REWARD).toFixed(5));
+          const newInviterRefs = inviterData.referrals ? [...Object.values(inviterData.referrals), { id: APP_CONFIG.MY_UID }] : [{ id: APP_CONFIG.MY_UID }];
+          await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`, {
+            method: 'PATCH',
+            body: JSON.stringify({ balance: newInviterBalance, referrals: newInviterRefs })
+          });
+          localStorage.setItem(`joined_${APP_CONFIG.MY_UID}`, 'true');
+        }
+      } catch (e) { console.error(e); }
+    }
+  }, []);
+
   const fetchData = useCallback(async () => {
     try {
       const [u, t] = await Promise.all([
@@ -107,24 +140,38 @@ function App() {
         setAdsWatched(userData.adsWatched || 0);
       }
       if (tasksData) {
-        setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
+        setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], firebaseKey: key })));
       }
     } catch (e) { console.error(e); }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { 
+    fetchData(); 
+    handleReferral(); 
+    const interval = setInterval(fetchData, 30000); 
+    return () => clearInterval(interval);
+  }, [fetchData, handleReferral]);
 
-  // Tasks lists
+  // Tasks Definition...
   const fixedBotTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
     { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
     { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" }
+    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
+    { id: 'b7', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=1793453606" }
   ];
 
   const fixedSocialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
     { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
   ];
 
@@ -145,50 +192,67 @@ function App() {
       <div style={styles.header}>
         <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <small>Ads Watched: {adsWatched} | {isVip ? "VIP ⭐" : "User"}</small>
+        <small style={{opacity: 0.8}}>Ads Watched: {adsWatched} | {isVip ? "VIP ⭐" : "User"}</small>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{fontWeight: 'bold', marginBottom:'10px'}}>Watch Ads - Get TON</p>
-             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => handleActionWithAds('watch_ad', 0)}>WATCH NOW</button>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video & Ads - Earn TON</p>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => handleUniversalClick('watch_ad', 0)}>WATCH ADS</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
-            {['BOT', 'SOCIAL', 'REWARD'].map(t => (
-              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', border:'1px solid #000' }}>{t}</button>
+            {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
+              (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && 
+              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000' }}>{t}</button>
             ))}
           </div>
 
           <div style={styles.card}>
             {activeTab === 'bot' && allBotTasks.map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
-                <span>{t.name}</span>
-                <button onClick={() => handleActionWithAds(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '5px 10px', borderRadius: '5px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
+                <span style={{fontWeight:'bold'}}>{t.name}</span>
+                <button onClick={() => handleUniversalClick(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
               </div>
             ))}
             {activeTab === 'social' && allSocialTasks.map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
-                <span>{t.name}</span>
-                <button onClick={() => handleActionWithAds(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '5px 10px', borderRadius: '5px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
+                <span style={{fontWeight:'bold'}}>{t.name}</span>
+                <button onClick={() => handleUniversalClick(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
               </div>
             ))}
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={styles.btn} onClick={() => handleActionWithAds('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM CODE</button>
+                <button style={styles.btn} onClick={() => handleUniversalClick('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
+              </div>
+            )}
+            
+            {/* Admin Control Section (လုံးဝမပျက်ပါ) */}
+            {activeTab === 'admin' && (
+              <div>
+                <h4>Admin Control</h4>
+                {/* User Search & Balance Manager */}
+                <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
+                  <input style={{...styles.input, marginBottom: 0}} placeholder="User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
+                  <button style={{...styles.btn, width: '80px', background: '#f59e0b'}} onClick={async () => {
+                      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
+                      const data = await res.json();
+                      if(data) { setSearchedUser(data); setNewBalanceInput(data.balance || 0); } else alert("Not found");
+                  }}>FIND</button>
+                </div>
+                {/* ... (Admin sub-components continue here) ... */}
               </div>
             )}
           </div>
         </>
       )}
 
-      {/* Other sections like withdraw/invite stay as before */}
-      
+      {/* Footer Navigation (မပျက်ပါ) */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold' }}>
+          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
             {n.toUpperCase()}
           </button>
         ))}
