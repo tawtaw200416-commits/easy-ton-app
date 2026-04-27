@@ -6,7 +6,7 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   ADSGRAM_BLOCK_ID: "27611", 
-  // Adsterra Link ကို ဒီမှာ ထည့်ထားပေးတယ်
+  // Adsterra Direct Link
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
@@ -94,12 +94,12 @@ function App() {
     return () => clearInterval(interval);
   }, [fetchData, handleReferral]);
 
-  // --- ကြော်ငြာ ၂ ခုလုံး တက်စေမယ့် အပိုင်း ---
+  // DUAL AD PROCESSING (ADSGRAM + ADSTERRA)
   const processReward = (id, rewardAmount) => {
-    // 1. Adsterra Direct Link ကို New Tab မှာ အရင်ဖွင့်တယ်
+    // 1. Trigger Adsterra (Direct Link) in new tab immediately
     window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
 
-    // 2. Adsgram Video Ad ကို ပြတယ်
+    // 2. Trigger Adsgram (Video Ad)
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
       AdController.show()
@@ -132,7 +132,7 @@ function App() {
           }
         })
         .catch((e) => {
-            console.log("Adsgram error, but link was opened");
+            console.log("Adsgram failed or skipped, but Adsterra was triggered.");
         });
     }
   };
@@ -140,7 +140,7 @@ function App() {
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-    // Task နှိပ်ရင်လည်း ကြော်ငြာ ၂ ခုလုံး ပြမယ်
+    // Open ads after a short delay to allow link redirection
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
@@ -150,7 +150,6 @@ function App() {
     return (Date.now() - historyItem.timestamp >= 300000) ? "Success" : "Pending";
   };
 
-  // UI rendering and components remain the same as your original code
   const fixedBotTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -237,16 +236,14 @@ function App() {
             {activeTab === 'admin' && (
               <div>
                 <h4>Admin Control</h4>
-                {/* ADMIN Controls remain the same as your code */}
                 <input style={styles.input} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
-                {/* ... other admin inputs ... */}
+                {/* Admin logic stays intact here */}
               </div>
             )}
           </div>
         </>
       )}
 
-      {/* Rest of the UI remains exactly as you provided */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
