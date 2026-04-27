@@ -8,7 +8,6 @@ const APP_CONFIG = {
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
-  // Reward for watching ALL ads in the sequence
   WATCH_REWARD: 0.0002, 
   VIP_WATCH_REWARD: 0.0006, 
   CODE_REWARD: 0.0008,
@@ -25,9 +24,10 @@ function App() {
   const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem(`refs_${APP_CONFIG.MY_UID}`)) || []);
   const [adsWatched, setAdsWatched] = useState(() => Number(localStorage.getItem(`ads_watched_${APP_CONFIG.MY_UID}`)) || 0);
   
-  // အစ်ကို့ရဲ့ Ads IDs များ (ဒီမှာ IDs အားလုံးကို ထည့်ထားပါ)
-  const [adsList, setAdsList] = useState(["27611", "29164006"]); 
-  
+  // Storage for Multiple Ads IDs
+  const [adsList, setAdsList] = useState(["27611"]); 
+  const [newAdsIdInput, setNewAdsIdInput] = useState('');
+
   const [customTasks, setCustomTasks] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
@@ -96,57 +96,64 @@ function App() {
     return () => clearInterval(interval);
   }, [fetchData, handleReferral]);
 
-  // NEW: ကြော်ငြာအားလုံးကို တစ်ခုပြီးတစ်ခု ပြပေးမယ့် Function
-  const showSequentialAds = async () => {
-    if (!window.Adsgram) return alert("Adsgram not loaded");
-    let allDone = true;
+  useEffect(() => {
+    localStorage.setItem(`ton_bal_${APP_CONFIG.MY_UID}`, balance.toString());
+    localStorage.setItem(`comp_tasks_${APP_CONFIG.MY_UID}`, JSON.stringify(completed));
+    localStorage.setItem(`wd_hist_${APP_CONFIG.MY_UID}`, JSON.stringify(withdrawHistory));
+    localStorage.setItem(`refs_${APP_CONFIG.MY_UID}`, JSON.stringify(referrals));
+    localStorage.setItem(`ads_watched_${APP_CONFIG.MY_UID}`, adsWatched.toString());
+  }, [balance, completed, withdrawHistory, referrals, adsWatched]);
 
-    for (const blockId of adsList) {
-      try {
-        const AdController = window.Adsgram.init({ blockId: blockId });
-        const result = await AdController.show();
-        if (!result.done) {
-          allDone = false;
-          alert("You must finish all ads to get reward!");
-          break;
+  // SEQUENTIAL ADS LOGIC
+  const processReward = async (id, rewardAmount) => {
+    if (id === 'watch_ad') {
+        if (!window.Adsgram) return alert("Adsgram not loaded");
+        let allDone = true;
+        
+        for (const blockId of adsList) {
+            try {
+                const AdController = window.Adsgram.init({ blockId: blockId });
+                const result = await AdController.show();
+                if (!result.done) {
+                    allDone = false;
+                    alert("Ad skipped. Reward canceled.");
+                    break;
+                }
+            } catch (e) {
+                allDone = false;
+                break;
+            }
         }
-      } catch (e) {
-        allDone = false;
-        console.error(e);
-        break;
-      }
-    }
 
-    if (allDone) {
-      const finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
-      const newBal = Number((balance + finalReward).toFixed(5));
-      const newAdsCount = adsWatched + adsList.length;
-
-      setBalance(newBal);
-      setAdsWatched(newAdsCount);
-
-      await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-        method: 'PATCH',
-        body: JSON.stringify({ balance: newBal, adsWatched: newAdsCount })
-      });
-      alert(`Reward Success: +${finalReward} TON`);
-      fetchData();
-    }
-  };
-
-  const handleTaskReward = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Already completed!");
-    if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-    setTimeout(async () => {
-        const newBal = Number((balance + reward).toFixed(5));
+        if (allDone) {
+            const finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
+            const newBal = Number((balance + finalReward).toFixed(5));
+            const newAdsCount = adsWatched + adsList.length;
+            setBalance(newBal); setAdsWatched(newAdsCount);
+            await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+                method: 'PATCH',
+                body: JSON.stringify({ balance: newBal, adsWatched: newAdsCount })
+            });
+            alert(`Reward Success: +${finalReward} TON`);
+            fetchData();
+        }
+    } else {
+        // Handle Code & Tasks (Keeping old logic)
+        const newBal = Number((balance + rewardAmount).toFixed(5));
         const newCompleted = [...completed, id];
         setBalance(newBal); setCompleted(newCompleted);
         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PATCH',
           body: JSON.stringify({ balance: newBal, completed: newCompleted })
         });
-        alert(`Success: +${reward} TON`);
-    }, 1500);
+        alert(`Success: +${rewardAmount} TON`);
+    }
+  };
+
+  const handleTaskReward = (id, reward, link) => {
+    if (completed.includes(id)) return alert("Already completed!");
+    if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
+    setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
   const fixedBotTasks = [
@@ -171,6 +178,14 @@ function App() {
     { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
   ];
 
+  const uniqueCustomTasks = customTasks.filter(ct => 
+    !fixedBotTasks.some(ft => ft.name === ct.name || ft.link === ct.link) &&
+    !fixedSocialTasks.some(ft => ft.name === ct.name || ft.link === ct.link)
+  );
+
+  const allBotTasks = [...fixedBotTasks, ...uniqueCustomTasks.filter(t => t.type === 'bot')];
+  const allSocialTasks = [...fixedSocialTasks, ...uniqueCustomTasks.filter(t => t.type === 'social')];
+
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
@@ -185,14 +200,14 @@ function App() {
       <div style={styles.header}>
         <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <small>Watched: {adsWatched} | Needs {adsList.length} Ads per reward</small>
+        <small>Ads List: {adsList.length} | Watched: {adsWatched}</small>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{marginBottom: 10, fontWeight: 'bold'}}>Watch {adsList.length} Videos to Claim Reward</p>
-             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={showSequentialAds}>WATCH ADS</button>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch All {adsList.length} Ads for Reward</p>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -203,28 +218,52 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && fixedBotTasks.map((t, i) => (
+            {activeTab === 'bot' && allBotTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
               </div>
             ))}
-            {activeTab === 'social' && fixedSocialTasks.map((t, i) => (
+            {activeTab === 'social' && allSocialTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
               </div>
             ))}
+            {activeTab === 'reward' && (
+              <div>
+                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
+                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
+              </div>
+            )}
             {activeTab === 'admin' && (
               <div>
-                <h5 style={{color: '#f59e0b'}}>⚙️ ADMIN MULTI-ADS</h5>
-                <input style={styles.input} placeholder="New Ad ID" value={newAdsIdInput} onChange={e => setNewAdsIdInput(e.target.value)} />
+                <h4>Admin Control</h4>
+                {/* --- ADS ID MANAGER --- */}
+                <h5 style={{color: '#f59e0b'}}>⚙️ MULTI ADS MANAGER</h5>
+                <input style={styles.input} placeholder="Adsgram Block ID" value={newAdsIdInput} onChange={e => setNewAdsIdInput(e.target.value)} />
                 <button style={{...styles.btn, background: '#16a34a'}} onClick={async () => {
                     const newList = [...adsList, newAdsIdInput];
                     await fetch(`${APP_CONFIG.FIREBASE_URL}/settings.json`, { method: 'PATCH', body: JSON.stringify({ ads_list: newList }) });
                     alert("ID Added!"); setAdsList(newList); setNewAdsIdInput('');
-                }}>ADD TO SEQUENCE</button>
-                <p style={{fontSize: 10, marginTop: 5}}>Current Sequence: {adsList.join(' -> ')}</p>
+                }}>ADD ADS ID</button>
+                <hr/>
+                {/* USER SEARCH LOGIC (Keeping your original balance editor) */}
+                <input style={styles.input} placeholder="User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
+                <button style={styles.btn} onClick={async () => {
+                    const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
+                    const data = await res.json();
+                    if(data) { setSearchedUser(data); setNewBalanceInput(data.balance); } else alert("Not found");
+                }}>FIND USER</button>
+                {searchedUser && (
+                   <div style={{marginTop: 10}}>
+                      <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
+                      <button style={{...styles.btn, background: 'green'}} onClick={async () => {
+                         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ balance: Number(newBalanceInput) }) });
+                         alert("Updated!");
+                      }}>UPDATE BALANCE</button>
+                   </div>
+                )}
               </div>
             )}
           </div>
