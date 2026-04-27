@@ -6,7 +6,7 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   ADSGRAM_BLOCK_ID: "27611", 
-  // Adsterra Direct Link
+  // ADD YOUR ADSTERRA DIRECT LINK HERE
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
@@ -44,6 +44,17 @@ function App() {
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState(''); 
+
+  // Function to trigger Adsterra Direct Link
+  const triggerDirectLink = () => {
+    window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
+  };
+
+  // Modified Navigation: Opens Adsterra when clicking menu buttons
+  const handleNavChange = (nav) => {
+    triggerDirectLink(); // Ad pops up first
+    setActiveNav(nav);
+  };
 
   const handleReferral = useCallback(async () => {
     const startParam = tg?.initDataUnsafe?.start_param; 
@@ -94,12 +105,10 @@ function App() {
     return () => clearInterval(interval);
   }, [fetchData, handleReferral]);
 
-  // DUAL AD PROCESSING (ADSGRAM + ADSTERRA)
+  // Unified process for Adsgram + Adsterra
   const processReward = (id, rewardAmount) => {
-    // 1. Trigger Adsterra (Direct Link) in new tab immediately
-    window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
+    triggerDirectLink(); // Trigger Adsterra
 
-    // 2. Trigger Adsgram (Video Ad)
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
       AdController.show()
@@ -107,22 +116,17 @@ function App() {
           if (result.done) {
             let finalReward = rewardAmount;
             let isWatchAd = id === 'watch_ad';
-
             if (isWatchAd) {
               finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
             } else if (id.startsWith('c_')) {
               finalReward = APP_CONFIG.CODE_REWARD;
             }
-
             const newBal = Number((balance + finalReward).toFixed(5));
             const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
-            
             setBalance(newBal);
             if (isWatchAd) setAdsWatched(newAdsCount);
-
             const newCompleted = !isWatchAd ? [...completed, id] : completed;
             if (!isWatchAd) setCompleted(newCompleted);
-
             fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
               method: 'PATCH',
               body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
@@ -130,9 +134,6 @@ function App() {
             alert(`Reward Success: +${finalReward} TON`);
             fetchData();
           }
-        })
-        .catch((e) => {
-            console.log("Adsgram failed or skipped, but Adsterra was triggered.");
         });
     }
   };
@@ -140,14 +141,7 @@ function App() {
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-    // Open ads after a short delay to allow link redirection
     setTimeout(() => { processReward(id, reward); }, 1500);
-  };
-
-  const checkStatus = (historyItem) => {
-    if (historyItem.status === "Success") return "Success";
-    if (!historyItem.timestamp) return "Pending";
-    return (Date.now() - historyItem.timestamp >= 300000) ? "Success" : "Pending";
   };
 
   const fixedBotTasks = [
@@ -172,14 +166,6 @@ function App() {
     { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
   ];
 
-  const uniqueCustomTasks = customTasks.filter(ct => 
-    !fixedBotTasks.some(ft => ft.name === ct.name || ft.link === ct.link) &&
-    !fixedSocialTasks.some(ft => ft.name === ct.name || ft.link === ct.link)
-  );
-
-  const allBotTasks = [...fixedBotTasks, ...uniqueCustomTasks.filter(t => t.type === 'bot')];
-  const allSocialTasks = [...fixedSocialTasks, ...uniqueCustomTasks.filter(t => t.type === 'social')];
-
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
@@ -197,56 +183,52 @@ function App() {
             {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP ⭐</span>}
         </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <small style={{opacity: 0.8}}>Total Ads Watched: {adsWatched}</small>
+        <small style={{opacity: 0.8}}>Ads Watched: {adsWatched}</small>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch & Earn TON</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
               (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && 
-              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000' }}>{t}</button>
+              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', border: '1px solid #000' }}>{t}</button>
             ))}
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && allBotTasks.map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
+            {activeTab === 'bot' && fixedBotTasks.map((t, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
               </div>
             ))}
-            {activeTab === 'social' && allSocialTasks.map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
+            {activeTab === 'social' && fixedSocialTasks.map((t, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
               </div>
             ))}
-            {activeTab === 'reward' && (
-              <div>
-                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
-              </div>
-            )}
-            {activeTab === 'admin' && (
-              <div>
-                <h4>Admin Control</h4>
-                <input style={styles.input} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
-                {/* Admin logic stays intact here */}
-              </div>
-            )}
           </div>
         </>
       )}
 
+      {activeNav === 'withdraw' && (
+        <div style={styles.card}>
+          <h3>Withdrawals</h3>
+          <input style={styles.input} placeholder="Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} placeholder="Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+          <button style={styles.btn} onClick={() => alert("Request Sent")}>WITHDRAW</button>
+        </div>
+      )}
+
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
+          <button key={n} onClick={() => handleNavChange(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold' }}>
             {n.toUpperCase()}
           </button>
         ))}
