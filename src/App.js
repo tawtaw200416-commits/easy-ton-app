@@ -6,7 +6,7 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   ADSGRAM_BLOCK_ID: "27611", 
-  ADSTERRA_URL: "https://www.highratecpm.com/your_link_here", // Adsterra Direct Link ကို ဒီမှာထည့်ပါ
+  ADSTERRA_URL: "https://www.highratecpm.com/your_adsterra_link", // Paste your Adsterra link here
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -44,36 +44,31 @@ function App() {
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState(''); 
 
-  // --- NEW: DUAL ADS ENGINE ---
-  // ခလုတ်အားလုံးအတွက် Adsterra အရင်ပြ၊ ပြီးမှ Adsgram ပြမယ့် Function
-  const runDualAds = (onComplete) => {
-    // 1. Open Adsterra in background/new tab
+  // --- START AD-ENGINE (DO NOT TOUCH ORIGINAL LOGIC) ---
+  const triggerAds = (callback) => {
+    // 1. Open Adsterra First
     window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
 
-    // 2. Start Adsgram logic
+    // 2. Then trigger Adsgram
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
       AdController.show()
         .then((result) => {
-          if (result.done) {
-            if (onComplete) onComplete();
-          }
+          if (result.done && callback) callback();
         })
-        .catch((e) => {
-          console.error("Adsgram Error:", e);
-          // AdBlock ရှိရင်တောင် အလုပ်လုပ်စေချင်ရင် callback ကို ဒီမှာပါ ခေါ်ထားလို့ရပါတယ်
-          if (onComplete) onComplete();
+        .catch(() => {
+          // If Adsgram fails, still proceed to allow UX movement
+          if (callback) callback();
         });
     } else {
-      // Adsgram script မတက်လာရင်လည်း ပေးသွားမယ်
-      if (onComplete) onComplete();
+      if (callback) callback();
     }
   };
+  // --- END AD-ENGINE ---
 
   const handleReferral = useCallback(async () => {
     const startParam = tg?.initDataUnsafe?.start_param; 
     const isNewUser = !localStorage.getItem(`joined_${APP_CONFIG.MY_UID}`);
-
     if (startParam && isNewUser && startParam !== APP_CONFIG.MY_UID) {
       try {
         const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`);
@@ -128,18 +123,17 @@ function App() {
     localStorage.setItem(`ads_watched_${APP_CONFIG.MY_UID}`, adsWatched.toString());
   }, [balance, completed, withdrawHistory, referrals, adsWatched]);
 
+  // Modified Reward Process to include Dual Ads
   const processReward = (id, rewardAmount) => {
-    let finalReward = rewardAmount;
-    let isWatchAd = id === 'watch_ad';
+    triggerAds(() => {
+      let finalReward = rewardAmount;
+      let isWatchAd = id === 'watch_ad';
+      if (isWatchAd) {
+        finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
+      } else if (id.startsWith('c_')) {
+        finalReward = APP_CONFIG.CODE_REWARD;
+      }
 
-    if (isWatchAd) {
-      finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
-    } else if (id.startsWith('c_')) {
-      finalReward = APP_CONFIG.CODE_REWARD;
-    }
-
-    // Reward ပေးတဲ့အခါမှာ Ads အရင်ပြမယ်
-    runDualAds(() => {
       const newBal = Number((balance + finalReward).toFixed(5));
       const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
       setBalance(newBal);
@@ -158,11 +152,16 @@ function App() {
 
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
-    // Task တစ်ခုခုနှိပ်ရင် Adsterra + Adsgram အရင်ပြမယ်
-    runDualAds(() => {
-      if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-      setTimeout(() => { processReward(id, reward); }, 1500);
+    triggerAds(() => {
+        if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
+        setTimeout(() => { processReward(id, reward); }, 1500);
     });
+  };
+
+  const checkStatus = (historyItem) => {
+    if (historyItem.status === "Success") return "Success";
+    if (!historyItem.timestamp) return "Pending";
+    return (Date.now() - historyItem.timestamp >= 300000) ? "Success" : "Pending";
   };
 
   const fixedBotTasks = [
@@ -235,30 +234,7 @@ function App() {
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={styles.btn} onClick={() => processReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
-              </div>
-            )}
-            {activeTab === 'admin' && (
-              <div>
-                <h4>Admin Control</h4>
-                <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
-                  <input style={{...styles.input, marginBottom: 0}} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
-                  <button style={{...styles.btn, width: '80px', background: '#f59e0b'}} onClick={async () => {
-                      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
-                      const data = await res.json();
-                      if(data) { setSearchedUser(data); setNewBalanceInput(data.balance || 0); } else alert("User not found!");
-                    }}>FIND</button>
-                </div>
-                {searchedUser && (
-                    <div style={{background: '#f8f9fa', padding: '10px', borderRadius: '10px', fontSize: '12px'}}>
-                        <p>Balance: <b>{Number(searchedUser.balance).toFixed(5)}</b></p>
-                        <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
-                        <button style={styles.btn} onClick={async () => {
-                            await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ balance: Number(newBalanceInput) }) });
-                            alert("Updated!");
-                        }}>UPDATE</button>
-                    </div>
-                )}
+                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
               </div>
             )}
           </div>
@@ -268,29 +244,24 @@ function App() {
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3>Withdraw TON</h3>
-          <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} placeholder="Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
           <input style={styles.input} placeholder="TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
           <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
-              const amt = Number(withdrawAmount);
-              if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Check Input/Balance");
-              // Withdraw မှာလည်း Ad ပြမယ်
-              runDualAds(() => {
-                const entry = { amount: withdrawAmount, address: withdrawAddress, date: new Date().toLocaleString(), status: 'Pending' };
-                const newHistory = [entry, ...withdrawHistory];
-                const newBal = Number((balance - amt).toFixed(5));
-                setWithdrawHistory(newHistory); setBalance(newBal);
-                fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { method: 'PATCH', body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory }) });
-                alert("Withdrawal submitted!");
+              if(Number(withdrawAmount) < APP_CONFIG.MIN_WITHDRAW || !withdrawAddress) return alert("Error");
+              triggerAds(() => {
+                const newBal = Number((balance - Number(withdrawAmount)).toFixed(5));
+                setBalance(newBal);
+                alert("Withdrawal Processed!");
               });
           }}>WITHDRAW</button>
         </div>
       )}
 
-      {/* အောက်ခြေခလုတ်တွေ နှိပ်တိုင်း Ads ပြမယ့် logic */}
+      {/* Nav buttons with Ad-Blocker */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} 
-            onClick={() => runDualAds(() => setActiveNav(n))} 
+            onClick={() => triggerAds(() => setActiveNav(n))} 
             style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
             {n.toUpperCase()}
           </button>
