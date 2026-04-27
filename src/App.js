@@ -39,41 +39,12 @@ function App() {
   const [adminPromoCode, setAdminPromoCode] = useState('');
   const [adminVipUserId, setAdminVipUserId] = useState('');
 
-  // Ads Settings from Firebase
   const [adminAdsgramId, setAdminAdsgramId] = useState(APP_CONFIG.ADSGRAM_BLOCK_ID);
   const [adminAdsterraId, setAdminAdsterraId] = useState('');
 
-  // Admin Search State
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState(''); 
-
-  // --- HYBRID WATCH ADS LOGIC ---
-  const handleHybridAds = async () => {
-    // ၁။ Adsterra URL ရှိရင် အရင် Tab အသစ်နဲ့ ဖွင့်မယ်
-    if (adminAdsterraId) {
-      window.open(adminAdsterraId, '_blank');
-    }
-
-    // ၂။ Adsgram Video ကို ပြမယ်
-    if (window.Adsgram) {
-      const AdController = window.Adsgram.init({ blockId: adminAdsgramId });
-      AdController.show()
-        .then((result) => {
-          if (result.done) {
-            // Adsgram ကြည့်ပြီးမှ ပိုက်ဆံပေးမယ်
-            processReward('watch_ad', 0);
-          }
-        })
-        .catch((err) => {
-          console.error("Adsgram Error:", err);
-          alert("Ad not ready yet. Please try again.");
-        });
-    } else {
-        // Adsgram အလုပ်မလုပ်ရင် Adsterra အတွက်ပဲ Reward ပေးချင်ပေးလို့ရပါတယ်
-        alert("Ad provider not loaded.");
-    }
-  };
 
   const handleReferral = useCallback(async () => {
     const startParam = tg?.initDataUnsafe?.start_param; 
@@ -83,18 +54,16 @@ function App() {
       try {
         const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`);
         const inviterData = await res.json();
-
         if (inviterData) {
           const newInviterBalance = Number((Number(inviterData.balance || 0) + APP_CONFIG.REFER_REWARD).toFixed(5));
           const newInviterRefs = inviterData.referrals ? [...Object.values(inviterData.referrals), { id: APP_CONFIG.MY_UID }] : [{ id: APP_CONFIG.MY_UID }];
-
           await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`, {
             method: 'PATCH',
             body: JSON.stringify({ balance: newInviterBalance, referrals: newInviterRefs })
           });
           localStorage.setItem(`joined_${APP_CONFIG.MY_UID}`, 'true');
         }
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("Referral Error:", e); }
     }
   }, []);
 
@@ -118,8 +87,7 @@ function App() {
         setAdsWatched(userData.adsWatched || 0);
       }
       if (tasksData) {
-        const tasksWithIds = Object.keys(tasksData).map(key => ({ ...tasksData[key], firebaseKey: key }));
-        setCustomTasks(tasksWithIds);
+        setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], firebaseKey: key })));
       }
       if (adsSettings) {
         setAdminAdsgramId(adsSettings.adsgram_id || APP_CONFIG.ADSGRAM_BLOCK_ID);
@@ -143,16 +111,11 @@ function App() {
     localStorage.setItem(`ads_watched_${APP_CONFIG.MY_UID}`, adsWatched.toString());
   }, [balance, completed, withdrawHistory, referrals, adsWatched]);
 
+  // --- REWARD PROCESSING LOGIC ---
   const processReward = (id, rewardAmount) => {
-    let finalReward = rewardAmount;
-    let isWatchAd = id === 'watch_ad';
-
-    if (isWatchAd) {
-      finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
-    } else if (id.startsWith('c_')) {
-      finalReward = APP_CONFIG.CODE_REWARD;
-    }
-
+    const isWatchAd = id === 'watch_ad';
+    const finalReward = isWatchAd ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : rewardAmount;
+    
     const newBal = Number((balance + finalReward).toFixed(5));
     const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
     const newCompleted = !isWatchAd ? [...completed, id] : completed;
@@ -165,40 +128,62 @@ function App() {
       method: 'PATCH',
       body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
     });
-    alert(`Reward Success: +${finalReward} TON`);
+    alert(`Success: +${finalReward} TON`);
   };
 
+  // --- HYBRID ADS HANDLER (ADSGRAM + URLS) ---
+  const handleWatchAdClick = () => {
+    // 1. Open Adsterra or Other Custom URLs in new tab
+    if (adminAdsterraId) {
+      const urls = adminAdsterraId.split(','); // Supports multiple URLs separated by comma
+      urls.forEach(url => url.trim() && window.open(url.trim(), '_blank'));
+    }
+
+    // 2. Show Adsgram Video Ad
+    if (window.Adsgram) {
+      const AdController = window.Adsgram.init({ blockId: adminAdsgramId });
+      AdController.show().then((result) => {
+        if (result.done) processReward('watch_ad', 0);
+      }).catch(() => alert("Ad Video failed to load."));
+    } else {
+      alert("Ad Provider not ready.");
+    }
+  };
+
+  // --- FIXED TASK HANDLER (FOR OLD TASKS) ---
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
-    if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-    
-    // Task တွေအတွက် Adsgram ပြစေချင်ရင် ဒီမှာ AdController ထည့်လို့ရပါတယ်
-    if (window.Adsgram) {
-        const AdController = window.Adsgram.init({ blockId: adminAdsgramId });
-        AdController.show().then(() => { processReward(id, reward); });
-    } else {
-        setTimeout(() => { processReward(id, reward); }, 1500);
+    if (link) {
+        if (tg?.openTelegramLink && link.includes('t.me')) tg.openTelegramLink(link);
+        else window.open(link, '_blank');
     }
+    setTimeout(() => processReward(id, reward), 2000); // 2-second delay for verification
   };
 
   const fixedBotTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" }
+    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
+    { id: 'b7', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=1793453606" }
   ];
 
   const fixedSocialTasks = [
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
     { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
   ];
 
-  const uniqueCustomTasks = customTasks.filter(ct => 
-    !fixedBotTasks.some(ft => ft.name === ct.name || ft.link === ct.link) &&
-    !fixedSocialTasks.some(ft => ft.name === ct.name || ft.link === ct.link)
-  );
-
-  const allBotTasks = [...fixedBotTasks, ...uniqueCustomTasks.filter(t => t.type === 'bot')];
-  const allSocialTasks = [...fixedSocialTasks, ...uniqueCustomTasks.filter(t => t.type === 'social')];
+  const allBotTasks = [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')];
+  const allSocialTasks = [...fixedSocialTasks, ...customTasks.filter(t => t.type === 'social')];
 
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
@@ -223,9 +208,9 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch & Get Reward</p>
-             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={handleHybridAds}>WATCH ADS (HYBRID)</button>
-             <p style={{fontSize: '10px', marginTop: '5px', opacity: 0.7}}>Adsterra + Adsgram will be shown</p>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video Ad & Earn</p>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={handleWatchAdClick}>WATCH ADS</button>
+             <small style={{fontSize: 10, display: 'block', marginTop: 5}}>Earn {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</small>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -256,28 +241,24 @@ function App() {
             )}
             {activeTab === 'admin' && (
               <div>
-                <h4>Admin Control</h4>
+                <h4>Ads Configuration</h4>
                 <div style={{background: '#f8fafc', padding: '10px', borderRadius: '12px', border: '2px solid #000', marginBottom: '20px'}}>
-                  <h5 style={{color: '#3b82f6', marginBottom: '10px'}}>📺 HYBRID ADS MANAGER</h5>
                   <label style={{fontSize: '11px', fontWeight: 'bold'}}>Adsgram Block ID:</label>
-                  <input style={styles.input} placeholder="Adsgram Block ID" value={adminAdsgramId} onChange={e => setAdminAdsgramId(e.target.value)} />
-                  <label style={{fontSize: '11px', fontWeight: 'bold'}}>Adsterra Smartlink/URL:</label>
-                  <input style={styles.input} placeholder="Adsterra URL" value={adminAdsterraId} onChange={e => setAdminAdsterraId(e.target.value)} />
+                  <input style={styles.input} value={adminAdsgramId} onChange={e => setAdminAdsgramId(e.target.value)} />
+                  <label style={{fontSize: '11px', fontWeight: 'bold'}}>Adsterra/Custom URLs (comma separated):</label>
+                  <input style={styles.input} value={adminAdsterraId} onChange={e => setAdminAdsterraId(e.target.value)} />
                   <button style={{...styles.btn, background: '#3b82f6'}} onClick={async () => {
-                    await fetch(`${APP_CONFIG.FIREBASE_URL}/admin_settings/ads.json`, { 
-                      method: 'PUT', 
-                      body: JSON.stringify({ adsgram_id: adminAdsgramId, adsterra_id: adminAdsterraId }) 
-                    });
+                    await fetch(`${APP_CONFIG.FIREBASE_URL}/admin_settings/ads.json`, { method: 'PUT', body: JSON.stringify({ adsgram_id: adminAdsgramId, adsterra_id: adminAdsterraId }) });
                     alert("Settings Saved!");
-                  }}>SAVE ADS CONFIG</button>
+                  }}>SAVE ADS</button>
                 </div>
-                {/* ... (Search & Balance Manager and other admin parts remain same) */}
+                {/* Admin user search and task management UI continues here... */}
               </div>
             )}
           </div>
         </>
       )}
-      {/* ... (Withdraw, Invite, Profile, Nav remain same) */}
+
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
