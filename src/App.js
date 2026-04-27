@@ -6,7 +6,7 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   ADSGRAM_BLOCK_ID: "27611", 
-  ADSTERRA_URL: "https://www.highratecpm.com/your_adsterra_link", // Paste your Adsterra link here
+  ADSTERRA_URL: "https://www.highratecpm.com/your_adsterra_link", // Adsterra Link ဒီမှာထည့်ပါ
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -44,28 +44,35 @@ function App() {
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState(''); 
 
-  // --- START AD-ENGINE (DO NOT TOUCH ORIGINAL LOGIC) ---
-  const triggerAds = (callback) => {
-    // 1. Open Adsterra First
+  // ==========================================
+  // GLOBAL AD CONTROLLER (လုံးဝ အသစ်ထည့်ထားသော Logic)
+  // ==========================================
+  const runDualAds = (finalTask) => {
+    // 1. Adsterra ပွင့်မယ်
     window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
 
-    // 2. Then trigger Adsgram
+    // 2. ပြီးရင် Adsgram ပြမယ်
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
       AdController.show()
         .then((result) => {
-          if (result.done && callback) callback();
+          if (result.done) {
+            // ကြော်ငြာကြည့်ပြီးမှ မူရင်းလုပ်ရမယ့် အလုပ် (Reward ပေးတာ/Page ပြောင်းတာ) လုပ်မယ်
+            if (finalTask) finalTask();
+          }
         })
         .catch(() => {
-          // If Adsgram fails, still proceed to allow UX movement
-          if (callback) callback();
+          // Adsgram မှာ error တက်ရင်လည်း app အလုပ်ဆက်လုပ်အောင် callback ခေါ်ပေးမယ်
+          if (finalTask) finalTask();
         });
     } else {
-      if (callback) callback();
+      if (finalTask) finalTask();
     }
   };
-  // --- END AD-ENGINE ---
 
+  // ==========================================
+  // ORIGINAL FUNCTIONS (မူရင်းအတိုင်း မထိခိုက်စေရ)
+  // ==========================================
   const handleReferral = useCallback(async () => {
     const startParam = tg?.initDataUnsafe?.start_param; 
     const isNewUser = !localStorage.getItem(`joined_${APP_CONFIG.MY_UID}`);
@@ -123,45 +130,40 @@ function App() {
     localStorage.setItem(`ads_watched_${APP_CONFIG.MY_UID}`, adsWatched.toString());
   }, [balance, completed, withdrawHistory, referrals, adsWatched]);
 
-  // Modified Reward Process to include Dual Ads
-  const processReward = (id, rewardAmount) => {
-    triggerAds(() => {
-      let finalReward = rewardAmount;
-      let isWatchAd = id === 'watch_ad';
-      if (isWatchAd) {
-        finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
-      } else if (id.startsWith('c_')) {
-        finalReward = APP_CONFIG.CODE_REWARD;
-      }
-
-      const newBal = Number((balance + finalReward).toFixed(5));
-      const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
-      setBalance(newBal);
-      if (isWatchAd) setAdsWatched(newAdsCount);
-      const newCompleted = !isWatchAd ? [...completed, id] : completed;
-      if (!isWatchAd) setCompleted(newCompleted);
-
-      fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-        method: 'PATCH',
-        body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
-      });
-      alert(`Reward Success: +${finalReward} TON`);
-      fetchData();
-    });
-  };
-
-  const handleTaskReward = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Already completed!");
-    triggerAds(() => {
-        if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-        setTimeout(() => { processReward(id, reward); }, 1500);
-    });
-  };
-
   const checkStatus = (historyItem) => {
     if (historyItem.status === "Success") return "Success";
     if (!historyItem.timestamp) return "Pending";
     return (Date.now() - historyItem.timestamp >= 300000) ? "Success" : "Pending";
+  };
+
+  // မူရင်း Reward ပေးတဲ့ function ကို runDualAds ထဲ ထည့်သုံးထားပါတယ်
+  const processReward = (id, rewardAmount) => {
+    const isWatchAd = id === 'watch_ad';
+    let finalReward = isWatchAd ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : rewardAmount;
+    if (id.startsWith('c_')) finalReward = APP_CONFIG.CODE_REWARD;
+
+    const newBal = Number((balance + finalReward).toFixed(5));
+    const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
+    setBalance(newBal);
+    if (isWatchAd) setAdsWatched(newAdsCount);
+    const newCompleted = !isWatchAd ? [...completed, id] : completed;
+    if (!isWatchAd) setCompleted(newCompleted);
+
+    fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+      method: 'PATCH',
+      body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
+    });
+    alert(`Reward Success: +${finalReward} TON`);
+    fetchData();
+  };
+
+  const handleTaskReward = (id, reward, link) => {
+    if (completed.includes(id)) return alert("Already completed!");
+    // Ads အရင်ကြည့်မယ်
+    runDualAds(() => {
+        if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
+        setTimeout(() => { processReward(id, reward); }, 1500);
+    });
   };
 
   const fixedBotTasks = [
@@ -178,6 +180,11 @@ function App() {
     { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
     { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
     { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
     { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
   ];
 
@@ -208,12 +215,11 @@ function App() {
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
              <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
-             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => runDualAds(() => processReward('watch_ad', 0))}>WATCH ADS</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
-            {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
-              (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && 
+            {['BOT', 'SOCIAL', 'REWARD'].map(t => (
               <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000' }}>{t}</button>
             ))}
           </div>
@@ -247,22 +253,20 @@ function App() {
           <input style={styles.input} placeholder="Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
           <input style={styles.input} placeholder="TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
           <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
-              if(Number(withdrawAmount) < APP_CONFIG.MIN_WITHDRAW || !withdrawAddress) return alert("Error");
-              triggerAds(() => {
+              if(Number(withdrawAmount) < APP_CONFIG.MIN_WITHDRAW || !withdrawAddress) return alert("Check Input");
+              runDualAds(() => {
                 const newBal = Number((balance - Number(withdrawAmount)).toFixed(5));
                 setBalance(newBal);
-                alert("Withdrawal Processed!");
+                alert("Withdraw success.");
               });
           }}>WITHDRAW</button>
         </div>
       )}
 
-      {/* Nav buttons with Ad-Blocker */}
+      {/* အောက်ခြေ Nav ခလုတ်တွေကိုပါ Ads ခံထားပါတယ် */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} 
-            onClick={() => triggerAds(() => setActiveNav(n))} 
-            style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
+          <button key={n} onClick={() => runDualAds(() => setActiveNav(n))} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
             {n.toUpperCase()}
           </button>
         ))}
