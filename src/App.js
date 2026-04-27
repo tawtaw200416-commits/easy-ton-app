@@ -6,7 +6,8 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   ADSGRAM_BLOCK_ID: "27611", 
-  ADSTERRA_LINK: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec", // Added Adsterra
+  // Adsterra link added here
+  ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -40,7 +41,6 @@ function App() {
   const [adminPromoCode, setAdminPromoCode] = useState('');
   const [adminVipUserId, setAdminVipUserId] = useState('');
 
-  // Admin Search State
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState(''); 
@@ -131,48 +131,70 @@ function App() {
 
     if (isWatchAd) {
       finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
+      
+      // Step 1: Open Adsterra first
+      tg?.openLink ? tg.openLink(APP_CONFIG.ADSTERRA_URL) : window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
+
+      // Step 2: Open Adsgram after 1 second delay
+      setTimeout(() => {
+        if (window.Adsgram) {
+          const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
+          AdController.show()
+            .then((result) => {
+              if (result.done) {
+                const newBal = Number((balance + finalReward).toFixed(5));
+                const newAdsCount = adsWatched + 1;
+                
+                setBalance(newBal);
+                setAdsWatched(newAdsCount);
+
+                fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+                  method: 'PATCH',
+                  body: JSON.stringify({ 
+                    balance: newBal, 
+                    adsWatched: newAdsCount
+                  })
+                });
+                alert(`Reward Success: +${finalReward} TON`);
+                fetchData();
+              }
+            });
+        }
+      }, 1000);
+
     } else if (id.startsWith('c_')) {
       finalReward = APP_CONFIG.CODE_REWARD;
-    }
-
-    if (window.Adsgram) {
-      const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-      AdController.show()
-        .then((result) => {
-          if (result.done) {
-            // After Adsgram finishes, trigger Adsterra automatically
-            if (isWatchAd) {
-                tg?.openLink ? tg.openLink(APP_CONFIG.ADSTERRA_LINK) : window.open(APP_CONFIG.ADSTERRA_LINK, '_blank');
-            }
-
-            const newBal = Number((balance + finalReward).toFixed(5));
-            const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
-            
-            setBalance(newBal);
-            if (isWatchAd) setAdsWatched(newAdsCount);
-
-            const newCompleted = !isWatchAd ? [...completed, id] : completed;
-            if (!isWatchAd) setCompleted(newCompleted);
-
-            fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-              method: 'PATCH',
-              body: JSON.stringify({ 
-                balance: newBal, 
-                completed: newCompleted, 
-                adsWatched: newAdsCount
-              })
-            });
-            alert(`Reward Success: +${finalReward} TON`);
-            fetchData();
-          }
-        });
+      // Handle Promo Codes
+      const newBal = Number((balance + finalReward).toFixed(5));
+      const newCompleted = [...completed, id];
+      setBalance(newBal);
+      setCompleted(newCompleted);
+      fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+        method: 'PATCH',
+        body: JSON.stringify({ balance: newBal, completed: newCompleted })
+      });
+      alert(`Code Success: +${finalReward} TON`);
     }
   };
 
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-    setTimeout(() => { processReward(id, reward); }, 1500);
+    
+    // For tasks, show adsterra then reward
+    tg?.openLink ? tg.openLink(APP_CONFIG.ADSTERRA_URL) : window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
+    
+    setTimeout(() => { 
+        const newBal = Number((balance + reward).toFixed(5));
+        const newCompleted = [...completed, id];
+        setBalance(newBal);
+        setCompleted(newCompleted);
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+            method: 'PATCH',
+            body: JSON.stringify({ balance: newBal, completed: newCompleted })
+        });
+        alert(`Task Success: +${reward} TON`);
+    }, 2000);
   };
 
   const fixedBotTasks = [
@@ -255,13 +277,12 @@ function App() {
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
+                <button style={styles.btn} onClick={() => processReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
               </div>
             )}
             {activeTab === 'admin' && (
               <div>
                 <h4>Admin Control</h4>
-                {/* --- USER SEARCH & BALANCE MANAGER --- */}
                 <h5 style={{color: '#f59e0b', marginBottom: '10px'}}>🔍 USER DATA & BALANCE MANAGER</h5>
                 <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
                   <input style={{...styles.input, marginBottom: 0}} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
@@ -307,7 +328,6 @@ function App() {
                         >UPDATE BALANCE</button>
                     </div>
                     
-                    {/* --- WITHDRAW MANAGER WITHIN SEARCH --- */}
                     <div style={{marginTop: '10px', borderTop: '1px solid #ddd', paddingTop: '10px'}}>
                       <p style={{fontWeight: 'bold', color: '#000'}}>Withdraw History:</p>
                       {searchedUser.withdrawHistory && searchedUser.withdrawHistory.length > 0 ? (
