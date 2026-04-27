@@ -6,7 +6,6 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   ADSGRAM_BLOCK_ID: "27611", 
-  // Adsterra link added here
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
@@ -125,6 +124,7 @@ function App() {
     localStorage.setItem(`ads_watched_${APP_CONFIG.MY_UID}`, adsWatched.toString());
   }, [balance, completed, withdrawHistory, referrals, adsWatched]);
 
+  // အဓိကပြင်ဆင်ထားသော Reward Logic
   const processReward = (id, rewardAmount) => {
     let finalReward = rewardAmount;
     let isWatchAd = id === 'watch_ad';
@@ -132,10 +132,10 @@ function App() {
     if (isWatchAd) {
       finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
       
-      // Step 1: Open Adsterra first
+      // ၁။ Adsterra Link အရင်ဖွင့်မည်
       tg?.openLink ? tg.openLink(APP_CONFIG.ADSTERRA_URL) : window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
 
-      // Step 2: Open Adsgram after 1 second delay
+      // ၂။ Adsterra ကြည့်ပြီးမှ (သို့မဟုတ် ၂ စက္ကန့်အကြာတွင်) Adsgram တက်လာမည်
       setTimeout(() => {
         if (window.Adsgram) {
           const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
@@ -158,13 +158,16 @@ function App() {
                 alert(`Reward Success: +${finalReward} TON`);
                 fetchData();
               }
+            }).catch((err) => {
+                console.error("Adsgram Error:", err);
+                alert("Ads not loaded. Please try again.");
             });
         }
-      }, 1000);
+      }, 2000);
 
     } else if (id.startsWith('c_')) {
+      // Promo Codes Logic
       finalReward = APP_CONFIG.CODE_REWARD;
-      // Handle Promo Codes
       const newBal = Number((balance + finalReward).toFixed(5));
       const newCompleted = [...completed, id];
       setBalance(newBal);
@@ -181,7 +184,7 @@ function App() {
     if (completed.includes(id)) return alert("Already completed!");
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
     
-    // For tasks, show adsterra then reward
+    // Task များအတွက် Adsterra link ကို အရင်ဖွင့်ခိုင်းခြင်း
     tg?.openLink ? tg.openLink(APP_CONFIG.ADSTERRA_URL) : window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
     
     setTimeout(() => { 
@@ -194,7 +197,7 @@ function App() {
             body: JSON.stringify({ balance: newBal, completed: newCompleted })
         });
         alert(`Task Success: +${reward} TON`);
-    }, 2000);
+    }, 2500);
   };
 
   const fixedBotTasks = [
