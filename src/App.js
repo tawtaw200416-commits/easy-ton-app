@@ -28,7 +28,7 @@ function App() {
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   
-  // --- New Dynamic Ads States ---
+  // --- New Ads Management State ---
   const [adList, setAdList] = useState([]); 
   const [newAdInput, setNewAdInput] = useState('');
   const [adsgramBlockId, setAdsgramBlockId] = useState("27611");
@@ -63,7 +63,7 @@ function App() {
           });
           localStorage.setItem(`joined_${APP_CONFIG.MY_UID}`, 'true');
         }
-      } catch (e) { console.error("Referral Error:", e); }
+      } catch (e) { console.error(e); }
     }
   }, []);
 
@@ -76,7 +76,7 @@ function App() {
       ]);
       const userData = await u.json();
       const tasksData = await t.json();
-      const adsSetup = await a.json();
+      const adsData = await a.json();
 
       if (userData) {
         setBalance(Number(userData.balance || 0));
@@ -86,76 +86,74 @@ function App() {
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
         setAdsWatched(userData.adsWatched || 0);
       }
-      if (tasksData) {
-        setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], firebaseKey: key })));
-      }
-      if (adsSetup) {
-        setAdList(adsSetup.links || []);
-        setAdsgramBlockId(adsSetup.adsgramId || "27611");
+      if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
+      
+      // Load Ads from DB
+      if (adsData) {
+        setAdList(adsData.links || []);
+        setAdsgramBlockId(adsData.adsgramId || "27611");
       }
     } catch (e) { console.error(e); }
   }, []);
 
-  useEffect(() => { 
-    fetchData(); handleReferral(); 
-    const interval = setInterval(fetchData, 30000); 
-    return () => clearInterval(interval);
-  }, [fetchData, handleReferral]);
+  useEffect(() => { fetchData(); handleReferral(); }, [fetchData, handleReferral]);
 
-  // --- Dynamic Reward Logic ---
+  // --- Flexible Reward Logic ---
   const processReward = async (id, rewardAmount) => {
-    if (id === 'watch_ad') {
-      // 1. Open all custom links first (Adsterra, etc.)
-      for (const adLink of adList) {
-          window.open(adLink, '_blank');
-          await new Promise(r => setTimeout(r, 1000)); // Delay between links
+    let finalReward = rewardAmount;
+    let isWatchAd = id === 'watch_ad';
+
+    if (isWatchAd) {
+      // 1. Play custom ad links (Adsterra, etc.)
+      for (const link of adList) {
+          window.open(link, '_blank');
+          await new Promise(r => setTimeout(r, 1200)); 
       }
 
-      // 2. Finally show Adsgram to verify and reward
+      // 2. Play Adsgram (Verification)
       if (window.Adsgram) {
         const AdController = window.Adsgram.init({ blockId: adsgramBlockId });
         AdController.show().then((result) => {
           if (result.done) {
-            applyReward(isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD, true);
+            applyBalance(isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD, true);
           }
-        }).catch(() => alert("Ad error or closed."));
+        });
       }
     } else {
-      applyReward(rewardAmount, false, id);
+      applyBalance(finalReward, false, id);
     }
   };
 
-  const applyReward = (amount, isAd, taskId = null) => {
-    const newBal = Number((balance + amount).toFixed(5));
-    const newCount = isAd ? adsWatched + 1 : adsWatched;
+  const applyBalance = (reward, isAd, taskId = null) => {
+    const newBal = Number((balance + reward).toFixed(5));
+    const newAds = isAd ? adsWatched + 1 : adsWatched;
     const newComp = taskId && !completed.includes(taskId) ? [...completed, taskId] : completed;
 
     setBalance(newBal);
-    if (isAd) setAdsWatched(newCount);
+    if (isAd) setAdsWatched(newAds);
     if (taskId) setCompleted(newComp);
 
     fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
       method: 'PATCH',
-      body: JSON.stringify({ balance: newBal, adsWatched: newCount, completed: newComp })
+      body: JSON.stringify({ balance: newBal, adsWatched: newAds, completed: newComp })
     });
-    alert(`Reward: +${amount} TON`);
+    alert(`Success: +${reward} TON`);
   };
 
-  const handleSaveAds = async () => {
+  const saveAdsToDB = async () => {
     await fetch(`${APP_CONFIG.FIREBASE_URL}/admin_settings/ads_setup.json`, {
         method: 'PUT',
         body: JSON.stringify({ links: adList, adsgramId: adsgramBlockId })
     });
-    alert("Ad Settings Saved!");
+    alert("Saved Successfully!");
   };
 
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
-    btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
-    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
-    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' }
+    btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' },
+    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' }
   };
 
   return (
@@ -166,72 +164,74 @@ function App() {
             {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP ⭐</span>}
         </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <small style={{opacity: 0.8}}>Total Ads Watched: {adsWatched}</small>
+        <small>Ads Watched: {adsWatched}</small>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch All Ads - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
+             <p>Watch All Ads to Earn TON</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
-            {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
+            {['BOT', 'SOCIAL', 'ADMIN'].map(t => (
               (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && 
-              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000' }}>{t}</button>
+              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold' }}>{t}</button>
             ))}
           </div>
 
           <div style={styles.card}>
             {activeTab === 'admin' && (
               <div>
-                <h4 style={{color: '#3b82f6'}}>ADS SETUP</h4>
-                <label style={{fontSize:'12px', fontWeight:'bold'}}>Adsgram Block ID:</label>
+                <h4 style={{color:'blue'}}>ADS SETUP</h4>
+                <label>Adsgram Block ID:</label>
                 <input style={styles.input} value={adsgramBlockId} onChange={e => setAdsgramBlockId(e.target.value)} />
                 
-                <label style={{fontSize:'12px', fontWeight:'bold'}}>Custom Ad Links (Adsterra, etc.):</label>
+                <label>Other Ad Links:</label>
                 <div style={{display:'flex', gap:'5px'}}>
-                  <input style={styles.input} placeholder="Paste link here" value={newAdInput} onChange={e => setNewAdInput(e.target.value)} />
-                  <button style={{...styles.btn, width:'80px', height:'40px'}} onClick={() => { if(newAdInput) { setAdList([...adList, newAdInput]); setNewAdInput(''); } }}>ADD</button>
+                    <input style={styles.input} placeholder="Paste Link" value={newAdInput} onChange={e => setNewAdInput(e.target.value)} />
+                    <button style={{...styles.btn, width:'60px', height:'40px'}} onClick={() => { if(newAdInput) { setAdList([...adList, newAdInput]); setNewAdInput(''); } }}>ADD</button>
                 </div>
-                
-                <div style={{margin: '10px 0', maxHeight:'150px', overflowY:'auto'}}>
-                  {adList.map((link, i) => (
-                    <div key={i} style={{fontSize:'10px', background:'#eee', padding:'8px', marginBottom:'5px', borderRadius:'5px', display:'flex', justifyContent:'space-between'}}>
-                      <span style={{overflow:'hidden'}}>{link}</span>
-                      <button onClick={() => setAdList(adList.filter((_, idx) => idx !== i))} style={{color:'red', border:'none', background:'none', fontWeight:'bold'}}>DEL</button>
+                {adList.map((l, i) => (
+                    <div key={i} style={{fontSize:'10px', background:'#eee', padding:'5px', marginBottom:'5px', display:'flex', justifyContent:'space-between'}}>
+                        <span>{l}</span>
+                        <button onClick={() => setAdList(adList.filter((_, idx) => idx !== i))} style={{color:'red', border:'none'}}>DEL</button>
                     </div>
-                  ))}
-                </div>
-                <button style={{...styles.btn, background:'green'}} onClick={handleSaveAds}>SAVE ADS CONFIG</button>
+                ))}
+                <button style={{...styles.btn, background:'green'}} onClick={saveAdsToDB}>SAVE ALL ADS</button>
 
-                <hr style={{margin: '20px 0'}}/>
-                <h5 style={{color: '#f59e0b'}}>🔍 USER MANAGER</h5>
-                {/* Existing Admin Logic (Search, Tasks, etc. kept as is) */}
-                <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
-                  <input style={{...styles.input, marginBottom: 0}} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
-                  <button style={{...styles.btn, width: '80px', background: '#f59e0b'}} onClick={async () => {
-                      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
-                      const data = await res.json();
-                      if(data) { setSearchedUser(data); setNewBalanceInput(data.balance || 0); } else alert("Not found");
-                    }}>FIND</button>
+                <hr/>
+                <h5 style={{color: '#f59e0b'}}>🔍 SEARCH USER</h5>
+                <div style={{display: 'flex', gap: '5px'}}>
+                  <input style={styles.input} placeholder="ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
+                  <button style={{...styles.btn, width: '60px'}} onClick={async () => {
+                      const r = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
+                      const d = await r.json();
+                      if(d) { setSearchedUser(d); setNewBalanceInput(d.balance || 0); } else alert("Not found");
+                  }}>FIND</button>
                 </div>
-                {/* ... (Keep the rest of your original admin search results UI here) ... */}
+                {searchedUser && (
+                    <div style={{marginTop:'10px', padding:'10px', border:'1px solid #ddd'}}>
+                        <p>Bal: {searchedUser.balance}</p>
+                        <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
+                        <button style={{...styles.btn, background:'blue'}} onClick={async () => {
+                            await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ balance: Number(newBalanceInput) }) });
+                            alert("Updated!");
+                        }}>UPDATE BAL</button>
+                    </div>
+                )}
               </div>
             )}
             
-            {/* ... (Keep BOT, SOCIAL, REWARD UI the same) ... */}
+            {/* ... Other Tabs (BOT/SOCIAL) ... */}
           </div>
         </>
       )}
 
-      {/* ... (Keep NAV, WITHDRAW, PROFILE UI the same) ... */}
-      <div style={styles.nav}>
-        {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
-            {n.toUpperCase()}
-          </button>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px' }}>
+        {['earn', 'withdraw', 'profile'].map(n => (
+          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold' }}>{n.toUpperCase()}</button>
         ))}
       </div>
     </div>
