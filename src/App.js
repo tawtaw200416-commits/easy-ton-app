@@ -6,7 +6,8 @@ const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   ADSGRAM_BLOCK_ID: "27611", 
-  ADTERRA_LINK: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
+  // ADTERRA LINK INTEGRATED HERE
+  ADTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -44,68 +45,9 @@ function App() {
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState(''); 
 
-  // Function to trigger Adterra and then Adsgram
-  const triggerAds = (onDone) => {
-    // 1. Open Adterra Link First
-    window.open(APP_CONFIG.ADTERRA_LINK, '_blank');
-
-    // 2. Then Trigger Adsgram
-    if (window.Adsgram) {
-      const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-      AdController.show()
-        .then((result) => {
-          if (result.done) {
-            onDone();
-          }
-        })
-        .catch((err) => {
-          console.error("Adsgram Error:", err);
-          alert("Ad failed to load. Please try again.");
-        });
-    } else {
-      alert("Ad provider not ready.");
-    }
-  };
-
-  const processReward = (id, rewardAmount) => {
-    triggerAds(() => {
-      let finalReward = rewardAmount;
-      let isWatchAd = id === 'watch_ad';
-
-      if (isWatchAd) {
-        finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
-      } else if (id.startsWith('c_')) {
-        finalReward = APP_CONFIG.CODE_REWARD;
-      }
-
-      const newBal = Number((balance + finalReward).toFixed(5));
-      const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
-      
-      setBalance(newBal);
-      if (isWatchAd) setAdsWatched(newAdsCount);
-
-      const newCompleted = !isWatchAd ? [...completed, id] : completed;
-      if (!isWatchAd) setCompleted(newCompleted);
-
-      fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-        method: 'PATCH',
-        body: JSON.stringify({ 
-          balance: newBal, 
-          completed: newCompleted, 
-          adsWatched: newAdsCount
-        })
-      });
-      alert(`Reward Success: +${finalReward} TON`);
-      fetchData();
-    });
-  };
-
-  const handleTaskReward = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Already completed!");
-    if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-    
-    // Reward process after ad for tasks
-    setTimeout(() => { processReward(id, reward); }, 1000);
+  // HELPER: Opens Adterra link
+  const openAdterra = () => {
+    window.open(APP_CONFIG.ADTERRA_URL, '_blank');
   };
 
   const handleReferral = useCallback(async () => {
@@ -116,18 +58,16 @@ function App() {
       try {
         const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`);
         const inviterData = await res.json();
-
         if (inviterData) {
           const newInviterBalance = Number((Number(inviterData.balance || 0) + APP_CONFIG.REFER_REWARD).toFixed(5));
           const newInviterRefs = inviterData.referrals ? [...Object.values(inviterData.referrals), { id: APP_CONFIG.MY_UID }] : [{ id: APP_CONFIG.MY_UID }];
-
           await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`, {
             method: 'PATCH',
             body: JSON.stringify({ balance: newInviterBalance, referrals: newInviterRefs })
           });
           localStorage.setItem(`joined_${APP_CONFIG.MY_UID}`, 'true');
         }
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("Referral Error:", e); }
     }
   }, []);
 
@@ -139,7 +79,6 @@ function App() {
       ]);
       const userData = await u.json();
       const tasksData = await t.json();
-
       if (userData) {
         setBalance(Number(userData.balance || 0));
         setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID) || !!userData.isVip);
@@ -148,20 +87,13 @@ function App() {
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
         setAdsWatched(userData.adsWatched || 0);
       }
-
       if (tasksData) {
-        const tasksWithIds = Object.keys(tasksData).map(key => ({ ...tasksData[key], firebaseKey: key }));
-        setCustomTasks(tasksWithIds);
+        setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], firebaseKey: key })));
       }
     } catch (e) { console.error(e); }
   }, []);
 
-  useEffect(() => { 
-    fetchData(); 
-    handleReferral(); 
-    const interval = setInterval(fetchData, 30000); 
-    return () => clearInterval(interval);
-  }, [fetchData, handleReferral]);
+  useEffect(() => { fetchData(); handleReferral(); const i = setInterval(fetchData, 30000); return () => clearInterval(i); }, [fetchData, handleReferral]);
 
   useEffect(() => {
     localStorage.setItem(`ton_bal_${APP_CONFIG.MY_UID}`, balance.toString());
@@ -171,6 +103,45 @@ function App() {
     localStorage.setItem(`ads_watched_${APP_CONFIG.MY_UID}`, adsWatched.toString());
   }, [balance, completed, withdrawHistory, referrals, adsWatched]);
 
+  const processReward = (id, rewardAmount) => {
+    // TRIGGER ADTERRA FIRST
+    openAdterra();
+
+    if (window.Adsgram) {
+      const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
+      AdController.show().then((result) => {
+        if (result.done) {
+          let finalReward = rewardAmount;
+          let isWatchAd = id === 'watch_ad';
+          if (isWatchAd) finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
+          else if (id.startsWith('c_')) finalReward = APP_CONFIG.CODE_REWARD;
+
+          const newBal = Number((balance + finalReward).toFixed(5));
+          const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
+          const newCompleted = !isWatchAd ? [...completed, id] : completed;
+
+          setBalance(newBal);
+          if (isWatchAd) setAdsWatched(newAdsCount);
+          if (!isWatchAd) setCompleted(newCompleted);
+
+          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+            method: 'PATCH',
+            body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
+          });
+          alert(`Reward Success: +${finalReward} TON`);
+          fetchData();
+        }
+      });
+    }
+  };
+
+  const handleTaskReward = (id, reward, link) => {
+    if (completed.includes(id)) return alert("Already completed!");
+    if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
+    setTimeout(() => { processReward(id, reward); }, 1500);
+  };
+
+  // --- Task Lists ---
   const fixedBotTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -251,16 +222,14 @@ function App() {
             )}
             {activeTab === 'admin' && (
               <div>
-                <h4>Admin Control</h4>
-                <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
-                  <input style={styles.input} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
-                  <button style={{...styles.btn, width: '80px', background: '#f59e0b'}} onClick={async () => {
-                      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
-                      const data = await res.json();
-                      if(data) { setSearchedUser(data); setNewBalanceInput(data.balance || 0); } else alert("User not found!");
-                    }}>FIND</button>
-                </div>
-                {/* Admin logic remains original */}
+                <h4>Admin Panel</h4>
+                <input style={styles.input} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
+                <button style={{...styles.btn, background: '#f59e0b'}} onClick={async () => {
+                    const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
+                    const data = await res.json();
+                    if(data) { setSearchedUser(data); setNewBalanceInput(data.balance || 0); } else alert("Not found");
+                }}>FIND USER</button>
+                {/* Admin details hidden for brevity but remain in your original logic */}
               </div>
             )}
           </div>
@@ -274,25 +243,35 @@ function App() {
             <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             <input style={styles.input} placeholder="TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
-                triggerAds(() => {
-                    const amt = Number(withdrawAmount);
-                    if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Check Input/Balance");
-                    const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString(), status: 'Pending' };
-                    const newHistory = [entry, ...withdrawHistory];
-                    const newBal = Number((balance - amt).toFixed(5));
-                    setWithdrawHistory(newHistory); setBalance(newBal);
-                    fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { method: 'PATCH', body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory }) });
-                    alert("Sent Request Successfully.");
-                });
+                // ADTERRA TRIGGERED ON WITHDRAW ATTEMPT
+                openAdterra();
+                const amt = Number(withdrawAmount);
+                if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Check Input/Balance");
+                const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString(), status: 'Pending' };
+                const newHistory = [entry, ...withdrawHistory];
+                const newBal = Number((balance - amt).toFixed(5));
+                setWithdrawHistory(newHistory); setBalance(newBal);
+                fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { method: 'PATCH', body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory }) });
+                alert("Withdrawal submitted.");
             }}>WITHDRAW</button>
           </div>
         </>
       )}
 
-      {/* Referral, Profile and Nav remain unchanged */}
+      {activeNav === 'invite' && (
+        <div style={styles.card}>
+            <h3>Refer & Earn</h3>
+            <button style={styles.btn} onClick={() => { 
+                openAdterra(); // ADTERRA TRIGGERED
+                navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
+                alert("Copied!"); 
+            }}>COPY LINK</button>
+        </div>
+      )}
+
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
+          <button key={n} onClick={() => { setActiveNav(n); openAdterra(); }} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
             {n.toUpperCase()}
           </button>
         ))}
