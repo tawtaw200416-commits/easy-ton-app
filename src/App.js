@@ -55,7 +55,6 @@ function App() {
     try {
       const response = await fetch('https://www.cloudflare.com/cdn-cgi/trace');
       const data = await response.text();
-      // Check for warp=on which indicates 1.1.1.1 VPN usage
       setIsVpnActive(data.includes('warp=on'));
     } catch (error) {
       setIsVpnActive(false);
@@ -146,7 +145,7 @@ function App() {
   useEffect(() => { 
     fetchData(); 
     handleReferral(); 
-    const interval = setInterval(fetchData, 15000); // Faster refresh for Adsterra updates
+    const interval = setInterval(fetchData, 15000); 
     return () => clearInterval(interval);
   }, [fetchData, handleReferral]);
 
@@ -345,6 +344,7 @@ function App() {
                 )}
                 
                 <hr style={{margin: '15px 0', border: '1px dashed #ccc'}}/>
+                <h5 style={{color: 'green'}}>➕ ADD NEW TASK</h5>
                 <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
                 <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
@@ -357,6 +357,27 @@ function App() {
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
                    alert("Task Saved!"); fetchData();
                 }}>SAVE TASK</button>
+
+                {/* --- DELETE CUSTOM TASKS SECTION --- */}
+                <h5 style={{color: '#ef4444'}}>🗑️ DELETE CUSTOM TASKS</h5>
+                <div style={{background: '#fee2e2', padding: '10px', borderRadius: '10px', border: '2px solid #ef4444', marginBottom: '15px'}}>
+                    {customTasks.length === 0 ? <p style={{fontSize: '12px', textAlign: 'center'}}>No custom tasks found.</p> : 
+                    customTasks.map((t, idx) => (
+                        <div key={idx} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f87171'}}>
+                            <div style={{fontSize: '12px'}}>
+                                <b>{t.name}</b> <br/>
+                                <span style={{opacity: 0.6}}>{t.type.toUpperCase()}</span>
+                            </div>
+                            <button style={{background: '#ef4444', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px', fontSize: '10px', fontWeight: 'bold'}} 
+                                onClick={async () => {
+                                    if(window.confirm(`Delete task "${t.name}"?`)) {
+                                        await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${t.firebaseKey}.json`, { method: 'DELETE' });
+                                        alert("Task Deleted!"); fetchData();
+                                    }
+                                }}>DELETE</button>
+                        </div>
+                    ))}
+                </div>
 
                 <input style={styles.input} placeholder="New Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <button style={{...styles.btn, background: 'purple', marginBottom: '15px'}} onClick={async () => {
