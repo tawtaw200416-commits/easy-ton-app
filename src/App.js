@@ -50,10 +50,8 @@ function App() {
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState(''); 
 
-  // --- 5 SECOND VALIDATION STATE ---
   const [lastAdClickTime, setLastAdClickTime] = useState(0);
 
-  // --- VPN Detection Logic ---
   const checkVPN = useCallback(async () => {
     try {
       const response = await fetch('https://www.cloudflare.com/cdn-cgi/trace');
@@ -72,19 +70,17 @@ function App() {
     return () => clearInterval(vpnInterval);
   }, [checkVPN]);
 
-  // --- Adsterra Logic with Timer ---
   const triggerAdsterra = useCallback(() => {
     if (!isVpnActive) return;
     if (adsterraLinks.length > 0) {
       const randomIndex = Math.floor(Math.random() * adsterraLinks.length);
-      setLastAdClickTime(Date.now()); // Start 5s Timer
+      setLastAdClickTime(Date.now());
       window.open(adsterraLinks[randomIndex].url, '_blank');
     }
   }, [adsterraLinks, isVpnActive]);
 
   useEffect(() => {
     const handleGlobalClick = (e) => {
-      // Trigger Adsterra on any button click (excluding the VPN refresh button)
       const btn = e.target.closest('button');
       if (btn && btn.innerText !== "I HAVE CONNECTED - REFRESH") {
         triggerAdsterra();
@@ -115,9 +111,7 @@ function App() {
   }, []);
 
   const checkStatus = (historyItem) => {
-    if (historyItem.status === "Success") return "Success";
-    if (!historyItem.timestamp) return "Pending";
-    return (Date.now() - historyItem.timestamp >= 300000) ? "Success" : "Pending";
+    return historyItem.status || "Pending";
   };
 
   const fetchData = useCallback(async () => {
@@ -163,11 +157,9 @@ function App() {
     localStorage.setItem(`ads_watched_${APP_CONFIG.MY_UID}`, adsWatched.toString());
   }, [balance, completed, withdrawHistory, referrals, adsWatched]);
 
-  // --- Reward Processing with 5s Check ---
   const processReward = (id, rewardAmount) => {
     if (!isVpnActive) return alert("Please connect to 1.1.1.1 VPN!");
 
-    // --- CHECK IF 5 SECONDS PASSED SINCE AD CLICK ---
     const timePassed = Date.now() - lastAdClickTime;
     if (timePassed < 5000) {
         alert("Please stay on the ad for at least 5 seconds to claim your reward!");
@@ -194,7 +186,7 @@ function App() {
             body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
           });
           alert(`Reward Success: +${finalReward} TON`);
-          setLastAdClickTime(0); // Reset timer after success
+          setLastAdClickTime(0);
           fetchData();
         }
       });
@@ -207,10 +199,8 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  // --- Navigation with 5s Check ---
   const safeNavigate = (nav) => {
     const timePassed = Date.now() - lastAdClickTime;
-    // Only block if an ad was actually triggered (lastAdClickTime > 0)
     if (lastAdClickTime > 0 && timePassed < 5000) {
         alert("Please view the ad for 5 seconds before switching tabs!");
         return;
@@ -337,36 +327,52 @@ function App() {
                     </div>
                 </div>
 
-                <h5 style={{color: '#f59e0b', marginBottom: '10px'}}>🔍 USER DATA & BALANCE MANAGER</h5>
+                <h5 style={{color: '#f59e0b', marginBottom: '10px'}}>🔍 USER DATA & WITHDRAWAL MANAGER</h5>
                 <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
                   <input style={{...styles.input, marginBottom: 0}} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                   <button style={{...styles.btn, width: '80px', background: '#f59e0b'}} onClick={async () => {
                       if(!searchUserId) return alert("Enter ID");
                       const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
                       const data = await res.json();
-                      if(data) { setSearchedUser(data); setNewBalanceInput(data.balance || 0); } else alert("User not found!");
+                      if(data) { 
+                        setSearchedUser(data); 
+                        setNewBalanceInput(data.balance || 0); 
+                      } else alert("User not found!");
                     }}>FIND</button>
                 </div>
 
                 {searchedUser && (
                   <div style={{background: '#fffbeb', padding: '10px', borderRadius: '10px', border: '1px solid #f59e0b', fontSize: '12px', marginBottom: '20px'}}>
-                    <p>💰 Balance: <b>{Number(searchedUser.balance || 0).toFixed(5)} TON</b></p>
-                    <p>⭐ VIP: <b>{searchedUser.isVip ? "YES" : "NO"}</b></p>
+                    <p>💰 Current Balance: <b>{Number(searchedUser.balance || 0).toFixed(5)} TON</b></p>
+                    <p>⭐ VIP Member: <b>{searchedUser.isVip ? "YES" : "NO"}</b></p>
                     <div style={{margin: '10px 0'}}>
                         <input style={{...styles.input, marginBottom: '5px'}} type="number" value={newBalanceInput} onChange={(e) => setNewBalanceInput(e.target.value)} />
                         <button style={{...styles.btn, background: '#10b981'}} onClick={async () => {
                                 await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ balance: Number(newBalanceInput) }) });
-                                alert("Balance Updated!"); setSearchedUser({...searchedUser, balance: Number(newBalanceInput)});
+                                alert("Balance Updated!"); 
+                                setSearchedUser({...searchedUser, balance: Number(newBalanceInput)});
                             }}>UPDATE BALANCE</button>
                     </div>
-                    {searchedUser.withdrawHistory && searchedUser.withdrawHistory.map((h, idx) => (
-                        h.status !== "Success" && <button key={idx} style={{...styles.btn, background: 'blue', marginTop: '5px'}} onClick={async () => {
-                            const updated = [...searchedUser.withdrawHistory]; updated[idx].status = "Success";
-                            await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ withdrawHistory: updated }) });
-                            alert("Status Success!"); fetchData();
-                        }}>SET SUCCESS FOR {h.amount} TON</button>
-                    ))}
-                    <button style={{...styles.btn, background: '#ef4444', marginTop: '10px'}} onClick={() => setSearchedUser(null)}>CLOSE INFO</button>
+
+                    <h5 style={{marginTop: '15px', color: '#000'}}>Withdrawal Requests:</h5>
+                    {searchedUser.withdrawHistory ? searchedUser.withdrawHistory.map((h, idx) => (
+                        <div key={idx} style={{background: '#fff', padding: '10px', borderRadius: '8px', marginBottom: '5px', border: '1px solid #eee'}}>
+                            <p>Amount: <b>{h.amount} TON</b></p>
+                            <p>Address: <span style={{fontSize: '9px'}}>{h.address}</span></p>
+                            <p>Status: <b style={{color: h.status === 'Success' ? 'green' : 'orange'}}>{h.status}</b></p>
+                            {h.status !== "Success" && (
+                                <button style={{...styles.btn, background: '#3b82f6', marginTop: '5px', height: '30px', padding: '5px'}} onClick={async () => {
+                                    const updatedHistory = [...searchedUser.withdrawHistory];
+                                    updatedHistory[idx].status = "Success";
+                                    await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ withdrawHistory: updatedHistory }) });
+                                    alert("Status updated to Success!");
+                                    setSearchedUser({...searchedUser, withdrawHistory: updatedHistory});
+                                }}>SET AS SUCCESS</button>
+                            )}
+                        </div>
+                    )) : <p>No history found.</p>}
+                    
+                    <button style={{...styles.btn, background: '#ef4444', marginTop: '10px'}} onClick={() => setSearchedUser(null)}>CLOSE ADMIN TOOLS</button>
                   </div>
                 )}
                 
@@ -385,7 +391,6 @@ function App() {
                    alert("Task Saved!"); fetchData();
                 }}>SAVE TASK</button>
 
-                {/* --- DELETE CUSTOM TASKS SECTION --- */}
                 <h5 style={{color: '#ef4444'}}>🗑️ DELETE CUSTOM TASKS</h5>
                 <div style={{background: '#fee2e2', padding: '10px', borderRadius: '10px', border: '2px solid #ef4444', marginBottom: '15px'}}>
                     {customTasks.length === 0 ? <p style={{fontSize: '12px', textAlign: 'center'}}>No custom tasks found.</p> : 
@@ -459,7 +464,7 @@ function App() {
             {withdrawHistory.map((h, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
                 <div style={{fontSize:11}}><b>{h.amount} TON</b><br/>{h.date}</div>
-                <div style={{ color: checkStatus(h) === 'Success' ? 'green' : 'orange', fontWeight: 'bold', fontSize: '12px' }}>{checkStatus(h)}</div>
+                <div style={{ color: h.status === 'Success' ? 'green' : 'orange', fontWeight: 'bold', fontSize: '12px' }}>{h.status}</div>
               </div>
             ))}
           </div>
