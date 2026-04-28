@@ -20,12 +20,13 @@ const APP_CONFIG = {
 const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
 
 function App() {
-  const [balance, setBalance] = useState(0);
+  // --- STATES ---
+  const [balance, setBalance] = useState(() => Number(localStorage.getItem(`ton_bal_${APP_CONFIG.MY_UID}`)) || 0);
   const [isVip, setIsVip] = useState(VIP_IDS.includes(APP_CONFIG.MY_UID));
-  const [completed, setCompleted] = useState([]);
-  const [withdrawHistory, setWithdrawHistory] = useState([]);
-  const [referrals, setReferrals] = useState([]);
-  const [adsWatched, setAdsWatched] = useState(0);
+  const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem(`comp_tasks_${APP_CONFIG.MY_UID}`)) || []);
+  const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem(`wd_hist_${APP_CONFIG.MY_UID}`)) || []);
+  const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem(`refs_${APP_CONFIG.MY_UID}`)) || []);
+  const [adsWatched, setAdsWatched] = useState(() => Number(localStorage.getItem(`ads_watched_${APP_CONFIG.MY_UID}`)) || 0);
   
   const [isVpnActive, setIsVpnActive] = useState(true);
   const [checkingVpn, setCheckingVpn] = useState(true);
@@ -33,25 +34,26 @@ function App() {
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   
+  const [adsterraLinks, setAdsterraLinks] = useState([]);
+  const [lastAdClickTime, setLastAdClickTime] = useState(0);
+
+  // Input states
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
-
-  const [adsterraLinks, setAdsterraLinks] = useState([]);
   const [newAdUrl, setNewAdUrl] = useState('');
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState(''); 
 
-  // Admin states
+  // Admin Task States
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
   const [adminTaskType, setAdminTaskType] = useState('bot');
   const [adminPromoCode, setAdminPromoCode] = useState('');
   const [adminVipUserId, setAdminVipUserId] = useState('');
 
-  const [lastAdClickTime, setLastAdClickTime] = useState(0);
-
+  // --- VPN CHECK ---
   const checkVPN = useCallback(async () => {
     try {
       const response = await fetch('https://www.cloudflare.com/cdn-cgi/trace');
@@ -66,11 +68,11 @@ function App() {
 
   useEffect(() => {
     checkVPN();
-    const vpnInterval = setInterval(checkVPN, 15000);
+    const vpnInterval = setInterval(checkVPN, 10000);
     return () => clearInterval(vpnInterval);
   }, [checkVPN]);
 
-  // Adsterra Trigger
+  // --- ADSTERRA TRIGGER ---
   const triggerAdsterra = useCallback(() => {
     if (!isVpnActive) return;
     if (adsterraLinks.length > 0) {
@@ -80,6 +82,7 @@ function App() {
     }
   }, [adsterraLinks, isVpnActive]);
 
+  // --- DATA FETCHING ---
   const fetchData = useCallback(async () => {
     try {
       const [u, t, a] = await Promise.all([
@@ -92,7 +95,7 @@ function App() {
       const adsData = await a.json();
 
       if (userData) {
-        setBalance(Number(userData.balance || 0));
+        setBalance(prev => userData.balance !== undefined ? Number(userData.balance) : prev);
         setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID) || !!userData.isVip);
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
@@ -105,36 +108,42 @@ function App() {
       if (adsData) {
         setAdsterraLinks(Object.keys(adsData).map(key => ({ id: key, url: adsData[key].url })));
       }
-    } catch (e) { console.error("Fetch Error:", e); }
+    } catch (e) { console.error("Sync Error:", e); }
   }, []);
 
   useEffect(() => { 
     fetchData(); 
-    const interval = setInterval(fetchData, 20000); 
+    const interval = setInterval(fetchData, 15000); 
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Safe Navigation with Adsterra Trigger
-  const handleNavClick = (nav) => {
-    triggerAdsterra(); // ဘယ် Tab ပြောင်းပြောင်း Ad ပွင့်မယ်
+  // --- NAVIGATION WITH AD TRIGGER ---
+  const handleNavigation = (nav) => {
+    // 7s check before switching
+    const timePassed = Date.now() - lastAdClickTime;
+    if (lastAdClickTime > 0 && timePassed < 7000) {
+        alert("Please stay on the ad for 7 seconds!");
+        return;
+    }
+    
+    // Trigger Adsterra whenever moving between tabs
+    triggerAdsterra();
     setActiveNav(nav);
   };
 
+  // --- REWARD PROCESSING ---
   const processReward = (id, rewardAmount) => {
-    if (!isVpnActive) return alert("Please connect to 1.1.1.1 VPN!");
+    if (!isVpnActive) return alert("Connect to VPN!");
 
     const timePassed = Date.now() - lastAdClickTime;
     if (lastAdClickTime > 0 && timePassed < 7000) {
-        alert("Please stay on the ad for at least 7 seconds!");
+        alert("Wait 7 seconds on the ad page!");
         return;
     }
 
     let finalReward = rewardAmount;
     let isWatchAd = id === 'watch_ad';
-    
-    if (isWatchAd) {
-        finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
-    }
+    if (isWatchAd) finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
 
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
@@ -142,35 +151,56 @@ function App() {
         if (result.done) {
           const newBal = Number((balance + finalReward).toFixed(5));
           const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
-          
-          // Local State update
+          const newCompleted = !isWatchAd ? [...completed, id] : completed;
+
+          // Update State & LocalStorage
           setBalance(newBal);
           if (isWatchAd) setAdsWatched(newAdsCount);
+          if (!isWatchAd) setCompleted(newCompleted);
 
-          // Firebase Update
+          // Update Firebase
           await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PATCH',
-            body: JSON.stringify({ 
-                balance: newBal, 
-                adsWatched: newAdsCount,
-                completed: id.startsWith('b') || id.startsWith('s') ? [...completed, id] : completed
-            })
+            body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
           });
-          
+
           alert(`Success! +${finalReward} TON`);
           setLastAdClickTime(0);
-          fetchData(); // Sync up
+          fetchData();
         }
       });
     }
   };
 
   const handleTaskReward = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Already completed!");
-    triggerAdsterra();
+    if (completed.includes(id)) return alert("Already done!");
+    triggerAdsterra(); // Adsterra on task click
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
     setTimeout(() => { processReward(id, reward); }, 2000);
   };
+
+  // --- STYLES ---
+  const styles = {
+    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
+    header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
+    card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
+    btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
+    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff', zIndex: 100 },
+    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' }
+  };
+
+  // VPN Overlay
+  if (!isVpnActive && !checkingVpn) {
+    return (
+      <div style={{...styles.main, display:'flex', alignItems:'center', justifyContent:'center'}}>
+        <div style={{...styles.card, textAlign:'center'}}>
+          <h2 style={{color: 'red'}}>VPN REQUIRED</h2>
+          <p>Please use 1.1.1.1 VPN</p>
+          <button style={styles.btn} onClick={checkVPN}>REFRESH</button>
+        </div>
+      </div>
+    );
+  }
 
   const fixedBotTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
@@ -192,42 +222,18 @@ function App() {
   const allBotTasks = [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')];
   const allSocialTasks = [...fixedSocialTasks, ...customTasks.filter(t => t.type === 'social')];
 
-  const styles = {
-    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
-    header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
-    card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
-    btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
-    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' },
-    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' }
-  };
-
-  if (!isVpnActive && !checkingVpn) {
-    return (
-      <div style={{...styles.main, display:'flex', alignItems:'center', justifyContent:'center', textAlign:'center'}}>
-        <div style={styles.card}>
-          <h2 style={{color: 'red'}}>VPN REQUIRED ⚠️</h2>
-          <p>Please connect to <b>1.1.1.1 WARP VPN</b> to continue.</p>
-          <button style={{...styles.btn, background:'#007AFF'}} onClick={checkVPN}>REFRESH STATUS</button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div style={styles.main}>
       <div style={styles.header}>
-        <div style={{display:'flex', justifyContent:'center', alignItems:'center', gap:5}}>
-            <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
-            {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP ⭐</span>}
-        </div>
+        <small style={{color: '#facc15'}}>BALANCE</small>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <small style={{opacity: 0.8}}>Total Ads Watched: {adsWatched}</small>
+        <small>Ads: {adsWatched} | Status: {isVip ? "VIP ⭐" : "User"}</small>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
+             <p style={{fontWeight:'bold', marginBottom:'10px'}}>Watch & Earn</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsterra(); processReward('watch_ad', 0); }}>WATCH ADS</button>
           </div>
 
@@ -253,25 +259,19 @@ function App() {
             ))}
             {activeTab === 'reward' && (
               <div>
-                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
+                <input style={styles.input} placeholder="Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
                 <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
               </div>
             )}
             {activeTab === 'admin' && (
-               <div style={{fontSize: '12px'}}>
-                  <h4 style={{borderBottom: '2px solid #000'}}>Admin Control</h4>
-                  <input style={styles.input} placeholder="Paste Adsterra URL" value={newAdUrl} onChange={e => setNewAdUrl(e.target.value)} />
-                  <button style={{...styles.btn, background: '#d946ef', marginBottom: 10}} onClick={async () => {
+               <div>
+                  <h4 style={{borderBottom:'1px solid #000'}}>Admin Links</h4>
+                  <input style={styles.input} placeholder="URL" value={newAdUrl} onChange={e => setNewAdUrl(e.target.value)} />
+                  <button style={{...styles.btn, background:'purple'}} onClick={async () => {
                       const id = 'ad_'+Date.now();
-                      await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${id}.json`, { method: 'PUT', body: JSON.stringify({ url: newAdUrl }) });
-                      setNewAdUrl(''); fetchData(); alert("Link Added!");
+                      await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${id}.json`, { method:'PUT', body: JSON.stringify({url: newAdUrl}) });
+                      setNewAdUrl(''); fetchData();
                   }}>ADD LINK</button>
-                  {adsterraLinks.map(ad => (
-                      <div key={ad.id} style={{display:'flex', justifyContent:'space-between', padding:5, borderBottom:'1px solid #eee'}}>
-                        <span style={{width: '70%', overflow:'hidden'}}>{ad.url}</span>
-                        <button style={{color:'red'}} onClick={async () => { await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${ad.id}.json`, {method:'DELETE'}); fetchData(); }}>DEL</button>
-                      </div>
-                  ))}
                </div>
             )}
           </div>
@@ -280,24 +280,24 @@ function App() {
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-            <h3>Withdraw TON</h3>
-            <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-            <input style={styles.input} placeholder="TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
-            <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => alert("Withdrawal logic here...")}>WITHDRAW</button>
+          <h3>Withdraw</h3>
+          <input style={styles.input} placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} placeholder="Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+          <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => alert("Withdraw requested")}>CONFIRM</button>
         </div>
       )}
 
       {activeNav === 'invite' && (
         <div style={styles.card}>
-            <h3>Refer & Earn</h3>
-            <p>Earn {APP_CONFIG.REFER_REWARD} TON per friend!</p>
-            <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Link Copied!"); }}>COPY LINK</button>
+          <h3>Invite Friends</h3>
+          <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!"); }}>COPY LINK</button>
         </div>
       )}
 
+      {/* FOOTER NAV - All have Adsterra Triggers now */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => handleNavClick(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
+          <button key={n} onClick={() => handleNavigation(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
             {n.toUpperCase()}
           </button>
         ))}
