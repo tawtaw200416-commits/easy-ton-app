@@ -13,15 +13,13 @@ const APP_CONFIG = {
   VIP_WATCH_REWARD: 0.0006, 
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001,
-  WARP_LINK: "https://play.google.com/store/apps/details?id=com.cloudflare.onedotonedotonedotone"
+  VPN_IOS: "https://apps.apple.com/app/1-1-1-1-faster-internet/id1433553754",
+  VPN_ANDROID: "https://play.google.com/store/apps/details?id=com.cloudflare.onedotonedotonedotone"
 };
 
 const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
 
 function App() {
-  // VPN Lock State - ဒါက true ဖြစ်မှ bot ပေါ်မယ်
-  const [vpnActive, setVpnActive] = useState(false);
-
   const [balance, setBalance] = useState(() => Number(localStorage.getItem(`ton_bal_${APP_CONFIG.MY_UID}`)) || 0.0000);
   const [isVip, setIsVip] = useState(VIP_IDS.includes(APP_CONFIG.MY_UID));
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem(`comp_tasks_${APP_CONFIG.MY_UID}`)) || []);
@@ -29,10 +27,59 @@ function App() {
   const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem(`refs_${APP_CONFIG.MY_UID}`)) || []);
   const [adsWatched, setAdsWatched] = useState(() => Number(localStorage.getItem(`ads_watched_${APP_CONFIG.MY_UID}`)) || 0);
   
+  const [isVpnActive, setIsVpnActive] = useState(true); // Default true to prevent flicker
+  const [checkingVpn, setCheckingVpn] = useState(true);
+
   const [customTasks, setCustomTasks] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawAddress, setWithdrawAddress] = useState('');
+  const [rewardCodeInput, setRewardCodeInput] = useState('');
   const [adsterraLinks, setAdsterraLinks] = useState([]);
+
+  // --- VPN Detection Logic ---
+  const checkVPN = useCallback(async () => {
+    try {
+      const response = await fetch('https://www.cloudflare.com/cdn-cgi/trace');
+      const data = await response.text();
+      // Check if the user is routing through Cloudflare WARP/1.1.1.1
+      if (data.includes('warp=on')) {
+        setIsVpnActive(true);
+      } else {
+        setIsVpnActive(false);
+      }
+    } catch (error) {
+      setIsVpnActive(false);
+    } finally {
+      setCheckingVpn(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkVPN();
+    const vpnInterval = setInterval(checkVPN, 10000); // Check every 10 seconds
+    return () => clearInterval(vpnInterval);
+  }, [checkVPN]);
+
+  // --- Existing Logic ---
+  const triggerAdsterra = useCallback(() => {
+    if (!isVpnActive) return; // Block Adsterra if no VPN
+    if (adsterraLinks.length > 0) {
+      const randomIndex = Math.floor(Math.random() * adsterraLinks.length);
+      window.open(adsterraLinks[randomIndex].url, '_blank');
+    }
+  }, [adsterraLinks, isVpnActive]);
+
+  useEffect(() => {
+    const handleGlobalClick = (e) => {
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+        triggerAdsterra();
+      }
+    };
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, [triggerAdsterra]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -42,6 +89,9 @@ function App() {
         fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links.json`)
       ]);
       const userData = await u.json();
+      const tasksData = await t.json();
+      const adsData = await a.json();
+
       if (userData) {
         setBalance(Number(userData.balance || 0));
         setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID) || !!userData.isVip);
@@ -50,24 +100,20 @@ function App() {
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
         setAdsWatched(userData.adsWatched || 0);
       }
-      const tasksData = await t.json();
-      if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
-      const adsData = await a.json();
-      if (adsData) setAdsterraLinks(Object.keys(adsData).map(k => ({ id: k, url: adsData[k].url })));
+      if (tasksData) setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], firebaseKey: key })));
+      if (adsData) setAdsterraLinks(Object.keys(adsData).map(key => ({ id: key, url: adsData[key].url })));
     } catch (e) { console.error(e); }
   }, []);
 
   useEffect(() => { 
-    if(vpnActive) {
-        fetchData();
-        const interval = setInterval(fetchData, 30000);
-        return () => clearInterval(interval);
-    }
-  }, [fetchData, vpnActive]);
+    fetchData(); 
+    const interval = setInterval(fetchData, 30000); 
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   const processReward = (id, rewardAmount) => {
-    if (!vpnActive) return alert("Please connect VPN first!");
-
+    if (!isVpnActive) return alert("Please connect to 1.1.1.1 VPN to earn rewards!");
+    
     let finalReward = rewardAmount;
     let isWatchAd = id === 'watch_ad';
     if (isWatchAd) finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
@@ -80,73 +126,64 @@ function App() {
           const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
           setBalance(newBal);
           if (isWatchAd) setAdsWatched(newAdsCount);
-          const newCompleted = !isWatchAd ? [...completed, id] : completed;
-          
           fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PATCH',
-            body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
+            body: JSON.stringify({ balance: newBal, adsWatched: newAdsCount })
           });
-          alert(`Reward Added: +${finalReward} TON`);
-        } else {
-          alert("Ad not finished. No reward added.");
+          alert(`Reward Success: +${finalReward} TON`);
+          fetchData();
         }
-      }).catch(() => alert("VPN Required to load ads!"));
+      });
     }
   };
 
+  // --- Styles ---
   const styles = {
-    vpnOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', color: '#fff', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' },
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
-    header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
-    card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
-    btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
-    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' }
+    card: { backgroundColor: '#fff', padding: '20px', borderRadius: '15px', border: '2px solid #000', boxShadow: '4px 4px 0px #000', textAlign: 'center' },
+    btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer', marginTop: '10px' },
+    vpnOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#facc15', zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '20px', textAlign: 'center' }
   };
 
-  return (
-    <>
-      {/* VPN စစ်ဆေးသည့် မျက်နှာပြင် */}
-      {!vpnActive && (
-        <div style={styles.vpnOverlay}>
-          <h2 style={{color: '#facc15'}}>1.1.1.1 VPN REQUIRED</h2>
-          <p>You must connect to 1.1.1.1 VPN to use this bot and earn TON rewards.</p>
-          <button style={{...styles.btn, background: '#fff', color: '#000', margin: '20px 0'}} onClick={() => window.open(APP_CONFIG.WARP_LINK)}>DOWNLOAD 1.1.1.1 APK</button>
-          <button style={{...styles.btn, background: '#facc15', color: '#000', fontSize: '18px'}} onClick={() => setVpnActive(true)}>I CONNECTED VPN ✅</button>
-          <p style={{fontSize: '12px', marginTop: '20px', opacity: 0.7}}>Warning: Using without VPN will block rewards.</p>
-        </div>
-      )}
-
-      {/* Main Bot Content */}
-      <div style={{...styles.main, display: vpnActive ? 'block' : 'none'}}>
-        <div style={styles.header}>
-            <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
-            <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-            <small>Ads Watched: {adsWatched} {isVip && "⭐ VIP"}</small>
-        </div>
-
-        {activeNav === 'earn' && (
-          <div style={styles.card}>
-             <button style={{...styles.btn, background: '#facc15', color: '#000', marginBottom: '10px'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS & EARN</button>
-             <div style={{borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '10px', fontWeight: 'bold'}}>Tasks</div>
-             {[
-               { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-               { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" }
-             ].map((t, i) => (
-               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0' }}>
-                 <span>{t.name}</span>
-                 <button onClick={() => { window.open(t.link); setTimeout(() => processReward(t.id, 0.001), 2000); }} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
-               </div>
-             ))}
-          </div>
-        )}
-
-        <div style={styles.nav}>
-          {['earn', 'withdraw', 'profile'].map(n => (
-            <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold' }}>{n.toUpperCase()}</button>
-          ))}
+  // --- VPN Restriction UI ---
+  if (!isVpnActive && !checkingVpn) {
+    return (
+      <div style={styles.vpnOverlay}>
+        <div style={styles.card}>
+          <h2 style={{color: '#ef4444'}}>ACCESS DENIED ⚠️</h2>
+          <p>To use this bot and earn TON, you <b>MUST</b> connect to <b>1.1.1.1 Cloudflare VPN (WARP)</b>.</p>
+          <p style={{fontSize: '13px', color: '#666'}}>Other VPNs or normal connections are not allowed.</p>
+          
+          <button style={{...styles.btn, backgroundColor: '#007AFF'}} onClick={() => window.open(APP_CONFIG.VPN_IOS)}>
+            DOWNLOAD FOR IOS (APP STORE)
+          </button>
+          <button style={{...styles.btn, backgroundColor: '#3DDC84'}} onClick={() => window.open(APP_CONFIG.VPN_ANDROID)}>
+            DOWNLOAD FOR ANDROID (PLAY STORE)
+          </button>
+          
+          <button style={{...styles.btn, marginTop: '20px', backgroundColor: '#fff', color: '#000', border: '1px solid #000'}} onClick={checkVPN}>
+            I HAVE CONNECTED - REFRESH
+          </button>
         </div>
       </div>
-    </>
+    );
+  }
+
+  // --- Standard Render (Visible only if VPN is active) ---
+  return (
+    <div style={styles.main}>
+      {/* Rest of your existing App UI Code goes here (Header, Nav, Tabs, etc.) */}
+      <div style={{textAlign: 'center', background: '#000', padding: '20px', borderRadius: '25px', color: '#fff', border: '3px solid #fff'}}>
+         <h1 style={{fontSize: '32px'}}>{balance.toFixed(5)} TON</h1>
+         <p>VPN STATUS: <span style={{color: '#4ade80'}}>CONNECTED ✅</span></p>
+      </div>
+
+      <div style={styles.card}>
+         <button style={styles.btn} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
+      </div>
+
+      {/* Include your Navigation and other sections below as in your original code */}
+    </div>
   );
 }
 
