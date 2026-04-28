@@ -15,7 +15,7 @@ const APP_CONFIG = {
   REFER_REWARD: 0.001,
   VPN_IOS: "https://apps.apple.com/app/1-1-1-1-faster-internet/id1433553754",
   VPN_ANDROID: "https://play.google.com/store/apps/details?id=com.cloudflare.onedotonedotonedotone",
-  // Advertica link from your screenshot
+  // Your Advertica Link
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default"
 };
 
@@ -39,30 +39,17 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  const [adminTaskName, setAdminTaskName] = useState('');
-  const [adminTaskLink, setAdminTaskLink] = useState('');
-  const [adminTaskType, setAdminTaskType] = useState('bot');
-  const [adminPromoCode, setAdminPromoCode] = useState('');
-  const [adminVipUserId, setAdminVipUserId] = useState('');
-
   const [adsterraLinks, setAdsterraLinks] = useState([]);
-  const [newAdUrl, setNewAdUrl] = useState('');
-  const [searchUserId, setSearchUserId] = useState('');
-  const [searchedUser, setSearchedUser] = useState(null);
-  const [newBalanceInput, setNewBalanceInput] = useState(''); 
-
   const [lastAdClickTime, setLastAdClickTime] = useState(0);
 
+  // VPN Check logic
   const checkVPN = useCallback(async () => {
     try {
       const response = await fetch('https://www.cloudflare.com/cdn-cgi/trace');
       const data = await response.text();
       setIsVpnActive(data.includes('warp=on'));
-    } catch (error) {
-      setIsVpnActive(false);
-    } finally {
-      setCheckingVpn(false);
-    }
+    } catch (error) { setIsVpnActive(false); }
+    finally { setCheckingVpn(false); }
   }, []);
 
   useEffect(() => {
@@ -71,35 +58,47 @@ function App() {
     return () => clearInterval(vpnInterval);
   }, [checkVPN]);
 
-  // Combined Ad Logic: Advertica -> Adsterra
-  const triggerAdsSequence = useCallback(() => {
+  // Combined Ads Trigger (Advertica + Adsterra)
+  const triggerAllAds = useCallback(() => {
     if (!isVpnActive) return;
     setLastAdClickTime(Date.now());
     
     // Open Advertica
     window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
     
-    // Open Adsterra after 1 second
-    setTimeout(() => {
-        if (adsterraLinks.length > 0) {
-            const randomIndex = Math.floor(Math.random() * adsterraLinks.length);
-            window.open(adsterraLinks[randomIndex].url, '_blank');
-        }
-    }, 1000);
+    // Open Adsterra (if exists)
+    if (adsterraLinks.length > 0) {
+      const randomIndex = Math.floor(Math.random() * adsterraLinks.length);
+      setTimeout(() => {
+        window.open(adsterraLinks[randomIndex].url, '_blank');
+      }, 800);
+    }
   }, [adsterraLinks, isVpnActive]);
 
-  const handleTabChange = (tab) => {
+  // Validate 7s rule
+  const validateAdTime = () => {
     const timePassed = Date.now() - lastAdClickTime;
-    if (lastAdClickTime > 0 && timePassed < 7000) {
-      alert("⚠️ Access Denied! Please view the ads for at least 7 seconds.");
-      triggerAdsSequence(); // Re-trigger if they try to skip
-      return;
+    if (lastAdClickTime === 0 || timePassed < 7000) {
+      alert("⚠️ Access Denied! Please view the ads for at least 7 seconds to continue.");
+      triggerAllAds(); // Force open ads again
+      return false;
     }
-    
+    return true;
+  };
+
+  const handleTabChange = (tab) => {
+    if (!validateAdTime()) return;
     if (['bot', 'social', 'reward'].includes(tab)) {
-      triggerAdsSequence();
+      triggerAllAds();
     }
     setActiveTab(tab);
+  };
+
+  const safeNavigate = (nav) => {
+    if (activeNav === nav) return;
+    if (!validateAdTime()) return;
+    triggerAllAds();
+    setActiveNav(nav);
   };
 
   const fetchData = useCallback(async () => {
@@ -136,23 +135,9 @@ function App() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  useEffect(() => {
-    localStorage.setItem(`ton_bal_${APP_CONFIG.MY_UID}`, balance.toString());
-    localStorage.setItem(`comp_tasks_${APP_CONFIG.MY_UID}`, JSON.stringify(completed));
-    localStorage.setItem(`wd_hist_${APP_CONFIG.MY_UID}`, JSON.stringify(withdrawHistory));
-    localStorage.setItem(`refs_${APP_CONFIG.MY_UID}`, JSON.stringify(referrals));
-    localStorage.setItem(`ads_watched_${APP_CONFIG.MY_UID}`, adsWatched.toString());
-  }, [balance, completed, withdrawHistory, referrals, adsWatched]);
-
   const processReward = (id, rewardAmount) => {
-    if (!isVpnActive) return alert("Please connect to 1.1.1.1 VPN!");
-
-    const timePassed = Date.now() - lastAdClickTime;
-    if (lastAdClickTime === 0 || timePassed < 7000) {
-        alert("⚠️ Reward Locked! Stay on the ads for 7 seconds to unlock your reward.");
-        triggerAdsSequence();
-        return;
-    }
+    if (!isVpnActive) return alert("Please connect to VPN!");
+    if (!validateAdTime()) return;
 
     let finalReward = rewardAmount;
     let isWatchAd = id === 'watch_ad';
@@ -169,13 +154,13 @@ function App() {
           if (isWatchAd) setAdsWatched(newAdsCount);
           const newCompleted = !isWatchAd ? [...completed, id] : completed;
           if (!isWatchAd) setCompleted(newCompleted);
+          
           fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PATCH',
             body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
           });
           alert(`Reward Success: +${finalReward} TON`);
-          setLastAdClickTime(0); 
-          fetchData();
+          setLastAdClickTime(0); // Reset after successful reward
         }
       });
     }
@@ -183,13 +168,13 @@ function App() {
 
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
-    triggerAdsSequence();
+    triggerAllAds();
     if (link) {
       setTimeout(() => {
         tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-      }, 800);
+      }, 1000);
     }
-    setTimeout(() => { processReward(id, reward); }, 1500);
+    setTimeout(() => { processReward(id, reward); }, 2000);
   };
 
   const handleClaimClick = () => {
@@ -197,36 +182,7 @@ function App() {
     processReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD);
   }
 
-  const safeNavigate = (nav) => {
-    if (activeNav === nav) return;
-    const timePassed = Date.now() - lastAdClickTime;
-    if (lastAdClickTime > 0 && timePassed < 7000) {
-        alert("⚠️ Navigation Blocked! View the ads for 7 seconds first.");
-        triggerAdsSequence();
-        return;
-    }
-    triggerAdsSequence();
-    setActiveNav(nav);
-  };
-
-  const setSuccessStatus = async (userId, historyIndex) => {
-    try {
-      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
-      const userData = await res.json();
-      if(userData && userData.withdrawHistory) {
-        const updatedHistory = [...userData.withdrawHistory];
-        updatedHistory[historyIndex].status = "Success";
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
-          method: 'PATCH',
-          body: JSON.stringify({ withdrawHistory: updatedHistory })
-        });
-        alert("Withdrawal status updated!");
-        setSearchedUser({...userData, withdrawHistory: updatedHistory});
-        fetchData();
-      }
-    } catch (e) { alert("Update Error"); }
-  };
-
+  // Task lists
   const fixedBotTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -263,9 +219,7 @@ function App() {
       <div style={styles.vpnOverlay}>
         <div style={{...styles.card, padding: '30px'}}>
           <h2 style={{color: '#ef4444', marginBottom: '15px'}}>ACCESS DENIED ⚠️</h2>
-          <p>Please connect to <b>1.1.1.1 Cloudflare VPN (WARP)</b>.</p>
-          <button style={{...styles.btn, backgroundColor: '#007AFF', marginBottom: '10px'}} onClick={() => window.open(APP_CONFIG.VPN_IOS)}>DOWNLOAD FOR IOS</button>
-          <button style={{...styles.btn, backgroundColor: '#3DDC84', marginBottom: '20px'}} onClick={() => window.open(APP_CONFIG.VPN_ANDROID)}>DOWNLOAD FOR ANDROID</button>
+          <p>Please connect to <b>1.1.1.1 VPN</b> to use this app.</p>
           <button style={{...styles.btn, backgroundColor: '#fff', color: '#000'}} onClick={checkVPN}>REFRESH</button>
         </div>
       </div>
@@ -280,19 +234,18 @@ function App() {
             {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP ⭐</span>}
         </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <small style={{opacity: 0.8}}>Total Ads Watched: {adsWatched}</small>
+        <small style={{opacity: 0.8}}>Ads Watched: {adsWatched}</small>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
-             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsSequence(); processReward('watch_ad', 0); }}>WATCH ADS</button>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get Rewards</p>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAllAds(); processReward('watch_ad', 0); }}>WATCH ADS</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
-            {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
-              (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && 
+            {['BOT', 'SOCIAL', 'REWARD'].map(t => (
               <button key={t} onClick={() => handleTabChange(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000' }}>{t}</button>
             ))}
           </div>
@@ -301,13 +254,13 @@ function App() {
             {activeTab === 'bot' && allBotTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
-                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
+                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
               </div>
             ))}
             {activeTab === 'social' && allSocialTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
-                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
+                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
               </div>
             ))}
             {activeTab === 'reward' && (
@@ -316,18 +269,12 @@ function App() {
                 <button style={styles.btn} onClick={handleClaimClick}>CLAIM</button>
               </div>
             )}
-            {activeTab === 'admin' && (
-              <div>
-                {/* Full admin code follows same structure as provided previously */}
-                <h4 style={{borderBottom: '2px solid #000', paddingBottom: '5px'}}>Admin Control</h4>
-                {/* ... (Existing Admin Logic) */}
-              </div>
-            )}
           </div>
         </>
       )}
 
-      {/* Nav menus invoke triggerAdsSequence via safeNavigate */}
+      {/* Other sections (Withdraw, Profile, etc.) should use safeNavigate in buttons */}
+
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => safeNavigate(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
