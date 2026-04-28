@@ -79,18 +79,29 @@ function App() {
     }
   }, [adsterraLinks, isVpnActive]);
 
-  // Handle Tab Change with Adsterra trigger and 7s validation
-  const handleTabChange = (tab) => {
+  // Logic to validate 7-second ad view before any navigation
+  const validateAdTime = () => {
+    if (lastAdClickTime === 0) return true;
     const timePassed = Date.now() - lastAdClickTime;
-    if (lastAdClickTime > 0 && timePassed < 7000) {
-      alert("Please view the ad for 7 seconds before switching!");
-      return;
+    if (timePassed < 7000) {
+        alert("Please stay on the ad for at least 7 seconds before switching!");
+        return false;
     }
+    return true;
+  };
+
+  const handleTabChange = (tab) => {
+    if (!validateAdTime()) return;
     
     if (['bot', 'social', 'reward'].includes(tab)) {
       triggerAdsterra();
     }
     setActiveTab(tab);
+  };
+
+  const safeNavigate = (nav) => {
+    if (!validateAdTime()) return;
+    setActiveNav(nav);
   };
 
   const handleReferral = useCallback(async () => {
@@ -158,12 +169,7 @@ function App() {
 
   const processReward = (id, rewardAmount) => {
     if (!isVpnActive) return alert("Please connect to 1.1.1.1 VPN!");
-
-    const timePassed = Date.now() - lastAdClickTime;
-    if (lastAdClickTime > 0 && timePassed < 7000) {
-        alert("Please stay on the ad for at least 7 seconds to claim your reward!");
-        return;
-    }
+    if (!validateAdTime()) return;
 
     let finalReward = rewardAmount;
     let isWatchAd = id === 'watch_ad';
@@ -196,15 +202,6 @@ function App() {
     if (completed.includes(id)) return alert("Already completed!");
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
     setTimeout(() => { processReward(id, reward); }, 1500);
-  };
-
-  const safeNavigate = (nav) => {
-    const timePassed = Date.now() - lastAdClickTime;
-    if (lastAdClickTime > 0 && timePassed < 7000) {
-        alert("Please view the ad for 7 seconds before switching tabs!");
-        return;
-    }
-    setActiveNav(nav);
   };
 
   const setSuccessStatus = async (userId, historyIndex) => {
@@ -325,7 +322,6 @@ function App() {
             {activeTab === 'admin' && (
               <div>
                 <h4 style={{borderBottom: '2px solid #000', paddingBottom: '5px'}}>Admin Control</h4>
-                
                 <div style={{background: '#fef08a', padding: '10px', borderRadius: '10px', margin: '10px 0', border: '2px solid #000'}}>
                     <h5 style={{margin: '0 0 10px 0'}}>🔗 ADSTERRA DIRECT LINKS</h5>
                     <input style={styles.input} placeholder="Paste Adsterra URL" value={newAdUrl} onChange={e => setNewAdUrl(e.target.value)} />
@@ -370,7 +366,6 @@ function App() {
                                 alert("Balance Updated!"); setSearchedUser({...searchedUser, balance: Number(newBalanceInput)});
                             }}>UPDATE BALANCE</button>
                     </div>
-
                     <h5 style={{marginTop: '10px', color: '#3b82f6'}}>WITHDRAW HISTORY (CLICK TO SUCCESS)</h5>
                     <div style={{maxHeight: '150px', overflowY: 'auto', background: '#fff', borderRadius: '8px', padding: '5px'}}>
                       {searchedUser.withdrawHistory && searchedUser.withdrawHistory.length > 0 ? searchedUser.withdrawHistory.map((h, idx) => (
@@ -387,11 +382,9 @@ function App() {
                         </div>
                       )) : <p>No history</p>}
                     </div>
-
                     <button style={{...styles.btn, background: '#ef4444', marginTop: '10px'}} onClick={() => setSearchedUser(null)}>CLOSE INFO</button>
                   </div>
                 )}
-                
                 <hr style={{margin: '15px 0', border: '1px dashed #ccc'}}/>
                 <h5 style={{color: 'green'}}>➕ ADD NEW TASK</h5>
                 <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
@@ -406,7 +399,6 @@ function App() {
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
                    alert("Task Saved!"); fetchData();
                 }}>SAVE TASK</button>
-
                 <h5 style={{color: '#ef4444'}}>🗑️ DELETE CUSTOM TASKS</h5>
                 <div style={{background: '#fee2e2', padding: '10px', borderRadius: '10px', border: '2px solid #ef4444', marginBottom: '15px'}}>
                     {customTasks.length === 0 ? <p style={{fontSize: '12px', textAlign: 'center'}}>No custom tasks found.</p> : 
@@ -426,14 +418,12 @@ function App() {
                         </div>
                     ))}
                 </div>
-
                 <input style={styles.input} placeholder="New Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <button style={{...styles.btn, background: 'purple', marginBottom: '15px'}} onClick={async () => {
                    if(!adminPromoCode) return alert("Enter code");
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.CODE_REWARD }) });
                    alert("Code Created!"); setAdminPromoCode('');
                 }}>CREATE CODE</button>
-
                 <h5 style={{color: '#0ea5e9'}}>GIVE VIP STATUS</h5>
                 <input style={styles.input} placeholder="User ID" value={adminVipUserId} onChange={e => setAdminVipUserId(e.target.value)} />
                 <button style={{...styles.btn, background: '#0ea5e9'}} onClick={async () => {
@@ -459,7 +449,6 @@ function App() {
             </div>
             <button style={{...styles.btn, background: '#0ea5e9'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>VERIFY PAYMENT</button>
           </div>
-
           <div style={styles.card}>
             <h3>Withdraw TON</h3>
             <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
@@ -524,7 +513,19 @@ function App() {
 
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => safeNavigate(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
+          <button 
+            key={n} 
+            onClick={() => safeNavigate(n)} 
+            style={{ 
+              flex: 1, 
+              background: 'none', 
+              border: 'none', 
+              color: activeNav === n ? '#facc15' : '#fff', 
+              fontWeight: 'bold', 
+              fontSize: '10px',
+              cursor: 'pointer' 
+            }}
+          >
             {n.toUpperCase()}
           </button>
         ))}
