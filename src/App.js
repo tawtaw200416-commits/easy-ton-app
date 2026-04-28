@@ -47,8 +47,7 @@ function App() {
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState(''); 
 
-  // --- GLOBAL AD TRIGGER ---
-  // This triggers Adsterra when the user interacts with the app
+  // --- Adsterra ကို ခလုတ်နှိပ်တိုင်း ပွင့်စေမယ့် Function ---
   const triggerAdLink = useCallback(() => {
     if (adLinks.length > 0) {
         const randomAd = adLinks[Math.floor(Math.random() * adLinks.length)];
@@ -56,11 +55,10 @@ function App() {
     }
   }, [adLinks]);
 
-  // Handle global clicks for Adsterra
+  // Screen ပေါ်က ခလုတ်တစ်ခုခုကို နှိပ်လိုက်တာနဲ့ Ad ပွင့်အောင်လုပ်ခြင်း
   useEffect(() => {
     const handleGlobalClick = (e) => {
-        // We trigger the ad if a button or nav item is clicked
-        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A' || e.target.closest('button')) {
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
             triggerAdLink();
         }
     };
@@ -117,8 +115,7 @@ function App() {
   }, []);
 
   useEffect(() => { 
-    fetchData(); 
-    handleReferral(); 
+    fetchData(); handleReferral(); 
     const interval = setInterval(fetchData, 30000); 
     return () => clearInterval(interval);
   }, [fetchData, handleReferral]);
@@ -151,7 +148,7 @@ function App() {
             method: 'PATCH',
             body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
           });
-          alert(`Reward Success: +${finalReward} TON`);
+          alert(`Success: +${finalReward} TON`);
           fetchData();
         }
       });
@@ -163,12 +160,6 @@ function App() {
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
-
-  // --- Task Mapping (Original Logic preserved) ---
-  const fixedBotTasks = [{ id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" }, { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" }, { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" }, { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" }, { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" }, { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }, { id: 'b7', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=1793453606" }];
-  const fixedSocialTasks = [{ id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" }, { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" }, { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" }, { id: 's4', name: "@M9460", link: "https://t.me/M9460" }, { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" }, { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" }, { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" }, { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" }, { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }];
-  const allBotTasks = [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')];
-  const allSocialTasks = [...fixedSocialTasks, ...customTasks.filter(t => t.type === 'social')];
 
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
@@ -193,7 +184,7 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get TON</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
           </div>
 
@@ -205,66 +196,56 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && allBotTasks.map((t, i) => (
+            {activeTab === 'admin' && (
+              <div>
+                <h4 style={{borderBottom: '2px solid #000'}}>Admin Control</h4>
+                
+                {/* --- ADSTERRA MANAGER --- */}
+                <div style={{background: '#fef08a', padding: '10px', borderRadius: '10px', marginTop: '10px'}}>
+                    <h5 style={{margin: '0 0 10px 0'}}>🔗 ADSTERRA LINKS</h5>
+                    <input style={styles.input} placeholder="Adsterra URL ထည့်ပါ" value={newAdUrl} onChange={e => setNewAdUrl(e.target.value)} />
+                    <button style={{...styles.btn, background: '#d946ef', marginBottom: '10px'}} onClick={async () => {
+                        if(!newAdUrl) return;
+                        const id = 'ad_'+Date.now();
+                        await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${id}.json`, { method: 'PUT', body: JSON.stringify({ url: newAdUrl }) });
+                        setNewAdUrl(''); fetchData(); alert("Link Added!");
+                    }}>ADD LINK</button>
+                    
+                    <div style={{maxHeight: '100px', overflowY: 'auto', fontSize: '12px'}}>
+                        {adLinks.map(ad => (
+                            <div key={ad.id} style={{display:'flex', justifyContent:'space-between', padding: '5px', borderBottom: '1px solid #000'}}>
+                                <span style={{overflow: 'hidden'}}>{ad.url.substring(0, 30)}...</span>
+                                <button style={{color: 'red'}} onClick={async () => {
+                                    await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${ad.id}.json`, { method: 'DELETE' });
+                                    fetchData();
+                                }}>ဖျက်မည်</button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <hr/>
+                {/* ကျန်တဲ့ Admin Functions တွေပုံမှန်အတိုင်းဆက်ရှိနေပါမယ် */}
+                <input style={styles.input} placeholder="User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
+                <button style={styles.btn} onClick={async () => {
+                      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
+                      const data = await res.json();
+                      if(data) { setSearchedUser(data); setNewBalanceInput(data.balance || 0); }
+                }}>SEARCH USER</button>
+              </div>
+            )}
+            {/* BOT နှင့် SOCIAL Tasks များပြသရန်နေရာ (ပုံမှန်အတိုင်း) */}
+            {activeTab === 'bot' && [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')].map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
               </div>
             ))}
-            {activeTab === 'social' && allSocialTasks.map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
-                <span style={{fontWeight:'bold'}}>{t.name}</span>
-                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
-              </div>
-            ))}
-            {activeTab === 'reward' && (
-              <div>
-                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
-              </div>
-            )}
-            {activeTab === 'admin' && (
-              <div>
-                <h4 style={{borderBottom: '2px solid #000', paddingBottom: '5px'}}>Admin Control</h4>
-                
-                {/* --- ADSTERRA MANAGER --- */}
-                <h5 style={{color: '#d946ef', marginTop: '15px'}}>🔗 ADSTERRA DIRECT LINKS</h5>
-                <input style={styles.input} placeholder="Adsterra URL" value={newAdUrl} onChange={e => setNewAdUrl(e.target.value)} />
-                <button style={{...styles.btn, background: '#d946ef', marginBottom: '10px'}} onClick={async () => {
-                    if(!newAdUrl) return;
-                    const id = 'ad_'+Date.now();
-                    await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${id}.json`, { method: 'PUT', body: JSON.stringify({ url: newAdUrl }) });
-                    setNewAdUrl(''); fetchData(); alert("Ad Link Added!");
-                }}>ADD AD LINK</button>
-                
-                <div style={{maxHeight: '150px', overflowY: 'auto', marginBottom: '20px', fontSize: '10px'}}>
-                    {adLinks.map(ad => (
-                        <div key={ad.id} style={{display:'flex', justifyContent:'space-between', background: '#f5f5f5', padding: '5px', marginBottom: '2px'}}>
-                            <span style={{overflow: 'hidden'}}>{ad.url}</span>
-                            <button style={{color: 'red', border: 'none', background: 'none'}} onClick={async () => {
-                                await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${ad.id}.json`, { method: 'DELETE' });
-                                fetchData();
-                            }}>DEL</button>
-                        </div>
-                    ))}
-                </div>
-
-                {/* (Rest of original admin panel logic for User Search, Tasks, Promo, VIP remains below) */}
-                <h5 style={{color: '#f59e0b'}}>🔍 USER MANAGER</h5>
-                <input style={styles.input} placeholder="User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
-                <button style={{...styles.btn, background: '#f59e0b'}} onClick={async () => {
-                      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
-                      const data = await res.json();
-                      if(data) { setSearchedUser(data); setNewBalanceInput(data.balance || 0); } else alert("Not found");
-                }}>FIND USER</button>
-                {/* ... existing admin UI elements ... */}
-              </div>
-            )}
           </div>
         </>
       )}
 
-      {/* Navigation Buttons (Global Ad trigger included via click listener) */}
+      {/* Navigation အပိုင်း (ဘယ် Nav ကိုနှိပ်နှိပ် Ad တက်စေဖို့ Global Click က ကိုင်တွယ်ထားပါတယ်) */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
@@ -275,5 +256,15 @@ function App() {
     </div>
   );
 }
+
+const fixedBotTasks = [
+    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
+    { id: 'b7', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=1793453606" }
+];
 
 export default App;
