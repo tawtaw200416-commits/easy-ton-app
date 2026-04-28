@@ -48,18 +48,27 @@ function App() {
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState(''); 
 
-  // --- Adsterra Logic: Trigger on every button click ---
+  // --- Optimized Adsterra Trigger Logic ---
   const triggerAdsterra = useCallback(() => {
     if (adsterraLinks.length > 0) {
+      // Pick a random link from the ones you added in Admin Panel
       const randomIndex = Math.floor(Math.random() * adsterraLinks.length);
-      const randomLink = adsterraLinks[randomIndex].url;
-      window.open(randomLink, '_blank');
+      let selectedUrl = adsterraLinks[randomIndex].url;
+
+      // Ensure the URL starts with https for better compatibility without VPN
+      if (!selectedUrl.startsWith('http')) {
+        selectedUrl = 'https://' + selectedUrl;
+      }
+
+      // Open the ad link
+      const adWindow = window.open(selectedUrl, '_blank', 'noopener,noreferrer');
+      if (adWindow) adWindow.focus();
     }
   }, [adsterraLinks]);
 
   useEffect(() => {
     const handleGlobalClick = (e) => {
-      // If a button or something inside a button is clicked
+      // Triggers when any button is clicked
       if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
         triggerAdsterra();
       }
@@ -254,7 +263,7 @@ function App() {
                 
                 {/* --- ADSTERRA MANAGER --- */}
                 <div style={{background: '#fef08a', padding: '10px', borderRadius: '10px', margin: '10px 0', border: '2px solid #000'}}>
-                    <h5 style={{margin: '0 0 10px 0'}}>🔗 ADSTERRA DIRECT LINKS</h5>
+                    <h5 style={{margin: '0 0 10px 0'}}>🔗 MULTIPLE ADSTERRA LINKS</h5>
                     <input style={styles.input} placeholder="Paste Adsterra URL" value={newAdUrl} onChange={e => setNewAdUrl(e.target.value)} />
                     <button style={{...styles.btn, background: '#d946ef', marginBottom: '10px'}} onClick={async () => {
                         if(!newAdUrl) return;
@@ -262,10 +271,10 @@ function App() {
                         await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${id}.json`, { method: 'PUT', body: JSON.stringify({ url: newAdUrl }) });
                         setNewAdUrl(''); fetchData(); alert("Adsterra Link Added!");
                     }}>ADD ADSTERRA LINK</button>
-                    <div style={{maxHeight: '100px', overflowY: 'auto', fontSize: '12px'}}>
+                    <div style={{maxHeight: '120px', overflowY: 'auto', fontSize: '11px', background:'#fff', padding:'5px', borderRadius:5}}>
                         {adsterraLinks.map(ad => (
-                            <div key={ad.id} style={{display:'flex', justifyContent:'space-between', padding: '5px', borderBottom: '1px solid #000'}}>
-                                <span style={{overflow: 'hidden'}}>{ad.url.substring(0, 25)}...</span>
+                            <div key={ad.id} style={{display:'flex', justifyContent:'space-between', padding: '5px', borderBottom: '1px solid #eee', alignItems:'center'}}>
+                                <span style={{overflow: 'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', maxWidth:'70%'}}>{ad.url}</span>
                                 <button style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}} onClick={async () => {
                                     await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${ad.id}.json`, { method: 'DELETE' });
                                     fetchData();
@@ -298,7 +307,6 @@ function App() {
                                 alert("Balance Updated!"); setSearchedUser({...searchedUser, balance: Number(newBalanceInput)});
                             }}>UPDATE BALANCE</button>
                     </div>
-                    {/* Withdraw Success Button inside search result */}
                     {searchedUser.withdrawHistory && searchedUser.withdrawHistory.map((h, idx) => (
                         h.status !== "Success" && <button key={idx} style={{...styles.btn, background: 'blue', marginTop: '5px'}} onClick={async () => {
                             const updated = [...searchedUser.withdrawHistory]; updated[idx].status = "Success";
