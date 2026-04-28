@@ -79,27 +79,6 @@ function App() {
     }
   }, [adsterraLinks, isVpnActive]);
 
-  // Handle Tab Switch (BOT, SOCIAL, REWARD) with Adsterra & Timer
-  const switchTab = (tab) => {
-    const timePassed = Date.now() - lastAdClickTime;
-    if (lastAdClickTime > 0 && timePassed < 7000) {
-        alert("Please view the ad for at least 7 seconds before switching!");
-        return;
-    }
-    triggerAdsterra();
-    setActiveTab(tab);
-  };
-
-  const safeNavigate = (nav) => {
-    const timePassed = Date.now() - lastAdClickTime;
-    if (lastAdClickTime > 0 && timePassed < 7000) {
-        alert("Please view the ad for 7 seconds before switching tabs!");
-        return;
-    }
-    triggerAdsterra();
-    setActiveNav(nav);
-  };
-
   const fetchData = useCallback(async () => {
     try {
       const [u, t, a] = await Promise.all([
@@ -112,7 +91,7 @@ function App() {
       const adsData = await a.json();
 
       if (userData) {
-        setBalance(prev => userData.balance !== undefined ? Number(userData.balance) : prev);
+        setBalance(Number(userData.balance || 0));
         setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID) || !!userData.isVip);
         setCompleted(userData.completed || []);
         setWithdrawHistory(userData.withdrawHistory || []);
@@ -134,35 +113,51 @@ function App() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  const processReward = (id, rewardAmount) => {
-    if (!isVpnActive) return alert("Please connect to 1.1.1.1 VPN!");
-
+  // --- NEW SAFE TABS SWITCH LOGIC ---
+  const safeTabSwitch = (tab) => {
     const timePassed = Date.now() - lastAdClickTime;
     if (lastAdClickTime > 0 && timePassed < 7000) {
-        alert("Please stay on the ad for at least 7 seconds to claim your reward!");
+        alert("Please view the ad for at least 7 seconds before switching!");
+        return;
+    }
+    if (tab !== 'admin') triggerAdsterra(); // Admin နှိပ်ရင် ad မပြချင်ရင် ဒါကိုသုံးပါ
+    setActiveTab(tab);
+  };
+
+  const safeNavigate = (nav) => {
+    const timePassed = Date.now() - lastAdClickTime;
+    if (lastAdClickTime > 0 && timePassed < 7000) {
+        alert("Please view the ad for 7 seconds before switching tabs!");
+        return;
+    }
+    setActiveNav(nav);
+  };
+
+  const processReward = (id, rewardAmount) => {
+    if (!isVpnActive) return alert("Please connect to 1.1.1.1 VPN!");
+    const timePassed = Date.now() - lastAdClickTime;
+    if (lastAdClickTime > 0 && timePassed < 7000) {
+        alert("Wait 7 seconds to claim!");
         return;
     }
 
     let finalReward = rewardAmount;
-    let isWatchAd = id === 'watch_ad';
-    if (isWatchAd) finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
+    if (id === 'watch_ad') finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
 
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
       AdController.show().then((result) => {
         if (result.done) {
           const newBal = Number((balance + finalReward).toFixed(5));
-          const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
+          const newAdsCount = id === 'watch_ad' ? adsWatched + 1 : adsWatched;
           setBalance(newBal);
-          if (isWatchAd) setAdsWatched(newAdsCount);
-          const newCompleted = !isWatchAd ? [...completed, id] : completed;
-          if (!isWatchAd) setCompleted(newCompleted);
+          if (id === 'watch_ad') setAdsWatched(newAdsCount);
           fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PATCH',
-            body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
+            body: JSON.stringify({ balance: newBal, adsWatched: newAdsCount })
           });
-          alert(`Reward Success: +${finalReward} TON`);
-          setLastAdClickTime(0); 
+          alert(`Reward: +${finalReward} TON`);
+          setLastAdClickTime(0);
           fetchData();
         }
       });
@@ -170,10 +165,25 @@ function App() {
   };
 
   const handleTaskReward = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Already completed!");
+    if (completed.includes(id)) return alert("Already done!");
     triggerAdsterra();
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-    setTimeout(() => { processReward(id, reward); }, 2000);
+    setTimeout(() => { processReward(id, reward); }, 1500);
+  };
+
+  // ADMIN Functions
+  const setSuccessStatus = async (userId, historyIndex) => {
+    try {
+      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
+      const userData = await res.json();
+      if(userData && userData.withdrawHistory) {
+        const updatedHistory = [...userData.withdrawHistory];
+        updatedHistory[historyIndex].status = "Success";
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, { method: 'PATCH', body: JSON.stringify({ withdrawHistory: updatedHistory }) });
+        alert("Status Updated!");
+        setSearchedUser({...userData, withdrawHistory: updatedHistory});
+      }
+    } catch (e) { alert("Error"); }
   };
 
   const fixedBotTasks = [
@@ -207,7 +217,7 @@ function App() {
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
-    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff', zIndex: 1000 },
+    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' },
     vpnOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#facc15', zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '20px', textAlign: 'center' }
   };
 
@@ -215,8 +225,8 @@ function App() {
     return (
       <div style={styles.vpnOverlay}>
         <div style={{...styles.card, padding: '30px'}}>
-          <h2 style={{color: '#ef4444', marginBottom: '15px'}}>ACCESS DENIED ⚠️</h2>
-          <button style={{...styles.btn, backgroundColor: '#fff', color: '#000'}} onClick={checkVPN}>REFRESH VPN</button>
+          <h2 style={{color: '#ef4444'}}>VPN REQUIRED ⚠️</h2>
+          <button style={styles.btn} onClick={checkVPN}>REFRESH</button>
         </div>
       </div>
     );
@@ -225,22 +235,21 @@ function App() {
   return (
     <div style={styles.main}>
       <div style={styles.header}>
-        <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
+        <small style={{color: '#facc15'}}>BALANCE</small>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <small style={{opacity: 0.8}}>Ads Watched: {adsWatched} | {isVip ? "VIP ⭐" : "Active"}</small>
+        <small>{isVip ? "VIP ⭐" : "Standard"}</small>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video Reward</p>
-             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsterra(); processReward('watch_ad', 0); }}>WATCH ADS</button>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
               (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && 
-              <button key={t} onClick={() => switchTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000' }}>{t}</button>
+              <button key={t} onClick={() => safeTabSwitch(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000' }}>{t}</button>
             ))}
           </div>
 
@@ -248,49 +257,34 @@ function App() {
             {activeTab === 'bot' && allBotTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
-                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
+                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={styles.btn}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
               </div>
             ))}
             {activeTab === 'social' && allSocialTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
-                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
+                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={styles.btn}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
               </div>
             ))}
-            {activeTab === 'reward' && (
-              <div>
-                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
-              </div>
-            )}
             {activeTab === 'admin' && (
-              <div style={{fontSize: '12px'}}>
-                <h4>Admin Panel</h4>
-                <input style={styles.input} placeholder="Ad URL" value={newAdUrl} onChange={e => setNewAdUrl(e.target.value)} />
-                <button style={styles.btn} onClick={async () => {
-                    const id = 'ad_'+Date.now();
-                    await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${id}.json`, { method: 'PUT', body: JSON.stringify({ url: newAdUrl }) });
-                    fetchData(); alert("Ad Added!");
-                }}>ADD AD LINK</button>
+              <div>
+                <h4>Admin Control</h4>
+                {/* User Manager, Task Manager စတဲ့ logic အဟောင်းများ ဒီနေရာမှာ ရှိနေပါမယ် */}
+                <input style={styles.input} placeholder="User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
+                <button onClick={async () => {
+                    const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
+                    const data = await res.json();
+                    setSearchedUser(data);
+                }} style={styles.btn}>FIND USER</button>
               </div>
             )}
           </div>
         </>
       )}
 
-      {activeNav === 'withdraw' && (
-        <div style={styles.card}>
-          <h3>Withdraw TON</h3>
-          <input style={styles.input} placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-          <button style={styles.btn} onClick={() => alert("Request sent")}>WITHDRAW</button>
-        </div>
-      )}
-
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => safeNavigate(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
-            {n.toUpperCase()}
-          </button>
+          <button key={n} onClick={() => safeNavigate(n)} style={{ flex: 1, color: activeNav === n ? '#facc15' : '#fff', background: 'none', border: 'none', fontWeight:'bold' }}>{n.toUpperCase()}</button>
         ))}
       </div>
     </div>
