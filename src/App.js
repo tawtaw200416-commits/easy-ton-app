@@ -16,7 +16,7 @@ const APP_CONFIG = {
   VPN_IOS: "https://apps.apple.com/app/1-1-1-1-faster-internet/id1433553754",
   VPN_ANDROID: "https://play.google.com/store/apps/details?id=com.cloudflareonedotonedotonedotone",
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
-  // Adsterra Direct Link (Code ထဲမှာ တစ်ခါတည်းထည့်ထားသည်)
+  // Adsterra Direct Link is hardcoded here as requested
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec"
 };
 
@@ -40,11 +40,11 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
+  // Admin Panel States (Preserved)
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
   const [adminTaskType, setAdminTaskType] = useState('bot');
   const [adminVipUserId, setAdminVipUserId] = useState('');
-
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState(''); 
@@ -69,15 +69,12 @@ function App() {
     return () => clearInterval(vpnInterval);
   }, [checkVPN]);
 
-  // Advertica ပွင့်ပြီး 7 စက္ကန့်အကြာတွင် Adsterra ပွင့်မည့် Sequence
+  // Combined 7s logic: Advertica opens first, Adsterra opens 7 seconds later
   const triggerAdsSequence = useCallback(() => {
     if (!isVpnActive) return;
-    
-    // ပထမဦးစွာ Advertica ကို ဖွင့်မည်
     window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
     setLastAdClickTime(Date.now()); 
 
-    // 7 စက္ကန့် (7000ms) ပြည့်လျှင် Adsterra ကို ထပ်ဖွင့်မည်
     setTimeout(() => {
       window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
     }, 7000); 
@@ -86,7 +83,7 @@ function App() {
   const checkAdStay = () => {
     const timePassed = Date.now() - lastAdClickTime;
     if (lastAdClickTime === 0 || timePassed < 7000) {
-      alert("Please view Ad for 7 seconds first!");
+      alert("Please view Advertica for 7 seconds first!");
       triggerAdsSequence(); 
       return false;
     }
@@ -271,7 +268,7 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Earn TON</p>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Earn Reward</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsSequence(); processReward('watch_ad', 0); }}>WATCH ADS</button>
           </div>
 
@@ -328,20 +325,26 @@ function App() {
                 )}
                 
                 <hr/>
-                <h5>➕ TASK MANAGER</h5>
-                <input style={styles.input} placeholder="Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
+                <h5>➕ TASK MANAGER (BOT/SOCIAL)</h5>
+                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
+                <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
+                  <option value="bot">BOT</option>
+                  <option value="social">SOCIAL</option>
+                </select>
                 <button style={{...styles.btn, background: 'green', marginBottom: 15}} onClick={async () => {
                    const id = 't_'+Date.now();
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
-                   alert("Saved!"); fetchData();
+                   alert("Saved Task Successfully!"); fetchData();
+                   setAdminTaskName(''); setAdminTaskLink('');
                 }}>SAVE TASK</button>
 
-                <h5>GIVE VIP</h5>
+                <hr/>
+                <h5>GIVE VIP STATUS</h5>
                 <input style={styles.input} placeholder="User ID" value={adminVipUserId} onChange={e => setAdminVipUserId(e.target.value)} />
                 <button style={{...styles.btn, background: '#0ea5e9'}} onClick={async () => {
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${adminVipUserId}.json`, { method: 'PATCH', body: JSON.stringify({ isVip: true }) });
-                   alert("Done!"); setAdminVipUserId('');
+                   alert("VIP Status Granted!"); setAdminVipUserId('');
                 }}>GIVE VIP</button>
               </div>
             )}
@@ -356,17 +359,18 @@ function App() {
             <input style={styles.input} placeholder="Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
-                if(amt < 0.1 || amt > balance) return alert("Check Balance");
+                if(amt < 0.1 || amt > balance) return alert("Insufficient Balance");
                 const entry = { amount: withdrawAmount, address: withdrawAddress, date: new Date().toLocaleString(), status: 'Pending' };
                 const newHistory = [entry, ...withdrawHistory];
                 const newBal = Number((balance - amt).toFixed(5));
                 setBalance(newBal); setWithdrawHistory(newHistory);
                 fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { method: 'PATCH', body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory }) });
-                alert("Requested!");
+                alert("Withdrawal Requested!");
             }}>WITHDRAW</button>
         </div>
       )}
 
+      {/* Navigation Footer */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => safeNavigate(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
