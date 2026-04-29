@@ -1,40 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-
-const tg = window.Telegram?.WebApp;
-
-const APP_CONFIG = {
-  ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
-  MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
-  ADSGRAM_BLOCK_ID: "27611", 
-  FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
-  SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
-  MIN_WITHDRAW: 0.1,
-  WATCH_REWARD: 0.0004, 
-  VIP_WATCH_REWARD: 0.0008, 
-  CODE_REWARD: 0.0008,
-  REFER_REWARD: 0.001,
-  // Fixed Ad Links
-  ADVERTIC_URL: "Https://data527.click/a674e1237b7e268eb5f6/ef896b9a82/?placementName=default",
-  ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec"
-};
-
-const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
-
-function App() {
-  const [balance, setBalance] = useState(() => Number(localStorage.getItem(`ton_bal_${APP_CONFIG.MY_UID}`)) || 0);
-  const [isVip, setIsVip] = useState(VIP_IDS.includes(APP_CONFIG.MY_UID));
-  const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem(`comp_tasks_${APP_CONFIG.MY_UID}`)) || []);
-  const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem(`wd_hist_${APP_CONFIG.MY_UID}`)) || []);
-  const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem(`refs_${APP_CONFIG.MY_UID}`)) || []);
-  const [adsWatched, setAdsWatched] = useState(() => Number(localStorage.getItem(`ads_watched_${APP_CONFIG.MY_UID}`)) || 0);
-  
-  const [customTasks, setCustomTasks] = useState([]);
-  const [activeNav, setActiveNav] = useState('earn');
-  const [activeTab, setActiveTab] = useState('bot');
-  
-  const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawAddress, setWithdrawAddress] = useState('');
-  const [rewardCodeInput, setRewardCodeInput] = useState('');
+့  const [rewardCodeInput, setRewardCodeInput] = useState('');
 
   const [lastAdTime, setLastAdTime] = useState(0);
   const [isWaitingForAd, setIsWaitingForAd] = useState(false);
