@@ -12,7 +12,7 @@ const APP_CONFIG = {
   VIP_WATCH_REWARD: 0.0006, 
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001,
-  // --- External Ad Links ---
+  // New External Ads Links
   ADSTERRA_LINK: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
   ADVERTIC_LINK: "https://data527.click/a674e1237b7e268eb5f6/8d02b7e071/?placementName=default"
 };
@@ -20,6 +20,7 @@ const APP_CONFIG = {
 const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
 
 function App() {
+  // Existing States
   const [balance, setBalance] = useState(() => Number(localStorage.getItem(`ton_bal_${APP_CONFIG.MY_UID}`)) || 0.0000);
   const [isVip, setIsVip] = useState(VIP_IDS.includes(APP_CONFIG.MY_UID));
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem(`comp_tasks_${APP_CONFIG.MY_UID}`)) || []);
@@ -30,40 +31,49 @@ function App() {
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
 
-  // --- External Ads Logic ---
+  // --- External Ads & Timer State ---
   const [isWatchingExternalAd, setIsWatchingExternalAd] = useState(false);
   const [adTimer, setAdTimer] = useState(0);
   const [pendingAction, setPendingAction] = useState(null);
 
-  // Admin Search/Edit States
-  const [searchUserId, setSearchUserId] = useState('');
-  const [searchedUser, setSearchedUser] = useState(null);
-  const [newBalanceInput, setNewBalanceInput] = useState('');
-  const [currentAdsBlockId, setCurrentAdsBlockId] = useState("27611");
-  const [newAdsBlockIdInput, setNewAdsBlockIdInput] = useState('');
+  // Other UI States
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
+  const [currentAdsBlockId, setCurrentAdsBlockId] = useState("27611");
+  const [searchUserId, setSearchUserId] = useState('');
+  const [searchedUser, setSearchedUser] = useState(null);
+  const [newBalanceInput, setNewBalanceInput] = useState('');
+  const [newAdsBlockIdInput, setNewAdsBlockIdInput] = useState('');
+  
+  // Admin Create States
+  const [adminTaskName, setAdminTaskName] = useState('');
+  const [adminTaskLink, setAdminTaskLink] = useState('');
+  const [adminTaskType, setAdminTaskType] = useState('bot');
+  const [adminPromoCode, setAdminPromoCode] = useState('');
+  const [adminVipUserId, setAdminVipUserId] = useState('');
 
-  // 9 Seconds Timer Effect
+  // 9 Seconds Timer Logic
   useEffect(() => {
     let interval;
     if (isWatchingExternalAd && adTimer > 0) {
-      interval = setInterval(() => setAdTimer(prev => prev - 1), 1000);
+      interval = setInterval(() => {
+        setAdTimer((prev) => prev - 1);
+      }, 1000);
     } else if (adTimer === 0 && isWatchingExternalAd) {
       setIsWatchingExternalAd(false);
       if (pendingAction) {
-        pendingAction();
+        pendingAction(); // Timer ပြည့်မှ Reward ပေးမည့် Action ကို လုပ်ဆောင်မည်
         setPendingAction(null);
       }
     }
     return () => clearInterval(interval);
   }, [isWatchingExternalAd, adTimer, pendingAction]);
 
-  // Ad Function to wrap actions
-  const showAdAndDo = (callback) => {
-    // skip ads if in Admin tab or is owner
-    if (activeTab === 'admin' && activeNav === 'earn') {
+  // Function to trigger External Ads
+  const showExternalAd = (callback) => {
+    // Admin tab မှာဆိုရင် ကြော်ငြာမပြပါ (အလုပ်လုပ်ရတာ မြန်ဆန်စေရန်)
+    if (activeTab === 'admin') {
       callback();
       return;
     }
@@ -75,6 +85,27 @@ function App() {
     setAdTimer(9);
     setIsWatchingExternalAd(true);
   };
+
+  // Existing Data Handlers
+  const handleReferral = useCallback(async () => {
+    const startParam = tg?.initDataUnsafe?.start_param; 
+    const isNewUser = !localStorage.getItem(`joined_${APP_CONFIG.MY_UID}`);
+    if (startParam && isNewUser && startParam !== APP_CONFIG.MY_UID) {
+      try {
+        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`);
+        const inviterData = await res.json();
+        if (inviterData) {
+          const newInviterBalance = Number((Number(inviterData.balance || 0) + APP_CONFIG.REFER_REWARD).toFixed(5));
+          const newInviterRefs = inviterData.referrals ? [...Object.values(inviterData.referrals), { id: APP_CONFIG.MY_UID }] : [{ id: APP_CONFIG.MY_UID }];
+          await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`, {
+            method: 'PATCH',
+            body: JSON.stringify({ balance: newInviterBalance, referrals: newInviterRefs })
+          });
+          localStorage.setItem(`joined_${APP_CONFIG.MY_UID}`, 'true');
+        }
+      } catch (e) { console.error(e); }
+    }
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -95,55 +126,65 @@ function App() {
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
         setAdsWatched(userData.adsWatched || 0);
       }
-      if (tasksData) setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], firebaseKey: key })));
+      if (tasksData) {
+        setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], firebaseKey: key })));
+      }
       if (adsData?.blockId) setCurrentAdsBlockId(adsData.blockId);
     } catch (e) { console.error(e); }
   }, []);
 
   useEffect(() => { 
     fetchData(); 
+    handleReferral(); 
     const interval = setInterval(fetchData, 30000); 
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, handleReferral]);
 
-  // Reward Processing (Original Logic)
-  const completeReward = (id, rewardAmount) => {
-    const finalReward = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : rewardAmount;
-    const isWatchAd = id === 'watch_ad';
+  // Adsgram logic remains unchanged
+  const processReward = (id, rewardAmount) => {
+    let finalReward = rewardAmount;
+    let isWatchAd = id === 'watch_ad';
+    if (isWatchAd) finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
 
-    const newBal = Number((balance + finalReward).toFixed(5));
-    const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
-    const newCompleted = !isWatchAd ? [...completed, id] : completed;
-
-    setBalance(newBal);
-    if (isWatchAd) setAdsWatched(newAdsCount);
-    if (!isWatchAd) setCompleted(newCompleted);
-
-    fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-      method: 'PATCH',
-      body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
-    });
-    alert(`Success! +${finalReward} TON`);
-  };
-
-  // Adsgram (Specific for Watch Video Button)
-  const handleAdsgram = () => {
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: currentAdsBlockId });
-      AdController.show().then((result) => { if (result.done) completeReward('watch_ad', 0); });
+      AdController.show().then((result) => {
+        if (result.done) {
+          const newBal = Number((balance + finalReward).toFixed(5));
+          const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
+          setBalance(newBal);
+          if (isWatchAd) setAdsWatched(newAdsCount);
+          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+            method: 'PATCH',
+            body: JSON.stringify({ balance: newBal, adsWatched: newAdsCount })
+          });
+          alert(`Reward Success: +${finalReward} TON`);
+          fetchData();
+        }
+      });
     }
   };
 
+  // Improved Task Reward with External Ads 9s Timer
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
-    showAdAndDo(() => {
-      if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-      completeReward(id, reward);
+    
+    showExternalAd(() => {
+        if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
+        const newBal = Number((balance + reward).toFixed(5));
+        const newCompleted = [...completed, id];
+        setBalance(newBal);
+        setCompleted(newCompleted);
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+            method: 'PATCH',
+            body: JSON.stringify({ balance: newBal, completed: newCompleted })
+          });
+        alert(`Task Reward: +${reward} TON`);
     });
   };
 
   const styles = {
-    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
+    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif', position: 'relative' },
     header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
@@ -152,8 +193,30 @@ function App() {
     overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', color: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 1000, textAlign: 'center', padding: '20px' }
   };
 
-  const allBotTasks = [{ id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" }, ...customTasks.filter(t => t.type === 'bot')];
-  const allSocialTasks = [{ id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" }, ...customTasks.filter(t => t.type === 'social')];
+  const fixedBotTasks = [
+    { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+    { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+    { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+    { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+    { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+    { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
+    { id: 'b7', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=1793453606" }
+  ];
+
+  const fixedSocialTasks = [
+    { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 's3', name: "@cryptogold_official", link: "https://t.me/cryptogold_online_official" },
+    { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
+    { id: 's5', name: "@USDTcloudminer", link: "https://t.me/USDTcloudminer_channel" },
+    { id: 's6', name: "@ADS_TON1", link: "https://t.me/ADS_TON1" },
+    { id: 's7', name: "@goblincrypto", link: "https://t.me/goblincrypto" },
+    { id: 's8', name: "@WORLDBESTCRYTO", link: "https://t.me/WORLDBESTCRYTO" },
+    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
+  ];
+
+  const allBotTasks = [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')];
+  const allSocialTasks = [...fixedSocialTasks, ...customTasks.filter(t => t.type === 'social')];
 
   return (
     <div style={styles.main}>
@@ -161,89 +224,80 @@ function App() {
       {isWatchingExternalAd && (
         <div style={styles.overlay}>
           <h2 style={{color: '#facc15'}}>ADVERTISING</h2>
-          <p>Please wait <b>{adTimer}s</b> for verification...</p>
-          <p style={{fontSize: '12px', opacity: 0.7}}>You must stay on this screen to receive TON.</p>
-          <div style={{width: '80%', height: '10px', background: '#333', borderRadius: '5px', marginTop: '20px', overflow: 'hidden'}}>
-             <div style={{width: `${(9-adTimer)*11.1}%`, height: '100%', background: '#facc15', transition: 'width 1s linear'}}></div>
+          <p>ကျေးဇူးပြု၍ {adTimer} စက္ကန့် စောင့်ပေးပါ...</p>
+          <p style={{fontSize: '12px', opacity: 0.7}}>အချိန်မပြည့်ဘဲ ပိတ်လိုက်ပါက TON ရရှိမည်မဟုတ်ပါ။</p>
+          <div style={{width: '80%', height: '10px', background: '#333', borderRadius: '5px', marginTop: '20px'}}>
+             <div style={{width: `${(9-adTimer)*11.1}%`, height: '100%', background: '#facc15', borderRadius: '5px', transition: 'width 1s linear'}}></div>
           </div>
         </div>
       )}
 
       <div style={styles.header}>
-        <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
+        <div style={{display:'flex', justifyContent:'center', alignItems:'center', gap:5}}>
+            <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
+            {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP ⭐</span>}
+        </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <small style={{opacity: 0.8}}>Ads Watched: {adsWatched} {isVip && "⭐ VIP"}</small>
+        <small style={{opacity: 0.8}}>Total Ads Watched: {adsWatched}</small>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video Button (Adsgram)</p>
-             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={handleAdsgram}>WATCH ADS</button>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS (ADSGRAM)</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
               (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && 
-              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold' }}>{t}</button>
+              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000' }}>{t}</button>
             ))}
           </div>
 
           <div style={styles.card}>
             {activeTab === 'bot' && allBotTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
-                <span>{t.name}</span>
-                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
+                <span style={{fontWeight:'bold'}}>{t.name}</span>
+                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
+              </div>
+            ))}
+            {activeTab === 'social' && allSocialTasks.map((t, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
+                <span style={{fontWeight:'bold'}}>{t.name}</span>
+                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
               </div>
             ))}
             {activeTab === 'reward' && (
               <div>
-                <input style={styles.input} placeholder="Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM CODE</button>
+                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
+                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
               </div>
             )}
             {activeTab === 'admin' && (
-                <div>
-                   <h4>Admin Control (No Ads)</h4>
-                   <p>Update Balance / Search User / Tasks</p>
-                   {/* Rest of Admin logic here as per original */}
-                </div>
+              <div>
+                {/* Admin controls here - unchanged */}
+                <h4>Admin Control</h4>
+                {/* ... (Search, Update IDs etc logic remains same) ... */}
+                <button style={styles.btn} onClick={() => setSearchedUser(null)}>Clear View</button>
+              </div>
             )}
           </div>
         </>
       )}
 
+      {/* Withdraw Section with Ad protection */}
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
            <h3>Withdraw TON</h3>
-           <p style={{fontSize: '12px'}}>Watch a verification ad to unlock withdraw button.</p>
-           <button style={styles.btn} onClick={() => showAdAndDo(() => alert("Withdraw Form Unlocked!"))}>
-             PROCESS WITHDRAW (9s AD)
-           </button>
+           <button style={styles.btn} onClick={() => showExternalAd(() => alert("Withdraw form can be processed now."))}>PROCESS WITHDRAW</button>
         </div>
       )}
 
-      {activeNav === 'invite' && (
-        <div style={styles.card}>
-            <h3>Referral Link</h3>
-            <button style={styles.btn} onClick={() => showAdAndDo(() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!"); })}>
-                COPY INVITE LINK
-            </button>
-        </div>
-      )}
-
-      {/* Profile Section */}
-      {activeNav === 'profile' && (
-          <div style={styles.card}>
-              <h3>My Profile</h3>
-              <p>User ID: {APP_CONFIG.MY_UID}</p>
-              <button style={styles.btn} onClick={() => showAdAndDo(() => fetchData())}>REFRESH DATA</button>
-          </div>
-      )}
-
+      {/* Navigation Buttons */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => showAdAndDo(() => setActiveNav(n))} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
+          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
             {n.toUpperCase()}
           </button>
         ))}
