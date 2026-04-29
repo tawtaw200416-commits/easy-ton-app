@@ -5,7 +5,7 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
-  ADSGRAM_BLOCK_ID: "27611", 
+  ADSGRAM_BLOCK_ID: "27611",
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -48,19 +48,15 @@ function App() {
 
   const [lastAdClickTime, setLastAdClickTime] = useState(0);
 
-  // Trigger Ads logic (Advertica then Adsterra after 7s)
+  // Trigger Ads sequence (No VPN check)
   const triggerAdsSequence = useCallback(() => {
-    if (tg?.openLink) tg.openLink(APP_CONFIG.ADVERTICA_URL);
-    else window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
-    
+    window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
     setLastAdClickTime(Date.now()); 
 
     setTimeout(() => {
       if (adsterraLinks.length > 0) {
         const randomIndex = Math.floor(Math.random() * adsterraLinks.length);
-        const url = adsterraLinks[randomIndex].url;
-        if (tg?.openLink) tg.openLink(url); 
-        else window.open(url, '_blank');
+        window.open(adsterraLinks[randomIndex].url, '_blank');
       }
     }, 7000); 
   }, [adsterraLinks]);
@@ -68,11 +64,19 @@ function App() {
   const checkAdStay = () => {
     const timePassed = Date.now() - lastAdClickTime;
     if (lastAdClickTime === 0 || timePassed < 7000) {
-      alert("Please view the ad for 7 seconds first!");
+      alert("Please view Advertica for 7 seconds first!");
       triggerAdsSequence(); 
       return false;
     }
     return true;
+  };
+
+  const handleTabChange = (tab) => {
+    if (['bot', 'social', 'reward'].includes(tab)) {
+        if (!checkAdStay()) return;
+        triggerAdsSequence();
+    }
+    setActiveTab(tab);
   };
 
   const fetchData = useCallback(async () => {
@@ -100,7 +104,7 @@ function App() {
       if (adsData) {
         setAdsterraLinks(Object.keys(adsData).map(key => ({ id: key, url: adsData[key].url })));
       }
-    } catch (e) { console.error("Fetch error:", e); }
+    } catch (e) { console.error(e); }
   }, []);
 
   useEffect(() => { 
@@ -152,14 +156,6 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  const handleTabChange = (tab) => {
-    if (['bot', 'social', 'reward'].includes(tab)) {
-      if (!checkAdStay()) return;
-      triggerAdsSequence();
-    }
-    setActiveTab(tab);
-  };
-
   const setSuccessStatus = async (userId, historyIndex) => {
     try {
       const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
@@ -174,7 +170,7 @@ function App() {
         alert("Status updated!");
         fetchData();
       }
-    } catch (e) { alert("Error"); }
+    } catch (e) { alert("Error updating status"); }
   };
 
   const fixedBotTasks = [
@@ -184,8 +180,14 @@ function App() {
     { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" }
   ];
 
+  const fixedSocialTasks = [
+    { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+    { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+    { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
+  ];
+
   const allBotTasks = [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')];
-  const allSocialTasks = [...customTasks.filter(t => t.type === 'social')];
+  const allSocialTasks = [...fixedSocialTasks, ...customTasks.filter(t => t.type === 'social')];
 
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
@@ -199,15 +201,15 @@ function App() {
   return (
     <div style={styles.main}>
       <div style={styles.header}>
-        <small>TOTAL BALANCE {isVip && "⭐ VIP"}</small>
+        <small style={{color: '#facc15'}}>TOTAL BALANCE {isVip && "⭐ VIP"}</small>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <div style={{fontSize:11, opacity:0.7}}>Ads: {adsWatched} | Normal: 0.0003 | VIP: 0.0008</div>
+        <div style={{fontSize: 12, opacity: 0.8}}>Ads: {adsWatched}</div>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0'}}>Watch & Earn {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
+             <p style={{fontWeight: 'bold', marginBottom: 10}}>Watch & Earn {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsSequence(); processReward('watch_ad', 0); }}>WATCH ADS</button>
           </div>
 
@@ -228,50 +230,47 @@ function App() {
             
             {activeTab === 'admin' && (
               <div>
-                <h4 style={{borderBottom: '2px solid #000'}}>Admin Control</h4>
-                {/* ADSTERRA MANAGER - Always Visible for Admin */}
+                <h4 style={{borderBottom: '2px solid #000', marginBottom: 10}}>Admin Control</h4>
+                {/* ADSTERRA MANAGER - VPN NOT NEEDED ANYMORE */}
                 <div style={{background: '#fef08a', padding: 10, borderRadius: 10, margin: '10px 0', border: '2px solid #000'}}>
                     <h5>🔗 ADSTERRA LINKS</h5>
-                    <input style={styles.input} placeholder="Ad URL" value={newAdUrl} onChange={e => setNewAdUrl(e.target.value)} />
+                    <input style={styles.input} placeholder="Enter URL" value={newAdUrl} onChange={e => setNewAdUrl(e.target.value)} />
                     <button style={{...styles.btn, background: '#d946ef', marginBottom: 10}} onClick={async () => {
                         const id = 'ad_'+Date.now();
                         await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${id}.json`, { method: 'PUT', body: JSON.stringify({ url: newAdUrl }) });
-                        setNewAdUrl(''); fetchData(); alert("Ad Link Added!");
+                        setNewAdUrl(''); fetchData(); alert("Added!");
                     }}>ADD LINK</button>
-                    <div style={{maxHeight: 120, overflowY: 'auto'}}>
+                    <div style={{maxHeight: 150, overflowY: 'auto', fontSize: 12}}>
                         {adsterraLinks.map(ad => (
-                            <div key={ad.id} style={{display:'flex', justifyContent:'space-between', padding: 5, fontSize:11, borderBottom:'1px solid #ccc'}}>
+                            <div key={ad.id} style={{display:'flex', justifyContent:'space-between', padding: 5, borderBottom: '1px solid #000'}}>
                                 <span>{ad.url.substring(0, 25)}...</span>
-                                <button style={{color: 'red', fontWeight:'bold', border:'none', background:'none'}} onClick={async () => {
-                                    if(window.confirm("Delete this link?")) {
-                                        await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${ad.id}.json`, { method: 'DELETE' });
-                                        fetchData();
-                                    }
-                                }}>DELETE</button>
+                                <button style={{color: 'red', border:'none', background:'none', fontWeight:'bold'}} onClick={async () => {
+                                    await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${ad.id}.json`, { method: 'DELETE' });
+                                    fetchData();
+                                }}>DEL</button>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* USER MANAGER */}
                 <h5>🔍 USER MANAGER</h5>
-                <div style={{display:'flex', gap:5}}>
-                    <input style={styles.input} placeholder="User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
-                    <button style={{...styles.btn, width:80, height:40}} onClick={async () => {
-                        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
-                        const data = await res.json();
-                        if(data) { setSearchedUser(data); setNewBalanceInput(data.balance || 0); } else alert("Not found");
+                <div style={{display: 'flex', gap: 5}}>
+                  <input style={styles.input} placeholder="User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
+                  <button style={{...styles.btn, width: 80, height: 40}} onClick={async () => {
+                      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
+                      const data = await res.json();
+                      if(data) { setSearchedUser(data); setNewBalanceInput(data.balance || 0); } else alert("Not found");
                     }}>FIND</button>
                 </div>
                 {searchedUser && (
-                    <div style={{background:'#eee', padding:10, borderRadius:10, fontSize:12}}>
-                        <p>ID: {searchUserId} | Bal: {searchedUser.balance}</p>
-                        <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
-                        <button style={{...styles.btn, background:'green'}} onClick={async () => {
+                  <div style={{background: '#eee', padding: 10, borderRadius: 10, marginTop: 10}}>
+                    <p>Bal: {searchedUser.balance}</p>
+                    <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
+                    <button style={{...styles.btn, background: 'green'}} onClick={async () => {
                             await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ balance: Number(newBalanceInput) }) });
                             alert("Updated!"); fetchData();
                         }}>UPDATE</button>
-                    </div>
+                  </div>
                 )}
               </div>
             )}
@@ -279,7 +278,7 @@ function App() {
         </>
       )}
 
-      {/* Nav buttons same as before */}
+      {/* Navigation and other screens (Profile, Withdraw, Invite) maintained from your source */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold' }}>
