@@ -9,8 +9,8 @@ const APP_CONFIG = {
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
-  WATCH_REWARD: 0.0004,      // Normal
-  VIP_WATCH_REWARD: 0.001,   // VIP
+  WATCH_REWARD: 0.0004,      // Normal User Reward
+  VIP_WATCH_REWARD: 0.001,   // VIP User Reward
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001,
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
@@ -41,25 +41,27 @@ function App() {
   const lastAdTime = useRef(null);
   const pendingReward = useRef(null);
 
-  // --- ကြော်ငြာဖွင့်ခြင်း ---
+  // --- Trigger Dual Ads (Adsterra + Advertic) ---
   const triggerExternalAds = () => {
     lastAdTime.current = Date.now();
     window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
     window.open(APP_CONFIG.ADVERTIC_URL, '_blank');
   };
 
-  // --- Reward ပေါင်းခြင်း ---
+  // --- Process Reward Logic ---
   const grantReward = (id, amt) => {
     const isWatch = id === 'watch_ad';
     const isCode = id.startsWith('c_');
-    const newBal = Number((balance + amt).toFixed(5));
+    const isWithdraw = id === 'wd_req';
+    
+    const newBal = isWithdraw ? Number((balance - amt).toFixed(5)) : Number((balance + amt).toFixed(5));
     const newAds = isWatch ? adsWatched + 1 : adsWatched;
 
     setBalance(newBal);
     if (isWatch) setAdsWatched(newAds);
     
     let newCompleted = completed;
-    if (!isWatch && !isCode) {
+    if (!isWatch && !isCode && !isWithdraw) {
       newCompleted = [...completed, id];
       setCompleted(newCompleted);
     }
@@ -69,19 +71,24 @@ function App() {
       body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAds })
     });
 
-    alert(`Reward Success: +${amt} TON`);
+    if (isWithdraw) {
+        alert("Withdrawal Request Sent Successfully!");
+    } else {
+        alert(`Reward Success: +${amt} TON`);
+    }
+
     pendingReward.current = null;
     lastAdTime.current = null;
     fetchData();
   };
 
-  // --- ၉ စက္ကန့် စစ်ဆေးခြင်း ---
+  // --- 9-Second Verification Check ---
   useEffect(() => {
     const handleFocus = () => {
       if (lastAdTime.current && pendingReward.current) {
         const seconds = (Date.now() - lastAdTime.current) / 1000;
         if (seconds < 9) {
-          alert("၉ စက္ကန့်ကြာအောင် ကြည့်ပေးပါဗျာ။ ကြော်ငြာပြန်ပွင့်ပါမယ်။");
+          alert("Please watch the ads for at least 9 seconds to continue.");
           triggerExternalAds();
         } else {
           grantReward(pendingReward.current.id, pendingReward.current.amt);
@@ -117,9 +124,12 @@ function App() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // --- Task Handling ---
-  const handleTaskClick = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Already done!");
+  // --- General Button Click Handler ---
+  const handleActionClick = (id, reward, link) => {
+    if (id !== 'wd_req' && id !== 'watch_ad' && !id.startsWith('c_') && completed.includes(id)) {
+        return alert("Task already completed!");
+    }
+    
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
     
     pendingReward.current = { id, amt: reward };
@@ -160,7 +170,7 @@ function App() {
     <div style={styles.main}>
       <div style={styles.header}>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <small>{isVip ? "VIP ⭐" : "ACTIVE ✅"} | Ads: {adsWatched}</small>
+        <small>{isVip ? "VIP STATUS ⭐" : "ACTIVE USER ✅"} | Ads: {adsWatched}</small>
       </div>
 
       {activeNav === 'earn' && (
@@ -173,8 +183,7 @@ function App() {
                     const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
                     AdController.show().then(res => { if (res.done) grantReward('watch_ad', reward); });
                 } else {
-                    pendingReward.current = { id: 'watch_ad', amt: reward };
-                    triggerExternalAds();
+                    handleActionClick('watch_ad', reward);
                 }
              }}>WATCH ADS</button>
           </div>
@@ -190,22 +199,21 @@ function App() {
             {activeTab === 'bot' && allBotTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
-                <button onClick={() => handleTaskClick(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
+                <button onClick={() => handleActionClick(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
               </div>
             ))}
             {activeTab === 'social' && allSocialTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
-                <button onClick={() => handleTaskClick(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
+                <button onClick={() => handleActionClick(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
               </div>
             ))}
             {activeTab === 'reward' && (
               <div>
-                <input style={styles.input} placeholder="Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
+                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
                 <button style={styles.btn} onClick={() => {
-                   pendingReward.current = { id: 'c_'+rewardCodeInput, amt: APP_CONFIG.CODE_REWARD };
-                   triggerExternalAds();
-                }}>CLAIM</button>
+                   handleActionClick('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD);
+                }}>CLAIM REWARD</button>
               </div>
             )}
             {activeTab === 'admin' && (
@@ -214,15 +222,15 @@ function App() {
                 <button style={styles.btn} onClick={async () => {
                    const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
                    const data = await res.json();
-                   if(data) { setSearchedUser(data); setNewBalanceInput(data.balance); }
-                }}>FIND</button>
+                   if(data) { setSearchedUser(data); setNewBalanceInput(data.balance); } else { alert("User Not Found"); }
+                }}>FIND USER</button>
                 {searchedUser && (
-                  <div style={{marginTop:10}}>
-                    <p>Balance: {searchedUser.balance} TON</p>
+                  <div style={{marginTop:10, padding: 10, background: '#f3f4f6', borderRadius: 8}}>
+                    <p>Current Balance: {searchedUser.balance} TON</p>
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
                     <button style={{...styles.btn, background:'green'}} onClick={async () => {
                       await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({balance: Number(newBalanceInput)}) });
-                      alert("Updated!"); setSearchedUser(null);
+                      alert("User Balance Updated!"); setSearchedUser(null);
                     }}>UPDATE BALANCE</button>
                   </div>
                 )}
@@ -235,19 +243,43 @@ function App() {
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3>Withdraw TON</h3>
-          <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-          <input style={styles.input} placeholder="Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+          <p style={{fontSize: '12px', color: '#666'}}>Minimum Withdrawal: 0.1 TON</p>
+          <input style={styles.input} placeholder="Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} placeholder="TON Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
           <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
-              if(Number(withdrawAmount) < 0.1 || Number(withdrawAmount) > balance) return alert("Error");
-              pendingReward.current = { id: 'wd_req', amt: 0 };
-              triggerExternalAds();
-          }}>WITHDRAW</button>
+              const amt = Number(withdrawAmount);
+              if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance) return alert("Insufficient Balance or Invalid Amount");
+              if(!withdrawAddress) return alert("Please enter wallet address");
+              handleActionClick('wd_req', amt);
+          }}>WITHDRAW NOW</button>
+        </div>
+      )}
+
+      {activeNav === 'invite' && (
+        <div style={styles.card}>
+          <h3>Refer Friends</h3>
+          <p>Earn {APP_CONFIG.REFER_REWARD} TON for every friend you invite!</p>
+          <button style={styles.btn} onClick={() => {
+              const link = `https://t.me/YourBotName?start=${APP_CONFIG.MY_UID}`;
+              navigator.clipboard.writeText(link);
+              alert("Referral Link Copied!");
+          }}>COPY REFERRAL LINK</button>
+        </div>
+      )}
+
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h3>My Profile</h3>
+          <p>User ID: {APP_CONFIG.MY_UID}</p>
+          <p>Status: {isVip ? "VIP Member" : "Standard Member"}</p>
+          <p>Ads Watched: {adsWatched}</p>
+          <button style={styles.btn} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
         </div>
       )}
 
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
+          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '12px' }}>
             {n.toUpperCase()}
           </button>
         ))}
