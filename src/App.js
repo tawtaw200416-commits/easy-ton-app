@@ -13,10 +13,8 @@ const APP_CONFIG = {
   VIP_WATCH_REWARD: 0.0008, 
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001,
-  VPN_IOS: "https://apps.apple.com/app/1-1-1-1-faster-internet/id1433553754",
-  VPN_ANDROID: "https://play.google.com/store/apps/details?id=com.cloudflareonedotonedotonedotone",
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
-  // Adsterra Direct Link is hardcoded here as requested
+  // Adsterra Direct Link remains hardcoded
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec"
 };
 
@@ -30,8 +28,6 @@ function App() {
   const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem(`refs_${APP_CONFIG.MY_UID}`)) || []);
   const [adsWatched, setAdsWatched] = useState(() => Number(localStorage.getItem(`ads_watched_${APP_CONFIG.MY_UID}`)) || 0);
   
-  const [isVpnActive, setIsVpnActive] = useState(true);
-  const [checkingVpn, setCheckingVpn] = useState(true);
   const [customTasks, setCustomTasks] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
@@ -40,7 +36,6 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // Admin Panel States (Preserved)
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
   const [adminTaskType, setAdminTaskType] = useState('bot');
@@ -51,39 +46,20 @@ function App() {
 
   const [lastAdClickTime, setLastAdClickTime] = useState(0);
 
-  const checkVPN = useCallback(async () => {
-    try {
-      const response = await fetch('https://www.cloudflare.com/cdn-cgi/trace');
-      const data = await response.text();
-      setIsVpnActive(data.includes('warp=on'));
-    } catch (error) {
-      setIsVpnActive(false);
-    } finally {
-      setCheckingVpn(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    checkVPN();
-    const vpnInterval = setInterval(checkVPN, 10000);
-    return () => clearInterval(vpnInterval);
-  }, [checkVPN]);
-
-  // Combined 7s logic: Advertica opens first, Adsterra opens 7 seconds later
+  // Trigger Ads: Advertica first, then Adsterra after 7 seconds
   const triggerAdsSequence = useCallback(() => {
-    if (!isVpnActive) return;
     window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
     setLastAdClickTime(Date.now()); 
 
     setTimeout(() => {
       window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
     }, 7000); 
-  }, [isVpnActive]);
+  }, []);
 
   const checkAdStay = () => {
     const timePassed = Date.now() - lastAdClickTime;
     if (lastAdClickTime === 0 || timePassed < 7000) {
-      alert("Please view Advertica for 7 seconds first!");
+      alert("Please view for 7 seconds first!");
       triggerAdsSequence(); 
       return false;
     }
@@ -128,7 +104,6 @@ function App() {
   }, [fetchData]);
 
   const processReward = (id, rewardAmount) => {
-    if (!isVpnActive) return alert("Please connect to 1.1.1.1 VPN!");
     if (!checkAdStay()) return;
 
     let finalReward = rewardAmount;
@@ -237,23 +212,8 @@ function App() {
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
-    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' },
-    vpnOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#facc15', zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '20px', textAlign: 'center' }
+    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' }
   };
-
-  if (!isVpnActive && !checkingVpn) {
-    return (
-      <div style={styles.vpnOverlay}>
-        <div style={{...styles.card, padding: '30px'}}>
-          <h2 style={{color: '#ef4444'}}>ACCESS DENIED ⚠️</h2>
-          <p>Connect to <b>1.1.1.1 VPN</b> to continue.</p>
-          <button style={{...styles.btn, backgroundColor: '#007AFF', marginBottom: 10}} onClick={() => window.open(APP_CONFIG.VPN_IOS)}>IOS</button>
-          <button style={{...styles.btn, backgroundColor: '#3DDC84', marginBottom: 10}} onClick={() => window.open(APP_CONFIG.VPN_ANDROID)}>ANDROID</button>
-          <button style={{...styles.btn, background: '#fff', color:'#000', border:'2px solid #000'}} onClick={checkVPN}>REFRESH</button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={styles.main}>
@@ -370,7 +330,6 @@ function App() {
         </div>
       )}
 
-      {/* Navigation Footer */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => safeNavigate(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
