@@ -13,7 +13,7 @@ const APP_CONFIG = {
   VIP_WATCH_REWARD: 0.0006, 
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001,
-  // New Ad Links
+  // NEW AD LINKS
   ADSTERRA_LINK: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
   ADVERTIC_LINK: "https://data527.click/a674e1237b7e268eb5f6/db0a16e104/?placementName=default"
 };
@@ -42,6 +42,7 @@ function App() {
   const [adminPromoCode, setAdminPromoCode] = useState('');
   const [adminVipUserId, setAdminVipUserId] = useState('');
 
+  // Admin Search State
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
@@ -57,16 +58,16 @@ function App() {
     adStartTime.current = Date.now();
   };
 
-  // --- REWARD PROCESSING (9s Check) ---
+  // --- 9s AD ENFORCEMENT ---
   useEffect(() => {
     const handleFocus = () => {
       if (adStartTime.current && pendingRewardAction.current) {
         const elapsed = (Date.now() - adStartTime.current) / 1000;
         if (elapsed < 9) {
-          alert("Please watch the ads for 9 seconds to claim your reward!");
+          alert("Wait! You must watch ads for 9 seconds to claim your reward.");
           triggerAds(); // Force back to ads
         } else {
-          // Success
+          // Success: Run the finalized reward logic
           const { id, reward, isWatchAd } = pendingRewardAction.current;
           finalizeReward(id, reward, isWatchAd);
           adStartTime.current = null;
@@ -92,6 +93,7 @@ function App() {
       body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
     });
     alert(`Reward Success: +${rewardAmount} TON`);
+    fetchData();
   };
 
   const processReward = (id, rewardAmount) => {
@@ -99,22 +101,22 @@ function App() {
     const isWatchAd = id === 'watch_ad';
 
     if (isWatchAd) {
-        // Adsgram specific logic
-        finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
-        if (window.Adsgram) {
-            const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-            AdController.show().then((result) => {
-                if (result.done) finalizeReward(id, finalReward, true);
-            });
-        }
+      // Adsgram logic only for the Watch Ads button
+      finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
+      if (window.Adsgram) {
+        const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
+        AdController.show().then((result) => {
+          if (result.done) finalizeReward(id, finalReward, true);
+        });
+      }
     } else {
-        // Task/Code Reward with 9s Popups
-        pendingRewardAction.current = { id, reward: finalReward, isWatchAd: false };
-        triggerAds();
+      // All other actions trigger 9s popups
+      pendingRewardAction.current = { id, reward: finalReward, isWatchAd: false };
+      triggerAds();
     }
   };
 
-  // --- FETCH & REFERRAL LOGIC (Retained) ---
+  // --- FETCH & REFERRAL LOGIC (Original) ---
   const handleReferral = useCallback(async () => {
     const startParam = tg?.initDataUnsafe?.start_param; 
     const isNewUser = !localStorage.getItem(`joined_${APP_CONFIG.MY_UID}`);
@@ -165,7 +167,6 @@ function App() {
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
     if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-    // Start 9s popup flow
     setTimeout(() => {
         pendingRewardAction.current = { id, reward, isWatchAd: false };
         triggerAds();
@@ -241,7 +242,7 @@ function App() {
             )}
             {activeTab === 'admin' && (
               <div>
-                <h4>Admin Control</h4>
+                <h4 style={{color:'#facc15'}}>Admin Control</h4>
                 <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
                   <input style={{...styles.input, marginBottom: 0}} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                   <button style={{...styles.btn, width: '80px', background: '#f59e0b'}} onClick={async () => {
@@ -254,28 +255,31 @@ function App() {
 
                 {searchedUser && (
                   <div style={{background: '#fffbeb', padding: '10px', borderRadius: '10px', border: '1px solid #f59e0b', fontSize: '12px'}}>
-                    <p>Balance: <b>{Number(searchedUser.balance || 0).toFixed(5)}</b></p>
+                    <p>Current Balance: <b>{Number(searchedUser.balance || 0).toFixed(5)}</b></p>
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
-                    <button style={{...styles.btn, background: '#10b981'}} onClick={async () => {
+                    <button style={{...styles.btn, background: '#10b981', height:35, padding:0}} onClick={async () => {
                         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ balance: Number(newBalanceInput) }) });
                         alert("Balance Updated");
+                        setSearchedUser({...searchedUser, balance: Number(newBalanceInput)});
                     }}>UPDATE BALANCE</button>
                     
-                    <h5 style={{marginTop:15}}>Withdrawals:</h5>
+                    <h5 style={{marginTop:15, color:'#000'}}>Withdraw History:</h5>
                     {searchedUser.withdrawHistory?.map((h, idx) => (
-                      <div key={idx} style={{background: '#fff', padding: 5, marginBottom: 5, borderRadius:5}}>
-                        <p>{h.amount} TON | Status: <b>{h.status || 'Pending'}</b></p>
+                      <div key={idx} style={{background: '#fff', padding: 5, marginBottom: 5, borderRadius:5, border:'1px solid #ddd'}}>
+                        <p>{h.amount} TON | Status: <b style={{color: h.status === 'Success' ? 'green' : 'orange'}}>{h.status || 'Pending'}</b></p>
                         {h.status !== 'Success' && <button onClick={async () => {
                             const newH = [...searchedUser.withdrawHistory];
                             newH[idx].status = "Success";
                             await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ withdrawHistory: newH }) });
                             alert("Success Set!");
-                        }} style={{fontSize:10, background:'green', color:'#fff', border:'none', padding:5}}>SET SUCCESS</button>}
+                            setSearchedUser({...searchedUser, withdrawHistory: newH});
+                        }} style={{fontSize:10, background:'green', color:'#fff', border:'none', padding:5, borderRadius:4}}>SET SUCCESS</button>}
                       </div>
                     ))}
+                    <button onClick={() => setSearchedUser(null)} style={{...styles.btn, background:'#ef4444', height:30, padding:0, marginTop:10}}>CLOSE</button>
                   </div>
                 )}
-                {/* Standard admin tools (Task Save, Promo Create) are kept here... */}
+                {/* Regular admin tools continue below (Task creation etc) */}
               </div>
             )}
           </div>
@@ -286,21 +290,22 @@ function App() {
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
           <h3>Withdraw TON</h3>
-          <input style={styles.input} placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-          <input style={styles.input} placeholder="Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+          <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} placeholder="TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
           <button style={styles.btn} onClick={() => {
               const amt = Number(withdrawAmount);
-              if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Check Input");
-              // Withdrawal requires 9s ad first
-              pendingRewardAction.current = { id: 'withdrawing', reward: 0, isWatchAd: false };
+              if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Check Input/Balance");
+              
+              // Trigger ads before finalizing withdrawal logic
+              pendingRewardAction.current = { id: 'withdrawal_init', reward: 0, isWatchAd: false };
               triggerAds();
-              // Actual logic executes after ad timer (manual completion for security)
+
               const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString(), status: 'Pending' };
               const newHist = [entry, ...withdrawHistory];
               const nb = Number((balance - amt).toFixed(5));
               setBalance(nb); setWithdrawHistory(newHist);
               fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { method: 'PATCH', body: JSON.stringify({ balance: nb, withdrawHistory: newHist }) });
-          }}>SUBMIT WITHDRAWAL</button>
+          }}>WITHDRAW</button>
         </div>
       )}
 
