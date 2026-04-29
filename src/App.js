@@ -2,15 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 const tg = window.Telegram?.WebApp;
 
-// --- Connection Config (VPN Bypass for Firebase) ---
-const FIREBASE_PROXY = "https://corsproxy.io/?"; 
-const FIREBASE_BASE_URL = "https://easytonfree-default-rtdb.firebaseio.com";
-
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   ADSGRAM_BLOCK_ID: "27611", 
-  FIREBASE_URL: FIREBASE_PROXY + encodeURIComponent(FIREBASE_BASE_URL),
+  FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
   WATCH_REWARD: 0.0003, 
@@ -18,9 +14,9 @@ const APP_CONFIG = {
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001,
   VPN_IOS: "https://apps.apple.com/app/1-1-1-1-faster-internet/id1433553754",
-  VPN_ANDROID: "https://play.google.com/store/apps/details?id=com.cloudflare.onedotonedotonedotone",
+  VPN_ANDROID: "https://play.google.com/store/apps/details?id=com.cloudflareonedotonedotonedotone",
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
-  // HARDCODED ADSTERRA LINK
+  // Adsterra Direct Link (Code ထဲမှာ တစ်ခါတည်းထည့်ထားသည်)
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec"
 };
 
@@ -73,15 +69,15 @@ function App() {
     return () => clearInterval(vpnInterval);
   }, [checkVPN]);
 
-  // --- 7s Sequence: Advertica then Adsterra ---
+  // Advertica ပွင့်ပြီး 7 စက္ကန့်အကြာတွင် Adsterra ပွင့်မည့် Sequence
   const triggerAdsSequence = useCallback(() => {
     if (!isVpnActive) return;
     
-    // Open Advertica immediately
+    // ပထမဦးစွာ Advertica ကို ဖွင့်မည်
     window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
     setLastAdClickTime(Date.now()); 
 
-    // Open Adsterra exactly 7 seconds later
+    // 7 စက္ကန့် (7000ms) ပြည့်လျှင် Adsterra ကို ထပ်ဖွင့်မည်
     setTimeout(() => {
       window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
     }, 7000); 
@@ -90,7 +86,7 @@ function App() {
   const checkAdStay = () => {
     const timePassed = Date.now() - lastAdClickTime;
     if (lastAdClickTime === 0 || timePassed < 7000) {
-      alert("Please stay on the Ad for 7 seconds!");
+      alert("Please view Ad for 7 seconds first!");
       triggerAdsSequence(); 
       return false;
     }
@@ -107,10 +103,10 @@ function App() {
 
   const fetchData = useCallback(async () => {
     try {
-      const uUrl = FIREBASE_PROXY + encodeURIComponent(`${FIREBASE_BASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
-      const tUrl = FIREBASE_PROXY + encodeURIComponent(`${FIREBASE_BASE_URL}/global_tasks.json`);
-
-      const [u, t] = await Promise.all([fetch(uUrl), fetch(tUrl)]);
+      const [u, t] = await Promise.all([
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
+        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`)
+      ]);
       const userData = await u.json();
       const tasksData = await t.json();
 
@@ -144,7 +140,7 @@ function App() {
 
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-      AdController.show().then(async (result) => {
+      AdController.show().then((result) => {
         if (result.done) {
           const newBal = Number((balance + finalReward).toFixed(5));
           const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
@@ -154,8 +150,7 @@ function App() {
           if (isWatchAd) setAdsWatched(newAdsCount);
           setCompleted(newCompleted);
 
-          const patchUrl = FIREBASE_PROXY + encodeURIComponent(`${FIREBASE_BASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
-          await fetch(patchUrl, {
+          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
             method: 'PATCH',
             body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
           });
@@ -171,7 +166,7 @@ function App() {
   };
 
   const handleTaskReward = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Task already completed!");
+    if (completed.includes(id)) return alert("Already completed!");
     triggerAdsSequence();
     if (link) {
       setTimeout(() => {
@@ -198,22 +193,20 @@ function App() {
 
   const setSuccessStatus = async (userId, historyIndex) => {
     try {
-      const getUrl = FIREBASE_PROXY + encodeURIComponent(`${FIREBASE_BASE_URL}/users/${userId}.json`);
-      const res = await fetch(getUrl);
+      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
       const userData = await res.json();
       if(userData && userData.withdrawHistory) {
         const updatedHistory = [...userData.withdrawHistory];
         updatedHistory[historyIndex].status = "Success";
-        const patchUrl = FIREBASE_PROXY + encodeURIComponent(`${FIREBASE_BASE_URL}/users/${userId}.json`);
-        await fetch(patchUrl, {
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
           method: 'PATCH',
           body: JSON.stringify({ withdrawHistory: updatedHistory })
         });
-        alert("Status updated to Success!");
+        alert("Status updated!");
         setSearchedUser({...userData, withdrawHistory: updatedHistory});
         fetchData();
       }
-    } catch (e) { alert("Error updating status"); }
+    } catch (e) { alert("Error"); }
   };
 
   const fixedBotTasks = [
@@ -256,10 +249,10 @@ function App() {
       <div style={styles.vpnOverlay}>
         <div style={{...styles.card, padding: '30px'}}>
           <h2 style={{color: '#ef4444'}}>ACCESS DENIED ⚠️</h2>
-          <p>Please connect to <b>1.1.1.1 VPN</b> to use this application.</p>
-          <button style={{...styles.btn, backgroundColor: '#007AFF', marginBottom: 10}} onClick={() => window.open(APP_CONFIG.VPN_IOS)}>IOS (App Store)</button>
-          <button style={{...styles.btn, backgroundColor: '#3DDC84', marginBottom: 10}} onClick={() => window.open(APP_CONFIG.VPN_ANDROID)}>ANDROID (Play Store)</button>
-          <button style={{...styles.btn, background: '#fff', color:'#000', border:'2px solid #000'}} onClick={checkVPN}>REFRESH STATUS</button>
+          <p>Connect to <b>1.1.1.1 VPN</b> to continue.</p>
+          <button style={{...styles.btn, backgroundColor: '#007AFF', marginBottom: 10}} onClick={() => window.open(APP_CONFIG.VPN_IOS)}>IOS</button>
+          <button style={{...styles.btn, backgroundColor: '#3DDC84', marginBottom: 10}} onClick={() => window.open(APP_CONFIG.VPN_ANDROID)}>ANDROID</button>
+          <button style={{...styles.btn, background: '#fff', color:'#000', border:'2px solid #000'}} onClick={checkVPN}>REFRESH</button>
         </div>
       </div>
     );
@@ -273,17 +266,12 @@ function App() {
             {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP ⭐</span>}
         </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <div style={{display:'flex', justifyContent:'center', gap:10, opacity:0.8, fontSize:12}}>
-            <span>Ads: {adsWatched}</span>
-            <span>VIP Reward: {APP_CONFIG.VIP_WATCH_REWARD}</span>
-            <span>Normal: {APP_CONFIG.WATCH_REWARD}</span>
-        </div>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Ad - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Earn TON</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsSequence(); processReward('watch_ad', 0); }}>WATCH ADS</button>
           </div>
 
@@ -317,13 +305,12 @@ function App() {
             {activeTab === 'admin' && (
               <div>
                 <h4 style={{borderBottom: '2px solid #000'}}>Admin Control</h4>
-                
+                {/* USER SEARCH & UPDATE */}
                 <h5>🔍 USER MANAGER</h5>
                 <div style={{display: 'flex', gap: 5, marginBottom: 10}}>
                   <input style={{...styles.input, marginBottom: 0}} placeholder="User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                   <button style={{...styles.btn, width: 80, background: '#f59e0b'}} onClick={async () => {
-                      const getUrl = FIREBASE_PROXY + encodeURIComponent(`${FIREBASE_BASE_URL}/users/${searchUserId}.json`);
-                      const res = await fetch(getUrl);
+                      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
                       const data = await res.json();
                       if(data) { setSearchedUser(data); setNewBalanceInput(data.balance || 0); } else alert("Not found");
                     }}>FIND</button>
@@ -333,8 +320,7 @@ function App() {
                     <p>Balance: <b>{searchedUser.balance} TON</b></p>
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
                     <button style={{...styles.btn, background: '#10b981'}} onClick={async () => {
-                            const patchUrl = FIREBASE_PROXY + encodeURIComponent(`${FIREBASE_BASE_URL}/users/${searchUserId}.json`);
-                            await fetch(patchUrl, { method: 'PATCH', body: JSON.stringify({ balance: Number(newBalanceInput) }) });
+                            await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ balance: Number(newBalanceInput) }) });
                             alert("Updated!"); fetchData();
                         }}>UPDATE BALANCE</button>
                     <button style={{...styles.btn, background: '#ef4444', marginTop: 10}} onClick={() => setSearchedUser(null)}>CLOSE</button>
@@ -347,16 +333,14 @@ function App() {
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
                 <button style={{...styles.btn, background: 'green', marginBottom: 15}} onClick={async () => {
                    const id = 't_'+Date.now();
-                   const putUrl = FIREBASE_PROXY + encodeURIComponent(`${FIREBASE_BASE_URL}/global_tasks/${id}.json`);
-                   await fetch(putUrl, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
+                   await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
                    alert("Saved!"); fetchData();
                 }}>SAVE TASK</button>
 
                 <h5>GIVE VIP</h5>
                 <input style={styles.input} placeholder="User ID" value={adminVipUserId} onChange={e => setAdminVipUserId(e.target.value)} />
                 <button style={{...styles.btn, background: '#0ea5e9'}} onClick={async () => {
-                   const patchUrl = FIREBASE_PROXY + encodeURIComponent(`${FIREBASE_BASE_URL}/users/${adminVipUserId}.json`);
-                   await fetch(patchUrl, { method: 'PATCH', body: JSON.stringify({ isVip: true }) });
+                   await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${adminVipUserId}.json`, { method: 'PATCH', body: JSON.stringify({ isVip: true }) });
                    alert("Done!"); setAdminVipUserId('');
                 }}>GIVE VIP</button>
               </div>
@@ -370,24 +354,16 @@ function App() {
             <h3>Withdraw TON</h3>
             <input style={styles.input} placeholder="Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             <input style={styles.input} placeholder="Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
-            <button style={{...styles.btn, background: '#3b82f6'}} onClick={async () => {
+            <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
                 if(amt < 0.1 || amt > balance) return alert("Check Balance");
                 const entry = { amount: withdrawAmount, address: withdrawAddress, date: new Date().toLocaleString(), status: 'Pending' };
                 const newHistory = [entry, ...withdrawHistory];
                 const newBal = Number((balance - amt).toFixed(5));
                 setBalance(newBal); setWithdrawHistory(newHistory);
-                const patchUrl = FIREBASE_PROXY + encodeURIComponent(`${FIREBASE_BASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
-                await fetch(patchUrl, { method: 'PATCH', body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory }) });
-                alert("Withdrawal Requested!");
-            }}>SUBMIT WITHDRAWAL</button>
-        </div>
-      )}
-
-      {activeNav === 'invite' && (
-        <div style={styles.card}>
-            <h3>Referral Program</h3>
-            <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!"); }}>COPY LINK</button>
+                fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { method: 'PATCH', body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory }) });
+                alert("Requested!");
+            }}>WITHDRAW</button>
         </div>
       )}
 
