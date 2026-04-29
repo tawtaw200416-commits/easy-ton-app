@@ -5,7 +5,7 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
-  ADSGRAM_BLOCK_ID: "27611",
+  ADSGRAM_BLOCK_ID: "27611", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -14,7 +14,7 @@ const APP_CONFIG = {
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001,
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
-  // Adsterra Direct Link
+  // Adsterra Link Hardcoded as requested
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec"
 };
 
@@ -47,28 +47,28 @@ function App() {
 
   const [lastAdClickTime, setLastAdClickTime] = useState(0);
 
-  // Adsterra opens 7 seconds after Advertica
+  // --- Ad Sequence Logic (Advertica First, Adsterra after 7s) ---
   const triggerAdsSequence = useCallback(() => {
     window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
-    setLastAdClickTime(Date.now()); 
+    setLastAdClickTime(Date.now()); // Start timer
 
     setTimeout(() => {
       window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
-    }, 7000); 
+    }, 7000); // 7 seconds delay
   }, []);
 
   const checkAdStay = () => {
     const timePassed = Date.now() - lastAdClickTime;
     if (lastAdClickTime === 0 || timePassed < 7000) {
       alert("Please view Advertica for 7 seconds first!");
-      triggerAdsSequence(); 
+      triggerAdsSequence(); // Re-trigger if not enough time passed
       return false;
     }
     return true;
   };
 
   const handleTabChange = (tab) => {
-    if (!checkAdStay()) return;
+    if (!checkAdStay()) return; // Protect tab switching with ad logic
     if (['bot', 'social', 'reward'].includes(tab)) {
       triggerAdsSequence();
     }
@@ -105,7 +105,7 @@ function App() {
   }, [fetchData]);
 
   const processReward = (id, rewardAmount) => {
-    if (!checkAdStay()) return;
+    if (!checkAdStay()) return; // Double check 7s logic before giving reward
 
     let finalReward = rewardAmount;
     let isWatchAd = id === 'watch_ad';
@@ -129,12 +129,12 @@ function App() {
           });
           
           alert(`Reward Success: +${finalReward} TON`);
-          setLastAdClickTime(0); 
+          setLastAdClickTime(0); // Reset timer after success
           fetchData();
         }
       });
     } else {
-      alert("Ad provider not loaded.");
+      alert("Ad provider not loaded. Please wait.");
     }
   };
 
