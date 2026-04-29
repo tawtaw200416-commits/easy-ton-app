@@ -87,7 +87,7 @@ function App() {
   const checkAdStay = () => {
     const timePassed = Date.now() - lastAdClickTime;
     if (lastAdClickTime === 0 || timePassed < 7000) {
-      alert("Ad Verification Required: Please stay on the advertisement page for at least 7 seconds to unlock your reward!");
+      alert("Ad Verification Required: Please view the advertisement for at least 7 seconds to unlock this action!");
       triggerAdsSequence(); 
       return false;
     }
@@ -165,59 +165,66 @@ function App() {
     localStorage.setItem(`ads_watched_${APP_CONFIG.MY_UID}`, adsWatched.toString());
   }, [balance, completed, withdrawHistory, referrals, adsWatched]);
 
-  const processReward = (id, rewardAmount) => {
-    if (!isVpnActive) return alert("VPN Required: Please connect to 1.1.1.1 VPN to continue.");
-    
-    // Check if the specific task or code has already been completed/claimed
-    if (completed.includes(id)) return alert("Already Claimed: You cannot claim this reward more than once.");
-    
+  // NEW: Process reward using custom ad logic (No Adsgram for codes/tasks)
+  const processRewardCustom = (id, rewardAmount) => {
+    if (!isVpnActive) return alert("VPN connection required.");
     if (!checkAdStay()) return;
+    if (completed.includes(id)) return alert("Already claimed!");
 
     let finalReward = rewardAmount;
     let isWatchAd = id === 'watch_ad';
     if (isWatchAd) finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
     else if (id.startsWith('c_')) finalReward = APP_CONFIG.CODE_REWARD;
 
+    const newBal = Number((balance + finalReward).toFixed(5));
+    const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
+    const newCompleted = !isWatchAd ? [...completed, id] : completed;
+
+    setBalance(newBal);
+    if (isWatchAd) setAdsWatched(newAdsCount);
+    if (!isWatchAd) setCompleted(newCompleted);
+
+    fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+      method: 'PATCH',
+      body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
+    });
+
+    alert(`Reward Success: +${finalReward} TON`);
+    setLastAdClickTime(0); 
+    fetchData();
+  };
+
+  // KEEP: Adsgram ONLY for the main "WATCH ADS" button
+  const processRewardAdsgram = (id, rewardAmount) => {
+    if (!isVpnActive) return alert("Please connect to 1.1.1.1 VPN!");
+    if (!checkAdStay()) return;
+
     if (window.Adsgram) {
       const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
       AdController.show().then((result) => {
         if (result.done) {
-          const newBal = Number((balance + finalReward).toFixed(5));
-          const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
-          setBalance(newBal);
-          if (isWatchAd) setAdsWatched(newAdsCount);
-          
-          // Codes and tasks are added to completed; watch_ad is repeatable
-          const newCompleted = !isWatchAd ? [...completed, id] : completed;
-          if (!isWatchAd) setCompleted(newCompleted);
-          
-          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-            method: 'PATCH',
-            body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
-          });
-          alert(`Success: +${finalReward} TON has been added to your balance!`);
-          setLastAdClickTime(0); 
-          fetchData();
+            processRewardCustom(id, rewardAmount);
         }
       });
     }
   };
 
   const handleTaskReward = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Task already completed!");
+    if (completed.includes(id)) return alert("Already completed!");
     triggerAdsSequence();
     if (link) {
       setTimeout(() => {
         tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
       }, 500);
     }
-    setTimeout(() => { processReward(id, reward); }, 1500);
+    // Updated: Uses 7s Custom Ad logic for tasks
+    setTimeout(() => { processRewardCustom(id, reward); }, 1500);
   };
 
   const handleClaimClick = () => {
-    if(!rewardCodeInput) return alert("Please enter a promo code.");
-    // Prefixing with c_ to handle it as a specific completed ID
-    processReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD);
+    if(!rewardCodeInput) return alert("Enter Code");
+    // Updated: Uses 7s Custom Ad logic for codes and checks if already claimed
+    processRewardCustom('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD);
   }
 
   const safeNavigate = (nav) => {
@@ -309,7 +316,8 @@ function App() {
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
              <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
-             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsSequence(); processReward('watch_ad', 0); }}>WATCH ADS</button>
+             {/* This specific button still uses Adsgram + Custom Sequence */}
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsSequence(); processRewardAdsgram('watch_ad', 0); }}>WATCH ADS</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -341,22 +349,34 @@ function App() {
             
             {activeTab === 'admin' && (
               <div>
-                {/* Admin controls logic remains the same for internal management */}
                 <h4 style={{borderBottom: '2px solid #000', paddingBottom: '5px'}}>Admin Control</h4>
                 {/* ... existing admin UI elements ... */}
+                <div style={{background: '#fef08a', padding: '10px', borderRadius: '10px', margin: '10px 0', border: '2px solid #000'}}>
+                    <h5 style={{margin: '0 0 10px 0'}}>🔗 ADSTERRA DIRECT LINKS</h5>
+                    <input style={styles.input} placeholder="Paste Adsterra URL" value={newAdUrl} onChange={e => setNewAdUrl(e.target.value)} />
+                    <button style={{...styles.btn, background: '#d946ef', marginBottom: '10px'}} onClick={async () => {
+                        if(!newAdUrl) return;
+                        const id = 'ad_'+Date.now();
+                        await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${id}.json`, { method: 'PUT', body: JSON.stringify({ url: newAdUrl }) });
+                        setNewAdUrl(''); fetchData(); alert("Adsterra Link Added!");
+                    }}>ADD ADSTERRA LINK</button>
+                </div>
+                {/* ... (rest of admin tools) ... */}
               </div>
             )}
           </div>
         </>
       )}
 
-      {/* Other sections (Withdraw, Invite, Profile) remain same but with English UI */}
       {activeNav === 'withdraw' && (
         <>
           <div style={styles.card}>
             <h3 style={{color: '#0ea5e9'}}>💎 BUY VIP</h3>
-            <p style={{fontSize: '14px', margin: '5px 0'}}>Deposit 1 TON to withdraw instantly!</p>
-            {/* ... Wallet address section ... */}
+            <p style={{fontSize: '14px', margin: '5px 0'}}>Top up 1 TON to withdraw instantly!</p>
+            <div style={{background: '#f0f9ff', padding: '10px', borderRadius: '10px', border: '1px solid #0ea5e9', marginBottom: '15px'}}>
+              <p style={{fontSize: '11px', margin: '5px 0'}}>Admin Wallet: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
+              <button style={{...styles.btn, background: '#0ea5e9', padding: '5px', fontSize: '10px'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Copied!"); }}>COPY WALLET</button>
+            </div>
             <button style={{...styles.btn, background: '#0ea5e9'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>VERIFY PAYMENT</button>
           </div>
 
@@ -366,28 +386,18 @@ function App() {
             <input style={styles.input} placeholder="TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
-                if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Insufficient balance or invalid address.");
+                if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Check Input/Balance");
                 const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString(), status: 'Pending' };
                 const newHistory = [entry, ...withdrawHistory];
                 const newBal = Number((balance - amt).toFixed(5));
                 setBalance(newBal); setWithdrawHistory(newHistory);
                 fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { method: 'PATCH', body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory }) });
-                alert("Withdrawal Requested Successfully!");
+                alert("Withdrawal Requested!");
             }}>WITHDRAW</button>
-          </div>
-          <div style={styles.card}>
-            <h4>History</h4>
-            {withdrawHistory.map((h, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
-                <div style={{fontSize:11}}><b>{h.amount} TON</b><br/>{h.date}</div>
-                <div style={{ color: h.status === 'Success' ? 'green' : 'orange', fontWeight: 'bold', fontSize: '12px' }}>{h.status}</div>
-              </div>
-            ))}
           </div>
         </>
       )}
 
-      {/* Invite/Profile Nav items ... */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => safeNavigate(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
