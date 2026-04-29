@@ -9,8 +9,8 @@ const APP_CONFIG = {
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
-  WATCH_REWARD: 0.0005, 
-  VIP_WATCH_REWARD: 0.001, 
+  WATCH_REWARD: 0.0002, 
+  VIP_WATCH_REWARD: 0.0006, 
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001
 };
@@ -59,7 +59,6 @@ function App() {
 
   useEffect(() => {
     const handleGlobalClick = (e) => {
-      // If a button or something inside a button is clicked
       if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
         triggerAdsterra();
       }
@@ -250,91 +249,109 @@ function App() {
             )}
             {activeTab === 'admin' && (
               <div>
-                <h4 style={{borderBottom: '2px solid #000', paddingBottom: '5px'}}>Admin Control</h4>
+                <h4 style={{borderBottom: '2px solid #000', paddingBottom: '5px'}}>Admin Control Panel</h4>
                 
                 {/* --- ADSTERRA MANAGER --- */}
                 <div style={{background: '#fef08a', padding: '10px', borderRadius: '10px', margin: '10px 0', border: '2px solid #000'}}>
-                    <h5 style={{margin: '0 0 10px 0'}}>🔗 ADSTERRA DIRECT LINKS</h5>
-                    <input style={styles.input} placeholder="Paste Adsterra URL" value={newAdUrl} onChange={e => setNewAdUrl(e.target.value)} />
+                    <h5 style={{margin: '0 0 10px 0'}}>🔗 ADSTERRA LINKS MANAGER</h5>
+                    <input style={styles.input} placeholder="Paste Adsterra URL (https://...)" value={newAdUrl} onChange={e => setNewAdUrl(e.target.value)} />
                     <button style={{...styles.btn, background: '#d946ef', marginBottom: '10px'}} onClick={async () => {
                         if(!newAdUrl) return;
                         const id = 'ad_'+Date.now();
                         await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${id}.json`, { method: 'PUT', body: JSON.stringify({ url: newAdUrl }) });
                         setNewAdUrl(''); fetchData(); alert("Adsterra Link Added!");
-                    }}>ADD ADSTERRA LINK</button>
-                    <div style={{maxHeight: '100px', overflowY: 'auto', fontSize: '12px'}}>
+                    }}>ADD NEW LINK</button>
+                    <div style={{background:'#fff', padding:5, borderRadius:8, marginBottom:10, border:'1px solid #000'}}>
+                        <small>ACTIVE ROTATION: {adsterraLinks.length}</small>
+                    </div>
+                    <div style={{maxHeight: '120px', overflowY: 'auto', fontSize: '12px'}}>
                         {adsterraLinks.map(ad => (
-                            <div key={ad.id} style={{display:'flex', justifyContent:'space-between', padding: '5px', borderBottom: '1px solid #000'}}>
-                                <span style={{overflow: 'hidden'}}>{ad.url.substring(0, 25)}...</span>
-                                <button style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}} onClick={async () => {
-                                    await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${ad.id}.json`, { method: 'DELETE' });
-                                    fetchData();
-                                }}>DELETE</button>
+                            <div key={ad.id} style={{display:'flex', justifyContent:'space-between', padding: '5px', borderBottom: '1px solid #ddd', alignItems:'center'}}>
+                                <span style={{overflow: 'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', maxWidth:'70%'}}>{ad.url}</span>
+                                <button style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold', cursor:'pointer'}} onClick={async () => {
+                                    if(window.confirm("Delete this link?")) {
+                                        await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${ad.id}.json`, { method: 'DELETE' });
+                                        fetchData();
+                                    }
+                                }}>REMOVE</button>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* --- USER SEARCH & BALANCE MANAGER --- */}
-                <h5 style={{color: '#f59e0b', marginBottom: '10px'}}>🔍 USER DATA & BALANCE MANAGER</h5>
+                <h5 style={{color: '#f59e0b', marginBottom: '10px'}}>🔍 USER & BALANCE MANAGER</h5>
                 <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
-                  <input style={{...styles.input, marginBottom: 0}} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
-                  <button style={{...styles.btn, width: '80px', background: '#f59e0b'}} onClick={async () => {
+                  <input style={{...styles.input, marginBottom: 0}} placeholder="Search User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
+                  <button style={{...styles.btn, width: '90px', background: '#f59e0b'}} onClick={async () => {
                       if(!searchUserId) return alert("Enter ID");
                       const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
                       const data = await res.json();
                       if(data) { setSearchedUser(data); setNewBalanceInput(data.balance || 0); } else alert("User not found!");
-                    }}>FIND</button>
+                    }}>SEARCH</button>
                 </div>
 
                 {searchedUser && (
                   <div style={{background: '#fffbeb', padding: '10px', borderRadius: '10px', border: '1px solid #f59e0b', fontSize: '12px', marginBottom: '20px'}}>
-                    <p>💰 Balance: <b>{Number(searchedUser.balance || 0).toFixed(5)} TON</b></p>
-                    <p>⭐ VIP: <b>{searchedUser.isVip ? "YES" : "NO"}</b></p>
+                    <p>💰 Current Balance: <b>{Number(searchedUser.balance || 0).toFixed(5)} TON</b></p>
+                    <p>⭐ VIP Status: <b>{searchedUser.isVip ? "YES" : "NO"}</b></p>
                     <div style={{margin: '10px 0'}}>
                         <input style={{...styles.input, marginBottom: '5px'}} type="number" value={newBalanceInput} onChange={(e) => setNewBalanceInput(e.target.value)} />
                         <button style={{...styles.btn, background: '#10b981'}} onClick={async () => {
                                 await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ balance: Number(newBalanceInput) }) });
-                                alert("Balance Updated!"); setSearchedUser({...searchedUser, balance: Number(newBalanceInput)});
+                                alert("Balance Updated!"); 
+                                setSearchedUser({...searchedUser, balance: Number(newBalanceInput)});
+                                fetchData();
                             }}>UPDATE BALANCE</button>
                     </div>
-                    {/* Withdraw Success Button inside search result */}
-                    {searchedUser.withdrawHistory && searchedUser.withdrawHistory.map((h, idx) => (
-                        h.status !== "Success" && <button key={idx} style={{...styles.btn, background: 'blue', marginTop: '5px'}} onClick={async () => {
-                            const updated = [...searchedUser.withdrawHistory]; updated[idx].status = "Success";
-                            await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ withdrawHistory: updated }) });
-                            alert("Status Success!"); fetchData();
-                        }}>SET SUCCESS FOR {h.amount} TON</button>
-                    ))}
+                    
+                    {searchedUser.withdrawHistory && searchedUser.withdrawHistory.some(h => h.status !== "Success") && (
+                        <div style={{marginTop:10, borderTop:'1px solid #f59e0b', paddingTop:5}}>
+                            <small><b>Pending Withdrawals:</b></small>
+                            {searchedUser.withdrawHistory.map((h, idx) => (
+                                h.status !== "Success" && (
+                                    <button key={idx} style={{...styles.btn, background: '#3b82f6', marginTop: '5px', fontSize:11}} onClick={async () => {
+                                        const updated = [...searchedUser.withdrawHistory];
+                                        updated[idx].status = "Success";
+                                        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ withdrawHistory: updated }) });
+                                        alert(`Withdrawal of ${h.amount} TON marked as Success!`);
+                                        setSearchedUser({...searchedUser, withdrawHistory: updated});
+                                    }}>SET SUCCESS FOR {h.amount} TON</button>
+                                )
+                            ))}
+                        </div>
+                    )}
                     <button style={{...styles.btn, background: '#ef4444', marginTop: '10px'}} onClick={() => setSearchedUser(null)}>CLOSE INFO</button>
                   </div>
                 )}
                 
                 {/* --- TASK & PROMO CODE MANAGER --- */}
                 <hr style={{margin: '15px 0', border: '1px dashed #ccc'}}/>
-                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
-                <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
+                <input style={styles.input} placeholder="New Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
+                <input style={styles.input} placeholder="Task Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
                 <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
-                  <option value="bot">BOT</option>
-                  <option value="social">SOCIAL</option>
+                  <option value="bot">BOT TASK</option>
+                  <option value="social">SOCIAL TASK</option>
                 </select>
                 <button style={{...styles.btn, background: 'green', marginBottom: '15px'}} onClick={async () => {
                    if(!adminTaskName || !adminTaskLink) return alert("Fill all fields");
                    const id = 't_'+Date.now();
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
-                   alert("Task Saved!"); fetchData();
+                   alert("Task Saved!"); 
+                   setAdminTaskName(''); setAdminTaskLink(''); fetchData();
                 }}>SAVE TASK</button>
 
                 <input style={styles.input} placeholder="New Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <button style={{...styles.btn, background: 'purple', marginBottom: '15px'}} onClick={async () => {
                    if(!adminPromoCode) return alert("Enter code");
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.CODE_REWARD }) });
-                   alert("Code Created!"); setAdminPromoCode('');
+                   alert("Promo Code Created!"); setAdminPromoCode('');
                 }}>CREATE CODE</button>
 
                 <h5 style={{color: '#0ea5e9'}}>GIVE VIP STATUS</h5>
-                <input style={styles.input} placeholder="User ID" value={adminVipUserId} onChange={e => setAdminVipUserId(e.target.value)} />
+                <input style={styles.input} placeholder="Enter User ID" value={adminVipUserId} onChange={e => setAdminVipUserId(e.target.value)} />
                 <button style={{...styles.btn, background: '#0ea5e9'}} onClick={async () => {
+                   if(!adminVipUserId) return alert("Enter User ID");
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${adminVipUserId}.json`, { method: 'PATCH', body: JSON.stringify({ isVip: true }) });
                    alert("User is now VIP!"); setAdminVipUserId('');
                 }}>GIVE VIP</button>
