@@ -9,6 +9,9 @@ const APP_CONFIG = {
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
+  // Updated Rewards based on your request
+  WATCH_REWARD: 0.0003, 
+  VIP_WATCH_REWARD: 0.0008, 
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001,
   VPN_IOS: "https://apps.apple.com/app/1-1-1-1-faster-internet/id1433553754",
@@ -36,10 +39,10 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // Admin Dynamic Rewards - Default values will be updated from Firebase
+  // Admin Config State
   const [rewardConfig, setRewardConfig] = useState({ 
-    normal: 0.0002, 
-    vip: 0.0006 
+    normal: APP_CONFIG.WATCH_REWARD, 
+    vip: APP_CONFIG.VIP_WATCH_REWARD 
   });
 
   const [adminTaskName, setAdminTaskName] = useState('');
@@ -54,6 +57,7 @@ function App() {
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState(''); 
+
   const [lastAdClickTime, setLastAdClickTime] = useState(0);
 
   const checkVPN = useCallback(async () => {
@@ -87,11 +91,16 @@ function App() {
     }, 7000); 
   }, [adsterraLinks, isVpnActive]);
 
+  // Enhanced Ad Stay Check
   const checkAdStay = () => {
-    const timePassed = Date.now() - lastAdClickTime;
-    if (lastAdClickTime === 0 || timePassed < 7000) {
-      alert("Please view the Advertica ad for 7 seconds to unlock Adsterra and your reward!");
+    if (lastAdClickTime === 0) {
       triggerAdsSequence();
+      return false;
+    }
+    const timePassed = Date.now() - lastAdClickTime;
+    if (timePassed < 7000) {
+      alert("Please view the ad for 7 seconds to get your reward!");
+      triggerAdsSequence(); 
       return false;
     }
     return true;
@@ -134,8 +143,8 @@ function App() {
       }
       if (rewardsData) {
         setRewardConfig({
-          normal: rewardsData.normal || 0.0002,
-          vip: rewardsData.vip || 0.0006
+          normal: rewardsData.normal || APP_CONFIG.WATCH_REWARD,
+          vip: rewardsData.vip || APP_CONFIG.VIP_WATCH_REWARD
         });
       }
     } catch (e) { console.error(e); }
@@ -191,17 +200,11 @@ function App() {
     setTimeout(() => { processReward(id, reward); }, 1500);
   };
 
-  const handleAdminUpdateRewards = async () => {
-    try {
-      await fetch(`${APP_CONFIG.FIREBASE_URL}/rewards_config.json`, { 
-        method: 'PUT', 
-        body: JSON.stringify(rewardConfig) 
-      });
-      alert("Watch Rewards Updated Permanently!");
-      fetchData();
-    } catch (e) {
-      alert("Update Failed!");
-    }
+  const safeNavigate = (nav) => {
+    if (activeNav === nav) return;
+    if (!checkAdStay()) return;
+    triggerAdsSequence();
+    setActiveNav(nav);
   };
 
   const styles = {
@@ -254,45 +257,45 @@ function App() {
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'admin' && (
+            {activeTab === 'bot' && [
+              { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+              { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+              { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+              { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+              { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+              { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
+              { id: 'b7', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=1793453606" }
+            ].concat(customTasks.filter(t => t.type === 'bot')).map((t, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
+                <span style={{fontWeight:'bold'}}>{t.name}</span>
+                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
+              </div>
+            ))}
+            
+            {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
               <div>
                 <h4 style={{borderBottom: '2px solid #000', paddingBottom: '5px'}}>Admin Control</h4>
-                
                 <div style={{background: '#ecfdf5', padding: '10px', borderRadius: '10px', border: '2px solid #10b981', margin: '10px 0'}}>
                     <h5 style={{margin: '0 0 10px 0', color: '#047857'}}>💰 AD REWARD SETTINGS</h5>
                     <label style={{fontSize: '10px'}}>NORMAL REWARD (TON)</label>
                     <input style={styles.input} type="number" step="0.0001" value={rewardConfig.normal} onChange={e => setRewardConfig({...rewardConfig, normal: Number(e.target.value)})} />
                     <label style={{fontSize: '10px'}}>VIP REWARD (TON)</label>
                     <input style={styles.input} type="number" step="0.0001" value={rewardConfig.vip} onChange={e => setRewardConfig({...rewardConfig, vip: Number(e.target.value)})} />
-                    <button style={{...styles.btn, background: '#10b981'}} onClick={handleAdminUpdateRewards}>SAVE REWARDS</button>
+                    <button style={{...styles.btn, background: '#10b981'}} onClick={async () => {
+                        await fetch(`${APP_CONFIG.FIREBASE_URL}/rewards_config.json`, { method: 'PUT', body: JSON.stringify(rewardConfig) });
+                        alert("Watch Rewards Updated!"); fetchData();
+                    }}>SAVE REWARDS</button>
                 </div>
-                {/* ကျန်တဲ့ Admin UI တွေ ဒီအောက်မှာ ဆက်ရှိနေပါမယ်... */}
               </div>
             )}
-            
-            {/* Bot, Social, Reward logic တွေလည်း ပုံမှန်အတိုင်း အလုပ်လုပ်နေပါမယ် */}
-            {activeTab === 'bot' && [
-                { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
-                { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
-                { id: 'b3', name: "Workers On TON", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
-                { id: 'b4', name: "Easy Bonus Bot", link: "https://t.me/easybonuscode_bot?start=1793453606" },
-                { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
-                { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" },
-                { id: 'b7', name: "TonSpeed Bot", link: "https://t.me/tonspeeddrop_bot/startapp?startapp=1793453606" }
-              ].concat(customTasks.filter(t => t.type === 'bot')).map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
-                <span style={{fontWeight:'bold'}}>{t.name}</span>
-                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
-              </div>
-            ))}
           </div>
         </>
       )}
 
-      {/* Navigation Buttons */}
+      {/* Nav buttons unchanged */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
+          <button key={n} onClick={() => safeNavigate(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
             {n.toUpperCase()}
           </button>
         ))}
