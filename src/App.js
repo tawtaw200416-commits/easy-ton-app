@@ -13,8 +13,6 @@ const APP_CONFIG = {
   VIP_WATCH_REWARD: 0.0008, 
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001,
-  VPN_IOS: "https://apps.apple.com/app/1-1-1-1-faster-internet/id1433553754",
-  VPN_ANDROID: "https://play.google.com/store/apps/details?id=com.cloudflare.onedotonedotonedotone",
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default"
 };
 
@@ -28,8 +26,6 @@ function App() {
   const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem(`refs_${APP_CONFIG.MY_UID}`)) || []);
   const [adsWatched, setAdsWatched] = useState(() => Number(localStorage.getItem(`ads_watched_${APP_CONFIG.MY_UID}`)) || 0);
   
-  const [isVpnActive, setIsVpnActive] = useState(false); // Default false, so dashboard loads
-  const [checkingVpn, setCheckingVpn] = useState(true);
   const [customTasks, setCustomTasks] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
@@ -41,7 +37,6 @@ function App() {
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
   const [adminTaskType, setAdminTaskType] = useState('bot');
-  const [adminPromoCode, setAdminPromoCode] = useState('');
   const [adminVipUserId, setAdminVipUserId] = useState('');
 
   const [adsterraLinks, setAdsterraLinks] = useState([]);
@@ -53,59 +48,9 @@ function App() {
 
   const [lastAdClickTime, setLastAdClickTime] = useState(0);
 
-  // Still checks VPN but doesn't block the UI
-  const checkVPN = useCallback(async () => {
-    try {
-      const response = await fetch('https://www.cloudflare.com/cdn-cgi/trace');
-      const data = await response.text();
-      setIsVpnActive(data.includes('warp=on'));
-    } catch (error) {
-      setIsVpnActive(false);
-    } finally {
-      setCheckingVpn(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    checkVPN();
-    const vpnInterval = setInterval(checkVPN, 10000);
-    return () => clearInterval(vpnInterval);
-  }, [checkVPN]);
-
-  // VPN is only mandatory for rewards and sequence
-  const triggerAdsSequence = useCallback(() => {
-    if (!isVpnActive) return; // Sequence only runs if VPN is on
-    window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
-    setLastAdClickTime(Date.now()); 
-
-    setTimeout(() => {
-      if (adsterraLinks.length > 0) {
-        const randomIndex = Math.floor(Math.random() * adsterraLinks.length);
-        window.open(adsterraLinks[randomIndex].url, '_blank');
-      }
-    }, 7000); 
-  }, [adsterraLinks, isVpnActive]);
-
-  const checkAdStay = () => {
-    const timePassed = Date.now() - lastAdClickTime;
-    if (lastAdClickTime === 0 || timePassed < 7000) {
-      alert("Please view Advertica for 7 seconds first!");
-      triggerAdsSequence(); 
-      return false;
-    }
-    return true;
-  };
-
-  const handleTabChange = (tab) => {
-    if (['bot', 'social', 'reward'].includes(tab) && isVpnActive) {
-      triggerAdsSequence();
-    }
-    setActiveTab(tab);
-  };
-
+  // VPN logic removed from global state to ensure data always loads
   const fetchData = useCallback(async () => {
     try {
-      // Firebase works without VPN blocking now
       const [u, t, a] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
         fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
@@ -125,28 +70,39 @@ function App() {
       }
       if (tasksData) {
         setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], firebaseKey: key })));
-      } else {
-        setCustomTasks([]);
       }
       if (adsData) {
         setAdsterraLinks(Object.keys(adsData).map(key => ({ id: key, url: adsData[key].url })));
-      } else {
-        setAdsterraLinks([]);
       }
-    } catch (e) { console.error("Fetch Error:", e); }
+    } catch (e) { console.error("Data fetch error:", e); }
   }, []);
 
   useEffect(() => { 
     fetchData(); 
-    const interval = setInterval(fetchData, 15000); 
+    const interval = setInterval(fetchData, 10000); 
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  const processReward = (id, rewardAmount) => {
-    // VPN is strictly checked HERE, not on the whole UI
-    if (!isVpnActive) return alert("Please connect to 1.1.1.1 VPN to get reward!");
-    if (!checkAdStay()) return;
+  const triggerAdsSequence = () => {
+    window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
+    setLastAdClickTime(Date.now()); 
 
+    setTimeout(() => {
+      if (adsterraLinks.length > 0) {
+        const randomIndex = Math.floor(Math.random() * adsterraLinks.length);
+        window.open(adsterraLinks[randomIndex].url, '_blank');
+      }
+    }, 7000); 
+  };
+
+  const handleTabChange = (tab) => {
+    if (['bot', 'social', 'reward'].includes(tab)) {
+      triggerAdsSequence();
+    }
+    setActiveTab(tab);
+  };
+
+  const processReward = (id, rewardAmount) => {
     let finalReward = rewardAmount;
     let isWatchAd = id === 'watch_ad';
     if (isWatchAd) finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
@@ -169,7 +125,6 @@ function App() {
           });
           
           alert(`Reward Success: +${finalReward} TON`);
-          setLastAdClickTime(0); 
           fetchData();
         }
       });
@@ -180,28 +135,13 @@ function App() {
 
   const handleTaskReward = (id, reward, link) => {
     if (completed.includes(id)) return alert("Already completed!");
-    if (!isVpnActive) return alert("Connect VPN first!");
     triggerAdsSequence();
     if (link) {
       setTimeout(() => {
         tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
       }, 500);
     }
-    setTimeout(() => { processReward(id, reward); }, 1500);
-  };
-
-  const handleClaimClick = () => {
-    if(!rewardCodeInput) return alert("Enter Code");
-    if (!isVpnActive) return alert("Connect VPN first!");
-    triggerAdsSequence();
-    setTimeout(() => {
-      processReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD);
-    }, 1500);
-  }
-
-  const safeNavigate = (nav) => {
-    if (activeNav === nav) return;
-    setActiveNav(nav);
+    setTimeout(() => { processReward(id, reward); }, 2000);
   };
 
   const setSuccessStatus = async (userId, historyIndex) => {
@@ -215,11 +155,10 @@ function App() {
           method: 'PATCH',
           body: JSON.stringify({ withdrawHistory: updatedHistory })
         });
-        alert("Status updated to Success!");
-        setSearchedUser({...userData, withdrawHistory: updatedHistory});
+        alert("Status updated!");
         fetchData();
       }
-    } catch (e) { alert("Error updating status"); }
+    } catch (e) { alert("Error"); }
   };
 
   const fixedBotTasks = [
@@ -258,13 +197,6 @@ function App() {
 
   return (
     <div style={styles.main}>
-      {/* VPN Status Header (Non-blocking) */}
-      {!isVpnActive && (
-        <div style={{background: '#ef4444', color:'#fff', textAlign:'center', padding:5, borderRadius:10, marginBottom:10, fontSize:12}}>
-          ⚠️ VPN Disconnected (Reward disabled)
-        </div>
-      )}
-
       <div style={styles.header}>
         <div style={{display:'flex', justifyContent:'center', alignItems:'center', gap:5}}>
             <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
@@ -274,7 +206,6 @@ function App() {
         <div style={{display:'flex', justifyContent:'center', gap:10, opacity:0.8, fontSize:12}}>
             <span>Ads: {adsWatched}</span>
             <span>VIP Reward: {APP_CONFIG.VIP_WATCH_REWARD}</span>
-            <span>Normal: {APP_CONFIG.WATCH_REWARD}</span>
         </div>
       </div>
 
@@ -282,7 +213,7 @@ function App() {
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
              <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
-             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { processReward('watch_ad', 0); }}>WATCH ADS</button>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsSequence(); processReward('watch_ad', 0); }}>WATCH ADS</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -308,14 +239,14 @@ function App() {
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={styles.btn} onClick={handleClaimClick}>CLAIM</button>
+                <button style={styles.btn} onClick={() => processReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
               </div>
             )}
             
             {activeTab === 'admin' && (
               <div>
                 <h4 style={{borderBottom: '2px solid #000'}}>Admin Control</h4>
-                {/* ADSTERRA MANAGER - VPN NOT REQUIRED FOR ADMIN */}
+                {/* ADSTERRA MANAGER */}
                 <div style={{background: '#fef08a', padding: 10, borderRadius: 10, margin: '10px 0', border: '2px solid #000'}}>
                     <h5>🔗 ADSTERRA LINKS</h5>
                     <input style={styles.input} placeholder="URL" value={newAdUrl} onChange={e => setNewAdUrl(e.target.value)} />
@@ -325,9 +256,9 @@ function App() {
                         setNewAdUrl(''); fetchData(); alert("Added!");
                     }}>ADD LINK</button>
                     <div style={{maxHeight: 150, overflowY: 'auto', fontSize: 12}}>
-                        {adsterraLinks.length === 0 ? "No links found." : adsterraLinks.map(ad => (
+                        {adsterraLinks.map(ad => (
                             <div key={ad.id} style={{display:'flex', justifyContent:'space-between', padding: 5, borderBottom: '1px solid #000'}}>
-                                <span style={{wordBreak: 'break-all'}}>{ad.url.substring(0, 30)}...</span>
+                                <span style={{wordBreak:'break-all'}}>{ad.url}</span>
                                 <button style={{color: 'red', border:'none', background:'none', fontWeight:'bold'}} onClick={async () => {
                                     await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${ad.id}.json`, { method: 'DELETE' });
                                     fetchData();
@@ -350,17 +281,16 @@ function App() {
                 {searchedUser && (
                   <div style={{background: '#fffbeb', padding: 10, borderRadius: 10, border: '1px solid #f59e0b', fontSize: 12, marginBottom: 20}}>
                     <p>Balance: <b>{searchedUser.balance} TON</b></p>
-                    <p>VIP: <b>{searchedUser.isVip ? "YES" : "NO"}</b></p>
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
                     <button style={{...styles.btn, background: '#10b981'}} onClick={async () => {
                             await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ balance: Number(newBalanceInput) }) });
                             alert("Updated!"); fetchData();
                         }}>UPDATE BALANCE</button>
-                    <h5 style={{marginTop: 10}}>HISTORY</h5>
+                    <h5 style={{marginTop: 10}}>WITHDRAWALS</h5>
                     {searchedUser.withdrawHistory?.map((h, idx) => (
-                        <div key={idx} style={{display:'flex', justifyContent:'space-between', padding: 5, borderBottom: '1px dotted #ccc'}}>
+                        <div key={idx} style={{display:'flex', justifyContent:'space-between', padding: 5, borderBottom:'1px solid #ddd'}}>
                             <span>{h.amount} ({h.status})</span>
-                            {h.status !== "Success" && <button style={{background:'green', color:'#fff', border:'none', borderRadius:3}} onClick={() => setSuccessStatus(searchUserId, idx)}>SUCCESS</button>}
+                            {h.status !== "Success" && <button style={{background:'green', color:'#fff', border:'none', borderRadius:4}} onClick={() => setSuccessStatus(searchUserId, idx)}>SET SUCCESS</button>}
                         </div>
                     ))}
                     <button style={{...styles.btn, background: '#ef4444', marginTop: 10}} onClick={() => setSearchedUser(null)}>CLOSE</button>
@@ -378,14 +308,14 @@ function App() {
                 <button style={{...styles.btn, background: 'green', marginBottom: 15}} onClick={async () => {
                    const id = 't_'+Date.now();
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
-                   alert("Saved!"); fetchData();
+                   alert("Task Saved!"); fetchData();
                 }}>SAVE TASK</button>
 
                 <h5>GIVE VIP</h5>
                 <input style={styles.input} placeholder="User ID" value={adminVipUserId} onChange={e => setAdminVipUserId(e.target.value)} />
                 <button style={{...styles.btn, background: '#0ea5e9'}} onClick={async () => {
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${adminVipUserId}.json`, { method: 'PATCH', body: JSON.stringify({ isVip: true }) });
-                   alert("Done!"); setAdminVipUserId('');
+                   alert("VIP Access Granted!"); setAdminVipUserId('');
                 }}>GIVE VIP</button>
               </div>
             )}
@@ -401,7 +331,6 @@ function App() {
             <button style={{...styles.btn, background: '#0ea5e9'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Copied!"); }}>COPY WALLET</button>
             <p>Memo: <b>{APP_CONFIG.MY_UID}</b></p>
             <button style={{...styles.btn, background: '#0ea5e9'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Copied!"); }}>COPY MEMO</button>
-            <button style={{...styles.btn, background: '#0ea5e9', marginTop:10}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>VERIFY</button>
           </div>
 
           <div style={styles.card}>
@@ -416,17 +345,8 @@ function App() {
                 const newBal = Number((balance - amt).toFixed(5));
                 setBalance(newBal); setWithdrawHistory(newHistory);
                 fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { method: 'PATCH', body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory }) });
-                alert("Withdrawal Requested!");
+                alert("Requested!");
             }}>WITHDRAW</button>
-          </div>
-          <div style={styles.card}>
-            <h4>History</h4>
-            {withdrawHistory.map((h, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
-                <div style={{fontSize:11}}><b>{h.amount} TON</b><br/>{h.date}</div>
-                <div style={{ color: h.status === 'Success' ? 'green' : 'orange', fontWeight: 'bold' }}>{h.status}</div>
-              </div>
-            ))}
           </div>
         </>
       )}
@@ -435,11 +355,7 @@ function App() {
         <div style={styles.card}>
             <h3>Refer & Earn</h3>
             <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!"); }}>COPY LINK</button>
-            <div style={{marginTop: 15}}>
-                {referrals.map((r, i) => (
-                    <div key={i} style={{fontSize: '12px', padding: '5px 0', borderBottom: '1px solid #eee'}}>User: {r.id || r}</div>
-                ))}
-            </div>
+            <p style={{fontSize:12, marginTop:10}}>Total Referrals: {referrals.length}</p>
         </div>
       )}
 
@@ -449,13 +365,12 @@ function App() {
           <p>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></p>
           <p>User ID: <b>{APP_CONFIG.MY_UID}</b></p>
           <p>Balance: <b>{balance.toFixed(5)} TON</b></p>
-          <button style={{...styles.btn, background: '#ef4444', marginTop: 20}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
         </div>
       )}
 
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => safeNavigate(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
+          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
             {n.toUpperCase()}
           </button>
         ))}
