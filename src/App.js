@@ -5,7 +5,7 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
-  ADSGRAM_BLOCK_ID: "27611", 
+  ADSGRAM_BLOCK_ID: "27611",
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -14,7 +14,7 @@ const APP_CONFIG = {
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001,
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
-  // Adsterra Direct Link (Hardcoded as requested)
+  // Adsterra Link Direct Input
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec"
 };
 
@@ -36,7 +36,6 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // Admin States
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
   const [adminTaskType, setAdminTaskType] = useState('bot');
@@ -47,7 +46,7 @@ function App() {
 
   const [lastAdClickTime, setLastAdClickTime] = useState(0);
 
-  // 7s Logic: Advertica opens first, then Adsterra opens 7 seconds later
+  // Advertica open first, then 7s later Adsterra open automatically
   const triggerAdsSequence = useCallback(() => {
     window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
     setLastAdClickTime(Date.now()); 
@@ -179,7 +178,7 @@ function App() {
         setSearchedUser({...userData, withdrawHistory: updatedHistory});
         fetchData();
       }
-    } catch (e) { alert("Error"); }
+    } catch (e) { console.error(e); }
   };
 
   const fixedBotTasks = [
@@ -224,12 +223,15 @@ function App() {
             {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP ⭐</span>}
         </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
+        <div style={{display:'flex', justifyContent:'center', gap:10, opacity:0.8, fontSize:12}}>
+            <span>Ads: {adsWatched}</span>
+        </div>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Earn Reward</p>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get TON</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsSequence(); processReward('watch_ad', 0); }}>WATCH ADS</button>
           </div>
 
@@ -255,7 +257,7 @@ function App() {
             ))}
             {activeTab === 'reward' && (
               <div>
-                <input style={styles.input} placeholder="Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
+                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
                 <button style={styles.btn} onClick={handleClaimClick}>CLAIM</button>
               </div>
             )}
@@ -286,8 +288,8 @@ function App() {
                 )}
                 
                 <hr/>
-                <h5>➕ TASK MANAGER (BOT/SOCIAL)</h5>
-                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
+                <h5>➕ TASK MANAGER</h5>
+                <input style={styles.input} placeholder="Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
                 <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
                   <option value="bot">BOT</option>
@@ -296,16 +298,14 @@ function App() {
                 <button style={{...styles.btn, background: 'green', marginBottom: 15}} onClick={async () => {
                    const id = 't_'+Date.now();
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
-                   alert("Saved Task Successfully!"); fetchData();
-                   setAdminTaskName(''); setAdminTaskLink('');
+                   alert("Saved!"); fetchData();
                 }}>SAVE TASK</button>
 
-                <hr/>
-                <h5>GIVE VIP STATUS</h5>
+                <h5>GIVE VIP</h5>
                 <input style={styles.input} placeholder="User ID" value={adminVipUserId} onChange={e => setAdminVipUserId(e.target.value)} />
                 <button style={{...styles.btn, background: '#0ea5e9'}} onClick={async () => {
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${adminVipUserId}.json`, { method: 'PATCH', body: JSON.stringify({ isVip: true }) });
-                   alert("VIP Status Granted!"); setAdminVipUserId('');
+                   alert("Done!"); setAdminVipUserId('');
                 }}>GIVE VIP</button>
               </div>
             )}
@@ -314,13 +314,13 @@ function App() {
       )}
 
       {activeNav === 'withdraw' && (
-        <div style={styles.card}>
+          <div style={styles.card}>
             <h3>Withdraw TON</h3>
             <input style={styles.input} placeholder="Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             <input style={styles.input} placeholder="Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
-                if(amt < 0.1 || amt > balance) return alert("Insufficient Balance");
+                if(amt < 0.1 || amt > balance) return alert("Check Balance");
                 const entry = { amount: withdrawAmount, address: withdrawAddress, date: new Date().toLocaleString(), status: 'Pending' };
                 const newHistory = [entry, ...withdrawHistory];
                 const newBal = Number((balance - amt).toFixed(5));
@@ -328,10 +328,9 @@ function App() {
                 fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { method: 'PATCH', body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory }) });
                 alert("Withdrawal Requested!");
             }}>WITHDRAW</button>
-        </div>
+          </div>
       )}
 
-      {/* Navigation Footer */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => safeNavigate(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
