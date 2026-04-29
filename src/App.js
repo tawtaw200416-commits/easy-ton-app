@@ -1,4 +1,4 @@
-Import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const tg = window.Telegram?.WebApp;
 
@@ -22,12 +22,12 @@ const APP_CONFIG = {
 const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
 
 function App() {
-  const [balance, setBalance] = useState(() => Number(localStorage.getItem(`ton_bal_${APP_CONFIG.MY_UID}`)) || 0.0000);
+  const [balance, setBalance] = useState(() => Number(localStorage.getItem(ton_bal_${APP_CONFIG.MY_UID})) || 0.0000);
   const [isVip, setIsVip] = useState(VIP_IDS.includes(APP_CONFIG.MY_UID));
-  const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem(`comp_tasks_${APP_CONFIG.MY_UID}`)) || []);
-  const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem(`wd_hist_${APP_CONFIG.MY_UID}`)) || []);
-  const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem(`refs_${APP_CONFIG.MY_UID}`)) || []);
-  const [adsWatched, setAdsWatched] = useState(() => Number(localStorage.getItem(`ads_watched_${APP_CONFIG.MY_UID}`)) || 0);
+  const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem(comp_tasks_${APP_CONFIG.MY_UID})) || []);
+  const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem(wd_hist_${APP_CONFIG.MY_UID})) || []);
+  const [referrals, setReferrals] = useState(() => JSON.parse(localStorage.getItem(refs_${APP_CONFIG.MY_UID})) || []);
+  const [adsWatched, setAdsWatched] = useState(() => Number(localStorage.getItem(ads_watched_${APP_CONFIG.MY_UID})) || 0);
   
   const [isVpnActive, setIsVpnActive] = useState(true);
   const [checkingVpn, setCheckingVpn] = useState(true);
@@ -111,19 +111,19 @@ function App() {
 
   const handleReferral = useCallback(async () => {
     const startParam = tg?.initDataUnsafe?.start_param; 
-    const isNewUser = !localStorage.getItem(`joined_${APP_CONFIG.MY_UID}`);
+    const isNewUser = !localStorage.getItem(joined_${APP_CONFIG.MY_UID});
     if (startParam && isNewUser && startParam !== APP_CONFIG.MY_UID) {
       try {
-        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`);
+        const res = await fetch(${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json);
         const inviterData = await res.json();
         if (inviterData) {
           const newInviterBalance = Number((Number(inviterData.balance || 0) + APP_CONFIG.REFER_REWARD).toFixed(5));
           const newInviterRefs = inviterData.referrals ? [...Object.values(inviterData.referrals), { id: APP_CONFIG.MY_UID }] : [{ id: APP_CONFIG.MY_UID }];
-          await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`, {
+          await fetch(${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json, {
             method: 'PATCH',
             body: JSON.stringify({ balance: newInviterBalance, referrals: newInviterRefs })
           });
-          localStorage.setItem(`joined_${APP_CONFIG.MY_UID}`, 'true');
+          localStorage.setItem(joined_${APP_CONFIG.MY_UID}, 'true');
         }
       } catch (e) { console.error("Referral Error:", e); }
     }
@@ -132,9 +132,9 @@ function App() {
   const fetchData = useCallback(async () => {
     try {
       const [u, t, a] = await Promise.all([
-        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links.json`)
+        fetch(${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json),
+        fetch(${APP_CONFIG.FIREBASE_URL}/global_tasks.json),
+        fetch(${APP_CONFIG.FIREBASE_URL}/adsterra_links.json)
       ]);
       const userData = await u.json();
       const tasksData = await t.json();
@@ -165,11 +165,11 @@ function App() {
   }, [fetchData, handleReferral]);
 
   useEffect(() => {
-    localStorage.setItem(`ton_bal_${APP_CONFIG.MY_UID}`, balance.toString());
-    localStorage.setItem(`comp_tasks_${APP_CONFIG.MY_UID}`, JSON.stringify(completed));
-    localStorage.setItem(`wd_hist_${APP_CONFIG.MY_UID}`, JSON.stringify(withdrawHistory));
-    localStorage.setItem(`refs_${APP_CONFIG.MY_UID}`, JSON.stringify(referrals));
-    localStorage.setItem(`ads_watched_${APP_CONFIG.MY_UID}`, adsWatched.toString());
+    localStorage.setItem(ton_bal_${APP_CONFIG.MY_UID}, balance.toString());
+    localStorage.setItem(comp_tasks_${APP_CONFIG.MY_UID}, JSON.stringify(completed));
+    localStorage.setItem(wd_hist_${APP_CONFIG.MY_UID}, JSON.stringify(withdrawHistory));
+    localStorage.setItem(refs_${APP_CONFIG.MY_UID}, JSON.stringify(referrals));
+    localStorage.setItem(ads_watched_${APP_CONFIG.MY_UID}, adsWatched.toString());
   }, [balance, completed, withdrawHistory, referrals, adsWatched]);
 
   const processReward = (id, rewardAmount) => {
@@ -191,11 +191,11 @@ function App() {
           if (isWatchAd) setAdsWatched(newAdsCount);
           const newCompleted = !isWatchAd ? [...completed, id] : completed;
           if (!isWatchAd) setCompleted(newCompleted);
-          fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+          fetch(${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json, {
             method: 'PATCH',
             body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
           });
-          alert(`Reward Success: +${finalReward} TON`);
+          alert(Reward Success: +${finalReward} TON);
           setLastAdClickTime(0); 
           fetchData();
         }
@@ -237,13 +237,13 @@ function App() {
 
   const setSuccessStatus = async (userId, historyIndex) => {
     try {
-      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
+      const res = await fetch(${APP_CONFIG.FIREBASE_URL}/users/${userId}.json);
       const userData = await res.json();
       if(userData && userData.withdrawHistory) {
         const updatedHistory = [...userData.withdrawHistory];
         updatedHistory[historyIndex].status = "Success";
         
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
+        await fetch(${APP_CONFIG.FIREBASE_URL}/users/${userId}.json, {
           method: 'PATCH',
           body: JSON.stringify({ withdrawHistory: updatedHistory })
         });
@@ -362,7 +362,7 @@ function App() {
                     <button style={{...styles.btn, background: '#d946ef', marginBottom: '10px'}} onClick={async () => {
                         if(!newAdUrl) return;
                         const id = 'ad_'+Date.now();
-                        await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${id}.json`, { method: 'PUT', body: JSON.stringify({ url: newAdUrl }) });
+                        await fetch(${APP_CONFIG.FIREBASE_URL}/adsterra_links/${id}.json, { method: 'PUT', body: JSON.stringify({ url: newAdUrl }) });
                         setNewAdUrl(''); fetchData(); alert("Adsterra Link Added!");
                     }}>ADD ADSTERRA LINK</button>
                     <div style={{maxHeight: '100px', overflowY: 'auto', fontSize: '12px'}}>
@@ -370,7 +370,7 @@ function App() {
                             <div key={ad.id} style={{display:'flex', justifyContent:'space-between', padding: '5px', borderBottom: '1px solid #000'}}>
                                 <span style={{overflow: 'hidden'}}>{ad.url.substring(0, 25)}...</span>
                                 <button style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}} onClick={async () => {
-                                    await fetch(`${APP_CONFIG.FIREBASE_URL}/adsterra_links/${ad.id}.json`, { method: 'DELETE' });
+                                    await fetch(${APP_CONFIG.FIREBASE_URL}/adsterra_links/${ad.id}.json, { method: 'DELETE' });
                                     fetchData();
                                 }}>DELETE</button>
                             </div>
@@ -383,7 +383,7 @@ function App() {
                   <input style={{...styles.input, marginBottom: 0}} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                   <button style={{...styles.btn, width: '80px', background: '#f59e0b'}} onClick={async () => {
                       if(!searchUserId) return alert("Enter ID");
-                      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
+                      const res = await fetch(${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json);
                       const data = await res.json();
                       if(data) { setSearchedUser(data); setNewBalanceInput(data.balance || 0); } else alert("User not found!");
                     }}>FIND</button>
@@ -396,7 +396,7 @@ function App() {
                     <div style={{margin: '10px 0'}}>
                         <input style={{...styles.input, marginBottom: '5px'}} type="number" value={newBalanceInput} onChange={(e) => setNewBalanceInput(e.target.value)} />
                         <button style={{...styles.btn, background: '#10b981'}} onClick={async () => {
-                                await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ balance: Number(newBalanceInput) }) });
+                                await fetch(${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json, { method: 'PATCH', body: JSON.stringify({ balance: Number(newBalanceInput) }) });
                                 alert("Balance Updated!"); setSearchedUser({...searchedUser, balance: Number(newBalanceInput)});
                             }}>UPDATE BALANCE</button>
                     </div>
@@ -433,7 +433,7 @@ function App() {
                 <button style={{...styles.btn, background: 'green', marginBottom: '15px'}} onClick={async () => {
                    if(!adminTaskName || !adminTaskLink) return alert("Fill all fields");
                    const id = 't_'+Date.now();
-                   await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
+                   await fetch(${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
                    alert("Task Saved!"); fetchData();
                 }}>SAVE TASK</button>
 
@@ -448,8 +448,8 @@ function App() {
                             </div>
                             <button style={{background: '#ef4444', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px', fontSize: '10px', fontWeight: 'bold'}} 
                                 onClick={async () => {
-                                    if(window.confirm(`Delete task "${t.name}"?`)) {
-                                        await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${t.firebaseKey}.json`, { method: 'DELETE' });
+                                    if(window.confirm(Delete task "${t.name}"?)) {
+                                        await fetch(${APP_CONFIG.FIREBASE_URL}/global_tasks/${t.firebaseKey}.json, { method: 'DELETE' });
                                         alert("Task Deleted!"); fetchData();
                                     }
                                 }}>DELETE</button>
@@ -460,14 +460,14 @@ function App() {
                 <input style={styles.input} placeholder="New Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <button style={{...styles.btn, background: 'purple', marginBottom: '15px'}} onClick={async () => {
                    if(!adminPromoCode) return alert("Enter code");
-                   await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.CODE_REWARD }) });
+                   await fetch(${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json, { method: 'PUT', body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.CODE_REWARD }) });
                    alert("Code Created!"); setAdminPromoCode('');
                 }}>CREATE CODE</button>
 
                 <h5 style={{color: '#0ea5e9'}}>GIVE VIP STATUS</h5>
                 <input style={styles.input} placeholder="User ID" value={adminVipUserId} onChange={e => setAdminVipUserId(e.target.value)} />
                 <button style={{...styles.btn, background: '#0ea5e9'}} onClick={async () => {
-                   await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${adminVipUserId}.json`, { method: 'PATCH', body: JSON.stringify({ isVip: true }) });
+                   await fetch(${APP_CONFIG.FIREBASE_URL}/users/${adminVipUserId}.json, { method: 'PATCH', body: JSON.stringify({ isVip: true }) });
                    alert("User is now VIP!"); setAdminVipUserId('');
                 }}>GIVE VIP</button>
               </div>
@@ -496,12 +496,12 @@ function App() {
             <input style={styles.input} placeholder="TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
-                if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Check Input/Balance");
+                if(amt < APP_CONFIG.MIN_WITHDRAW  amt > balance  !withdrawAddress) return alert("Check Input/Balance");
                 const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString(), status: 'Pending' };
                 const newHistory = [entry, ...withdrawHistory];
                 const newBal = Number((balance - amt).toFixed(5));
                 setBalance(newBal); setWithdrawHistory(newHistory);
-                fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { method: 'PATCH', body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory }) });
+                fetch(${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json, { method: 'PATCH', body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory }) });
                 alert("Withdrawal Requested!");
             }}>WITHDRAW</button>
           </div>
@@ -523,7 +523,7 @@ function App() {
                 <h3>Refer & Earn</h3>
                 <p style={{fontSize: '14px', marginBottom: '10px'}}>Earn {APP_CONFIG.REFER_REWARD} TON per friend!</p>
                 <button style={styles.btn} onClick={() => { 
-                    navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
+                    navigator.clipboard.writeText(https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}); 
                     alert("Copied!"); 
                 }}>COPY LINK</button>
             </div>
