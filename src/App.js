@@ -9,8 +9,8 @@ const APP_CONFIG = {
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
-  WATCH_REWARD: 0.0002, // Default Fallback
-  VIP_WATCH_REWARD: 0.0006, // Default Fallback
+  WATCH_REWARD: 0.0002, 
+  VIP_WATCH_REWARD: 0.0006, 
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001,
   VPN_IOS: "https://apps.apple.com/app/1-1-1-1-faster-internet/id1433553754",
@@ -38,7 +38,7 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // Admin Dynamic Rewards
+  // Admin Dynamic Rewards - Initialize with fallback defaults
   const [rewardConfig, setRewardConfig] = useState({ 
     normal: APP_CONFIG.WATCH_REWARD, 
     vip: APP_CONFIG.VIP_WATCH_REWARD 
@@ -183,6 +183,7 @@ function App() {
     if (!isVpnActive) return alert("Please connect to 1.1.1.1 VPN!");
     if (!checkAdStay()) return;
 
+    // Use current state rewardConfig to determine the actual reward
     let finalReward = rewardAmount;
     let isWatchAd = id === 'watch_ad';
     
@@ -318,6 +319,7 @@ function App() {
 
       {activeNav === 'earn' && (
         <>
+          {/* Header text updated with dynamic values */}
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
              <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? rewardConfig.vip : rewardConfig.normal} TON</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsSequence(); processReward('watch_ad', 0); }}>WATCH ADS</button>
@@ -354,7 +356,7 @@ function App() {
               <div>
                 <h4 style={{borderBottom: '2px solid #000', paddingBottom: '5px'}}>Admin Control</h4>
 
-                {/* NEW: REWARD AMOUNT CONTROL */}
+                {/* AD REWARD CONTROL SECTION */}
                 <div style={{background: '#ecfdf5', padding: '10px', borderRadius: '10px', border: '2px solid #10b981', margin: '10px 0'}}>
                     <h5 style={{margin: '0 0 10px 0', color: '#047857'}}>💰 AD REWARD SETTINGS</h5>
                     <label style={{fontSize: '10px'}}>NORMAL REWARD (TON)</label>
