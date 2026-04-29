@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 const tg = window.Telegram?.WebApp;
 
@@ -12,9 +12,11 @@ const APP_CONFIG = {
   VIP_WATCH_REWARD: 0.0006, 
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001,
-  // --- New Ad Links ---
-  ADSTERRA: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
-  ADVERTIC: "https://data527.click/a674e1237b7e268eb5f6/8d02b7e071/?placementName=default"
+  // External Ads links
+  AD_LINKS: [
+    "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
+    "https://data527.click/a674e1237b7e268eb5f6/8d02b7e071/?placementName=default"
+  ]
 };
 
 const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
@@ -31,34 +33,46 @@ function App() {
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   
+  // --- Ad Timer States ---
+  const [adCountdown, setAdCountdown] = useState(0);
+  const [isAdActive, setIsAdActive] = useState(false);
+  const [pendingTask, setPendingTask] = useState(null);
+  const lastAdUrl = useRef("");
+
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // --- External Ads Timer State ---
-  const [showAdTimer, setShowAdTimer] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(0);
-  const [pendingRewardData, setPendingRewardData] = useState(null);
+  const [currentAdsBlockId, setCurrentAdsBlockId] = useState("27611");
 
-  const [currentAdsBlockId, setCurrentAdsBlockId] = useState("27611"); 
-  const [newAdsBlockIdInput, setNewAdsBlockIdInput] = useState('');
-
-  // Timer Logic
+  // Timer Logic & Anti-Cheat
   useEffect(() => {
     let timer;
-    if (showAdTimer && secondsLeft > 0) {
+    if (isAdActive && adCountdown > 0) {
       timer = setInterval(() => {
-        setSecondsLeft(prev => prev - 1);
+        setAdCountdown(prev => prev - 1);
       }, 1000);
-    } else if (secondsLeft === 0 && showAdTimer) {
-      setShowAdTimer(false);
-      if (pendingRewardData) {
-        completeExternalReward(pendingRewardData.id, pendingRewardData.reward);
-        setPendingRewardData(null);
+    } else if (adCountdown === 0 && isAdActive) {
+      setIsAdActive(false);
+      if (pendingTask) {
+        executeReward(pendingTask.id, pendingTask.reward);
+        setPendingTask(null);
       }
     }
     return () => clearInterval(timer);
-  }, [showAdTimer, secondsLeft, pendingRewardData]);
+  }, [adCountdown, isAdActive, pendingTask]);
+
+  // If user comes back early, show alert and redirect
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && isAdActive && adCountdown > 0) {
+        alert("Please watch for 9s to get reward!");
+        tg?.openLink ? tg.openLink(lastAdUrl.current) : window.open(lastAdUrl.current, '_blank');
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [isAdActive, adCountdown]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -79,40 +93,44 @@ function App() {
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
         setAdsWatched(userData.adsWatched || 0);
       }
-
       if (tasksData) {
         setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], firebaseKey: key })));
       }
-
       if (adsData?.blockId) setCurrentAdsBlockId(adsData.blockId);
     } catch (e) { console.error(e); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Helper to open External Ad and Start Timer
-  const startExternalAdTimer = (id, reward, linkToOpen = null) => {
-    // Randomly pick Adsterra or Advertic
-    const adUrl = Math.random() > 0.5 ? APP_CONFIG.ADSTERRA : APP_CONFIG.ADVERTIC;
+  // Integrated Ad Opener for ALL buttons
+  const triggerAdAndAction = (id, reward, actionLink = null) => {
+    if (id !== 'watch_ad' && completed.includes(id)) return alert("Already done!");
     
-    // Open the Ad link
-    tg?.openLink ? tg.openLink(adUrl) : window.open(adUrl, '_blank');
-    
-    // If there's a task link (bot/social), open it after a small delay
-    if (linkToOpen) {
-        setTimeout(() => {
-            tg?.openTelegramLink ? tg.openTelegramLink(linkToOpen) : window.open(linkToOpen, '_blank');
-        }, 1000);
-    }
+    // Pick random Ad link
+    const randomAd = APP_CONFIG.AD_LINKS[Math.floor(Math.random() * APP_CONFIG.AD_LINKS.length)];
+    lastAdUrl.current = randomAd;
 
-    setPendingRewardData({ id, reward });
-    setSecondsLeft(9);
-    setShowAdTimer(true);
+    // Start 9s Flow
+    setPendingTask({ id, reward, actionLink });
+    setAdCountdown(9);
+    setIsAdActive(true);
+
+    // Open Ad
+    tg?.openLink ? tg.openLink(randomAd) : window.open(randomAd, '_blank');
+
+    // If it's a task with a link, open that too
+    if (actionLink) {
+        setTimeout(() => {
+            tg?.openTelegramLink ? tg.openTelegramLink(actionLink) : window.open(actionLink, '_blank');
+        }, 1500);
+    }
   };
 
-  const completeExternalReward = (id, rewardAmount) => {
-    const newBal = Number((balance + rewardAmount).toFixed(5));
+  const executeReward = (id, rewardAmount) => {
     const isWatchAd = id === 'watch_ad';
+    const finalReward = isWatchAd ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : rewardAmount;
+    
+    const newBal = Number((balance + finalReward).toFixed(5));
     const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
     const newCompleted = !isWatchAd ? [...completed, id] : completed;
 
@@ -122,31 +140,9 @@ function App() {
 
     fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
       method: 'PATCH',
-      body: JSON.stringify({ 
-        balance: newBal, 
-        completed: newCompleted, 
-        adsWatched: newAdsCount
-      })
+      body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
     });
-    alert(`Success: +${rewardAmount} TON`);
-    fetchData();
-  };
-
-  // Original Task Logic updated with External Ad Trigger
-  const handleTaskReward = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Already completed!");
-    startExternalAdTimer(id, reward, link);
-  };
-
-  const processAdsgramReward = () => {
-    if (!window.Adsgram) return alert("Ads not ready");
-    const AdController = window.Adsgram.init({ blockId: currentAdsBlockId });
-    AdController.show().then((result) => {
-      if (result.done) {
-        const reward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
-        completeExternalReward('watch_ad', reward);
-      }
-    });
+    alert(`Reward Added: +${finalReward} TON`);
   };
 
   const fixedBotTasks = [
@@ -171,20 +167,18 @@ function App() {
     header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
-    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' },
-    // Timer Overlay
-    overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999, color: '#fff', flexDirection: 'column' }
+    overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 1000, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: '#fff' }
   };
 
   return (
     <div style={styles.main}>
       {/* Timer Overlay */}
-      {showAdTimer && (
+      {isAdActive && (
         <div style={styles.overlay}>
-           <h2 style={{fontSize: '40px'}}>{secondsLeft}s</h2>
-           <p>Wait for ad to finish to receive reward...</p>
-           <p style={{fontSize: '12px', color: '#facc15'}}>Don't close the app</p>
+            <h1 style={{fontSize: '50px', color: '#facc15'}}>{adCountdown}s</h1>
+            <p>Processing Reward...</p>
+            <p style={{fontSize: '12px'}}>Don't leave this page</p>
         </div>
       )}
 
@@ -197,11 +191,8 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Video Reward</p>
-             <div style={{display:'flex', gap: '5px'}}>
-                <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={processAdsgramReward}>ADSGRAM</button>
-                <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => startExternalAdTimer('watch_ad', isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD)}>DIRECT AD</button>
-             </div>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Video Task</p>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => triggerAdAndAction('watch_ad', 0)}>WATCH AD (9s)</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -214,20 +205,20 @@ function App() {
             {activeTab === 'bot' && allBotTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
-                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
+                <button onClick={() => triggerAdAndAction(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
               </div>
             ))}
             {activeTab === 'social' && allSocialTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
-                <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
+                <button onClick={() => triggerAdAndAction(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
               </div>
             ))}
           </div>
         </>
       )}
 
-      {/* Navigation */}
+      {/* Footer Nav */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
