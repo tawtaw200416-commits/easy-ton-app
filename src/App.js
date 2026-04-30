@@ -30,12 +30,12 @@ function App() {
   const [referrals, setReferrals] = useState([]);
   const [adsWatched, setAdsWatched] = useState(0);
   const [activeNav, setActiveNav] = useState('earn');
-  const [activeTab, setActiveTab] = useState('bot');
+  const [activeTab, setActiveTab] = useState('reward');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
   
-  // Anti-Cheat Timer States
+  // Timer & Anti-Cheat States
   const [isAdCooldown, setIsAdCooldown] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const timerRef = useRef(null);
@@ -55,7 +55,6 @@ function App() {
 
   const handleAdWatch = (rewardType, customAmt = 0) => {
     if (isAdCooldown) return;
-
     pendingReward.current = { type: rewardType, amt: customAmt };
     triggerDoubleAds();
     setIsAdCooldown(true);
@@ -73,20 +72,17 @@ function App() {
     }, 1000);
   };
 
-  // Visibility check: 9s မပြည့်ဘဲ ပြန်ဝင်လာရင် reward မပေးဘဲ ကြော်ငြာထဲ ပြန်ပို့မယ်
+  // Anti-Cheat: Forced Ad Watch Logic
   useEffect(() => {
     const handleCheck = () => {
       if (!document.hidden && isAdCooldown) {
         if (timeLeft > 0) {
-          alert(`Cheat Detected! ကျေးဇူးပြု၍ ကြော်ငြာကို နောက်ထပ် ${timeLeft} စက္ကန့်ကြည့်ပေးပါ။`);
-          triggerDoubleAds(); 
-        } else {
-          // Timer ပြည့်မှ Reward ပေးမယ်
-          if (pendingReward.current) {
-            processReward(pendingReward.current.type, pendingReward.current.amt);
-            pendingReward.current = null;
-            setIsAdCooldown(false);
-          }
+          alert(`Cheat Detected! You must stay in the ad for ${timeLeft} more seconds.`);
+          triggerDoubleAds(); // Send them back to ad
+        } else if (timeLeft === 0 && pendingReward.current) {
+          processReward(pendingReward.current.type, pendingReward.current.amt);
+          pendingReward.current = null;
+          setIsAdCooldown(false);
         }
       }
     };
@@ -94,10 +90,10 @@ function App() {
     return () => document.removeEventListener("visibilitychange", handleCheck);
   }, [isAdCooldown, timeLeft]);
 
-  // Firebase Data Sync
+  // Sync User Data
   useEffect(() => {
     const userRef = ref(db, `users/${APP_CONFIG.MY_UID}`);
-    const unsubscribe = onValue(userRef, (snapshot) => {
+    return onValue(userRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         setBalance(Number(data.balance || 0));
@@ -108,10 +104,9 @@ function App() {
         setAdsWatched(data.adsWatched || 0);
       }
     });
-    return () => unsubscribe();
   }, []);
 
-  // Referral tracking logic
+  // Referral System
   const handleReferral = useCallback(async () => {
     const startParam = tg?.initDataUnsafe?.start_param; 
     const storageKey = `joined_v6_${APP_CONFIG.MY_UID}`;
@@ -121,7 +116,7 @@ function App() {
         const inviterData = snapshot.val();
         if (inviterData) {
           const newInviterBalance = Number((Number(inviterData.balance || 0) + APP_CONFIG.REFER_REWARD).toFixed(5));
-          const newReferralEntry = { id: APP_CONFIG.MY_UID, date: new Date().toLocaleString() };
+          const newReferralEntry = { id: APP_CONFIG.MY_UID, date: new Date().toLocaleString(), reward: APP_CONFIG.REFER_REWARD };
           const currentRefs = inviterData.referrals ? Object.values(inviterData.referrals) : [];
           
           update(inviterRef, { 
@@ -147,7 +142,7 @@ function App() {
         completed: newCompleted, 
         adsWatched: newAdsCount 
     });
-    alert(`Reward Success: +${finalReward} TON ရရှိပါပြီ!`);
+    alert(`Congratulations! +${finalReward} TON Received.`);
   };
 
   const styles = {
@@ -173,9 +168,9 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get TON</p>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video To Earn TON</p>
              <button disabled={isAdCooldown} style={{...styles.btn, background: isAdCooldown ? '#444' : '#facc15', color: '#000'}} onClick={() => handleAdWatch('watch_ad')}>
-                {isAdCooldown ? `ခေတ္တစောင့်ပါ... (${timeLeft}s)` : "WATCH ADS"}
+                {isAdCooldown ? `PLEASE WAIT... (${timeLeft}s)` : "WATCH ADS"}
              </button>
           </div>
 
@@ -188,24 +183,24 @@ function App() {
 
           {activeTab === 'reward' && (
             <div style={styles.card}>
-                <input style={styles.input} placeholder="Promo Code ရိုက်ထည့်ပါ" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
+                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
                 <button disabled={isAdCooldown} style={styles.btn} onClick={async () => {
                     const snap = await get(ref(db, `promo_codes/${rewardCodeInput}`));
                     if(snap.exists() && !completed.includes('code_'+rewardCodeInput)) {
                         handleAdWatch('code_'+rewardCodeInput, snap.val().reward);
-                    } else { alert("Code မှားယွင်းနေပါသည် သို့မဟုတ် အသုံးပြုပြီးသားဖြစ်နေပါသည်!"); }
+                    } else { alert("Code Invalid or Already Used!"); }
                 }}>CLAIM CODE</button>
             </div>
           )}
 
           {activeTab === 'admin' && (
             <div style={styles.card}>
-                <h4>Admin - User Control</h4>
+                <h4>Admin - User Management</h4>
                 <div style={{display:'flex', gap:5}}>
                   <input style={styles.input} placeholder="User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
-                  <button style={{...styles.btn, width:80}} onClick={async () => {
+                  <button style={{...styles.btn, width:80, background: '#f59e0b'}} onClick={async () => {
                      const snap = await get(ref(db, `users/${searchUserId}`));
-                     if(snap.exists()) { setSearchedUser(snap.val()); setNewBalanceInput(snap.val().balance); }
+                     if(snap.exists()) { setSearchedUser(snap.val()); setNewBalanceInput(snap.val().balance); } else alert("Not Found!");
                   }}>FIND</button>
                 </div>
                 {searchedUser && (
@@ -215,13 +210,13 @@ function App() {
                   </div>
                 )}
                 <hr/>
-                <h4>Promo Code အသစ်ဖန်တီးရန်</h4>
-                <input style={styles.input} placeholder="Code နာမည်" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
-                <input style={styles.input} type="number" placeholder="ပေးမည့် Amount" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
+                <h4>Create Promo Code</h4>
+                <input style={styles.input} placeholder="Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
+                <input style={styles.input} type="number" placeholder="Reward Amount" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
                 <button style={{...styles.btn, background:'purple'}} onClick={() => {
-                    if(!adminPromoCode) return alert("Code နာမည်ထည့်ပါ!");
+                    if(!adminPromoCode) return alert("Enter Code!");
                     set(ref(db, `promo_codes/${adminPromoCode}`), { reward: Number(adminPromoReward) });
-                    alert("Custom Promo Code သိမ်းဆည်းပြီးပါပြီ!");
+                    alert("Code Saved!");
                     setAdminPromoCode('');
                 }}>SAVE CODE</button>
             </div>
@@ -236,16 +231,15 @@ function App() {
                 <h4 style={{color:'#facc15'}}>1 Refer = 0.001 TON</h4>
                 <button style={{...styles.btn, background:'#fff', color:'#000'}} onClick={() => {
                     navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`);
-                    alert("Invite Link ကို Copy ကူးလိုက်ပါပြီ!");
+                    alert("Invite Link Copied!");
                 }}>COPY LINK</button>
             </div>
             <div style={styles.card}>
-                <h4>ဖိတ်ခေါ်ထားသူများစာရင်း ({referrals.length})</h4>
-                {referrals.length === 0 ? <p style={{fontSize:12}}>စာရင်းမရှိသေးပါ။</p> : 
-                referrals.map((r, i) => (
-                    <div key={i} style={{fontSize:11, padding:8, borderBottom:'1px solid #eee', display:'flex', justifyContent:'space-between'}}>
+                <h4>Referral List ({referrals.length})</h4>
+                {referrals.map((r, i) => (
+                    <div key={i} style={{padding:8, borderBottom:'1px solid #eee', display:'flex', justifyContent:'space-between', fontSize:11}}>
                         <span>ID: <b>{r.id}</b></span>
-                        <span style={{color:'green', fontWeight:'bold'}}>+0.001 TON</span>
+                        <span style={{color:'green'}}>+{r.reward || 0.001} TON</span>
                     </div>
                 ))}
             </div>
@@ -255,23 +249,28 @@ function App() {
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
             <h3>Withdraw TON</h3>
-            <input style={styles.input} placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+            <input style={styles.input} placeholder="Amount (Min 0.1)" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             <input style={styles.input} placeholder="Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={styles.btn} onClick={() => {
-              if (parseFloat(withdrawAmount) < APP_CONFIG.MIN_WITHDRAW) {
-                alert(`Minimum withdraw is ${APP_CONFIG.MIN_WITHDRAW} TON`);
-              } else if (parseFloat(withdrawAmount) > balance) {
-                alert("Insufficient balance!");
-              } else {
-                alert("Withdraw Request Sent!");
-              }
+              if (parseFloat(withdrawAmount) < APP_CONFIG.MIN_WITHDRAW) alert(`Min: ${APP_CONFIG.MIN_WITHDRAW}`);
+              else if (parseFloat(withdrawAmount) > balance) alert("Low Balance!");
+              else alert("Withdrawal Sent!");
             }}>WITHDRAW</button>
         </div>
       )}
 
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+            <h3>User Profile</h3>
+            <p>ID: {APP_CONFIG.MY_UID}</p>
+            <p>Role: {isVip ? "VIP ⭐" : "Basic"}</p>
+            <button style={styles.btn}>SUPPORT BOT</button>
+        </div>
+      )}
+
       <div style={styles.nav}>
-        {['earn', 'invite', 'withdraw'].map(n => (
-          <button key={n} onClick={() => { triggerDoubleAds(); setActiveNav(n); }} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold' }}>
+        {['earn', 'invite', 'withdraw', 'profile'].map(n => (
+          <button key={n} onClick={() => { triggerDoubleAds(); setActiveNav(n); }} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
             {n.toUpperCase()}
           </button>
         ))}
