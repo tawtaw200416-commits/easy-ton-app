@@ -13,7 +13,7 @@ const APP_CONFIG = {
   VIP_WATCH_REWARD: 0.0006, 
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.001,
-  // Your specific ad links
+  // Your provided ad links
   AD_LINK_1: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
   AD_LINK_2: "https://data527.click/a674e1237b7e268eb5f6/503a052ca1/?placementName=default"
 };
@@ -46,31 +46,31 @@ function App() {
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState(''); 
 
-  // --- AD WATCH TRACKING ---
+  // Ad Tracking Logic
   const adStartTime = useRef(null);
-  const isAdActive = useRef(false);
+  const isAdOpen = useRef(false);
 
-  const triggerDualAds = () => {
+  const openAds = () => {
     adStartTime.current = Date.now();
-    isAdActive.current = true;
+    isAdOpen.current = true;
     window.open(APP_CONFIG.AD_LINK_1, '_blank');
-    setTimeout(() => { window.open(APP_CONFIG.AD_LINK_2, '_blank'); }, 600);
+    setTimeout(() => { window.open(APP_CONFIG.AD_LINK_2, '_blank'); }, 500);
   };
 
   useEffect(() => {
-    const handleFocus = () => {
-      if (isAdActive.current && adStartTime.current) {
-        const elapsed = (Date.now() - adStartTime.current) / 1000;
-        if (elapsed < 9) {
-          alert("You must watch ads for 9 seconds to continue! Returning to ads...");
+    const handleAppFocus = () => {
+      if (isAdOpen.current && adStartTime.current) {
+        const timeSpent = (Date.now() - adStartTime.current) / 1000;
+        if (timeSpent < 9) {
+          alert("Must watch ads for 9 seconds! Redirecting...");
           window.open(APP_CONFIG.AD_LINK_1, '_blank');
         } else {
-          isAdActive.current = false;
+          isAdOpen.current = false;
         }
       }
     };
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
+    window.addEventListener('focus', handleAppFocus);
+    return () => window.removeEventListener('focus', handleAppFocus);
   }, []);
 
   const handleReferral = useCallback(async () => {
@@ -118,7 +118,7 @@ function App() {
   useEffect(() => { fetchData(); handleReferral(); }, [fetchData, handleReferral]);
 
   const processReward = (id, rewardAmount) => {
-    if (isAdActive.current) return; // Block reward if 9s not met
+    if (isAdOpen.current) return; // Wait for 9s
     let finalReward = rewardAmount;
     let isWatchAd = id === 'watch_ad';
     if (isWatchAd) finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
@@ -132,15 +132,15 @@ function App() {
       method: 'PATCH',
       body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
     });
-    alert(`Reward Success: +${finalReward} TON`);
+    alert(`Reward: +${finalReward} TON`);
   };
 
   const handleTaskReward = (id, reward, link) => {
-    if (completed.includes(id)) return alert("Already completed!");
-    triggerDualAds();
+    if (completed.includes(id)) return alert("Done!");
+    openAds();
     setTimeout(() => {
         if (link) tg?.openTelegramLink ? tg.openTelegramLink(link) : window.open(link, '_blank');
-        setTimeout(() => { processReward(id, reward); }, 9000);
+        setTimeout(() => processReward(id, reward), 9000);
     }, 1000);
   };
 
@@ -168,26 +168,26 @@ function App() {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: '#000', padding: '25px', borderRadius: '25px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
-    btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
+    btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff' }
   };
 
   return (
     <div style={styles.main}>
       <div style={styles.header}>
-        <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
+        <h1>{balance.toFixed(5)} TON</h1>
         <small>Ads Watched: {adsWatched} {isVip && "⭐ VIP"}</small>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerDualAds(); setTimeout(() => processReward('watch_ad', 0), 9000); }}>WATCH ADS</button>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { openAds(); setTimeout(() => processReward('watch_ad', 0), 9000); }}>WATCH ADS</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
-              <button key={t} onClick={() => { triggerDualAds(); setActiveTab(t.toLowerCase()); }} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold' }}>{t}</button>
+              <button key={t} onClick={() => { openAds(); setActiveTab(t.toLowerCase()); }} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px' }}>{t}</button>
             ))}
           </div>
 
@@ -205,13 +205,13 @@ function App() {
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
             <h3>Withdraw</h3>
-            <button style={styles.btn} onClick={() => { triggerDualAds(); alert("Processing..."); }}>REQUEST WITHDRAW</button>
+            <button style={styles.btn} onClick={() => { openAds(); alert("Feature active after 9s check"); }}>WITHDRAW TON</button>
         </div>
       )}
 
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => { triggerDualAds(); setActiveNav(n); }} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold' }}>
+          <button key={n} onClick={() => { openAds(); setActiveNav(n); }} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold' }}>
             {n.toUpperCase()}
           </button>
         ))}
