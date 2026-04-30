@@ -35,11 +35,13 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
   
+  // Anti-Cheat Timer States
   const [isAdCooldown, setIsAdCooldown] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const timerRef = useRef(null);
   const pendingReward = useRef(null);
 
+  // Admin states
   const [adminPromoCode, setAdminPromoCode] = useState('');
   const [adminPromoReward, setAdminPromoReward] = useState(APP_CONFIG.CODE_REWARD);
   const [searchUserId, setSearchUserId] = useState('');
@@ -53,6 +55,7 @@ function App() {
 
   const handleAdWatch = (rewardType, customAmt = 0) => {
     if (isAdCooldown) return;
+
     pendingReward.current = { type: rewardType, amt: customAmt };
     triggerDoubleAds();
     setIsAdCooldown(true);
@@ -70,14 +73,15 @@ function App() {
     }, 1000);
   };
 
-  // Anti-Cheat: Enforcement of 9s Rule
+  // Visibility check: 9s မပြည့်ဘဲ ပြန်ဝင်လာရင် reward မပေးဘဲ ကြော်ငြာထဲ ပြန်ပို့မယ်
   useEffect(() => {
     const handleCheck = () => {
       if (!document.hidden && isAdCooldown) {
         if (timeLeft > 0) {
-          alert(`Cheat Detected! 9s မပြည့်သေးပါ။ ကြော်ငြာကို ပြန်ကြည့်ပါ။ (${timeLeft}s ကျန်)`);
+          alert(`Cheat Detected! ကျေးဇူးပြု၍ ကြော်ငြာကို နောက်ထပ် ${timeLeft} စက္ကန့်ကြည့်ပေးပါ။`);
           triggerDoubleAds(); 
         } else {
+          // Timer ပြည့်မှ Reward ပေးမယ်
           if (pendingReward.current) {
             processReward(pendingReward.current.type, pendingReward.current.amt);
             pendingReward.current = null;
@@ -90,9 +94,10 @@ function App() {
     return () => document.removeEventListener("visibilitychange", handleCheck);
   }, [isAdCooldown, timeLeft]);
 
+  // Firebase Data Sync
   useEffect(() => {
     const userRef = ref(db, `users/${APP_CONFIG.MY_UID}`);
-    return onValue(userRef, (snapshot) => {
+    const unsubscribe = onValue(userRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         setBalance(Number(data.balance || 0));
@@ -103,12 +108,13 @@ function App() {
         setAdsWatched(data.adsWatched || 0);
       }
     });
+    return () => unsubscribe();
   }, []);
 
-  // Referral History Update Logic
+  // Referral tracking logic
   const handleReferral = useCallback(async () => {
     const startParam = tg?.initDataUnsafe?.start_param; 
-    const storageKey = `joined_v5_${APP_CONFIG.MY_UID}`;
+    const storageKey = `joined_v6_${APP_CONFIG.MY_UID}`;
     if (startParam && !localStorage.getItem(storageKey) && startParam !== APP_CONFIG.MY_UID) {
       const inviterRef = ref(db, `users/${startParam}`);
       get(inviterRef).then((snapshot) => {
@@ -141,7 +147,7 @@ function App() {
         completed: newCompleted, 
         adsWatched: newAdsCount 
     });
-    alert(`Success: +${finalReward} TON!`);
+    alert(`Reward Success: +${finalReward} TON ရရှိပါပြီ!`);
   };
 
   const styles = {
@@ -161,15 +167,15 @@ function App() {
             {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP ⭐</span>}
         </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <small style={{opacity: 0.8}}>Ads Watched: {adsWatched}</small>
+        <small style={{opacity: 0.8}}>Total Ads Watched: {adsWatched}</small>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
              <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get TON</p>
-             <button disabled={isAdCooldown} style={{...styles.btn, background: isAdCooldown ? '#555' : '#facc15', color: '#000'}} onClick={() => handleAdWatch('watch_ad')}>
-                {isAdCooldown ? `WAIT: ${timeLeft}s` : "WATCH ADS"}
+             <button disabled={isAdCooldown} style={{...styles.btn, background: isAdCooldown ? '#444' : '#facc15', color: '#000'}} onClick={() => handleAdWatch('watch_ad')}>
+                {isAdCooldown ? `ခေတ္တစောင့်ပါ... (${timeLeft}s)` : "WATCH ADS"}
              </button>
           </div>
 
@@ -182,19 +188,19 @@ function App() {
 
           {activeTab === 'reward' && (
             <div style={styles.card}>
-                <input style={styles.input} placeholder="Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
+                <input style={styles.input} placeholder="Promo Code ရိုက်ထည့်ပါ" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
                 <button disabled={isAdCooldown} style={styles.btn} onClick={async () => {
                     const snap = await get(ref(db, `promo_codes/${rewardCodeInput}`));
                     if(snap.exists() && !completed.includes('code_'+rewardCodeInput)) {
                         handleAdWatch('code_'+rewardCodeInput, snap.val().reward);
-                    } else { alert("Code Invalid or Used!"); }
-                }}>{isAdCooldown ? "WAIT..." : "CLAIM"}</button>
+                    } else { alert("Code မှားယွင်းနေပါသည် သို့မဟုတ် အသုံးပြုပြီးသားဖြစ်နေပါသည်!"); }
+                }}>CLAIM CODE</button>
             </div>
           )}
 
           {activeTab === 'admin' && (
             <div style={styles.card}>
-                <h4>Admin - Manage Users</h4>
+                <h4>Admin - User Control</h4>
                 <div style={{display:'flex', gap:5}}>
                   <input style={styles.input} placeholder="User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                   <button style={{...styles.btn, width:80}} onClick={async () => {
@@ -205,16 +211,18 @@ function App() {
                 {searchedUser && (
                   <div style={{background:'#eee', padding:10, borderRadius:10, marginBottom:10}}>
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
-                    <button style={{...styles.btn, background:'green'}} onClick={() => update(ref(db, `users/${searchUserId}`), {balance: Number(newBalanceInput)})}>UPDATE</button>
+                    <button style={{...styles.btn, background:'green'}} onClick={() => update(ref(db, `users/${searchUserId}`), {balance: Number(newBalanceInput)})}>UPDATE BALANCE</button>
                   </div>
                 )}
                 <hr/>
-                <h4>Custom Reward Code</h4>
-                <input style={styles.input} placeholder="Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
-                <input style={styles.input} type="number" placeholder="Reward Amount" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
+                <h4>Promo Code အသစ်ဖန်တီးရန်</h4>
+                <input style={styles.input} placeholder="Code နာမည်" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
+                <input style={styles.input} type="number" placeholder="ပေးမည့် Amount" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
                 <button style={{...styles.btn, background:'purple'}} onClick={() => {
+                    if(!adminPromoCode) return alert("Code နာမည်ထည့်ပါ!");
                     set(ref(db, `promo_codes/${adminPromoCode}`), { reward: Number(adminPromoReward) });
-                    alert("Code Saved: " + adminPromoCode);
+                    alert("Custom Promo Code သိမ်းဆည်းပြီးပါပြီ!");
+                    setAdminPromoCode('');
                 }}>SAVE CODE</button>
             </div>
           )}
@@ -228,19 +236,37 @@ function App() {
                 <h4 style={{color:'#facc15'}}>1 Refer = 0.001 TON</h4>
                 <button style={{...styles.btn, background:'#fff', color:'#000'}} onClick={() => {
                     navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`);
-                    alert("Link Copied!");
+                    alert("Invite Link ကို Copy ကူးလိုက်ပါပြီ!");
                 }}>COPY LINK</button>
             </div>
             <div style={styles.card}>
-                <h4>ဖိတ်ခေါ်ထားသူများ ({referrals.length})</h4>
-                {referrals.map((r, i) => (
-                    <div key={i} style={{padding:8, borderBottom:'1px solid #eee', display:'flex', justifyContent:'space-between', fontSize:11}}>
-                        <span>ID: {r.id}</span>
-                        <span style={{color:'green'}}>+0.001 TON</span>
+                <h4>ဖိတ်ခေါ်ထားသူများစာရင်း ({referrals.length})</h4>
+                {referrals.length === 0 ? <p style={{fontSize:12}}>စာရင်းမရှိသေးပါ။</p> : 
+                referrals.map((r, i) => (
+                    <div key={i} style={{fontSize:11, padding:8, borderBottom:'1px solid #eee', display:'flex', justifyContent:'space-between'}}>
+                        <span>ID: <b>{r.id}</b></span>
+                        <span style={{color:'green', fontWeight:'bold'}}>+0.001 TON</span>
                     </div>
                 ))}
             </div>
         </>
+      )}
+
+      {activeNav === 'withdraw' && (
+        <div style={styles.card}>
+            <h3>Withdraw TON</h3>
+            <input style={styles.input} placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+            <input style={styles.input} placeholder="Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+            <button style={styles.btn} onClick={() => {
+              if (parseFloat(withdrawAmount) < APP_CONFIG.MIN_WITHDRAW) {
+                alert(`Minimum withdraw is ${APP_CONFIG.MIN_WITHDRAW} TON`);
+              } else if (parseFloat(withdrawAmount) > balance) {
+                alert("Insufficient balance!");
+              } else {
+                alert("Withdraw Request Sent!");
+              }
+            }}>WITHDRAW</button>
+        </div>
       )}
 
       <div style={styles.nav}>
