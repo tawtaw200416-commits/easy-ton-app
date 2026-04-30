@@ -26,7 +26,6 @@ function App() {
   const [balance, setBalance] = useState(0);
   const [isVip, setIsVip] = useState(false);
   const [completed, setCompleted] = useState([]);
-  const [withdrawHistory, setWithdrawHistory] = useState([]);
   const [referrals, setReferrals] = useState([]);
   const [adsWatched, setAdsWatched] = useState(0);
   const [activeNav, setActiveNav] = useState('earn');
@@ -35,13 +34,11 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
   
-  // Timer & Anti-Cheat States
   const [isAdCooldown, setIsAdCooldown] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const timerRef = useRef(null);
   const pendingReward = useRef(null);
 
-  // Admin states
   const [adminPromoCode, setAdminPromoCode] = useState('');
   const [adminPromoReward, setAdminPromoReward] = useState(APP_CONFIG.CODE_REWARD);
   const [searchUserId, setSearchUserId] = useState('');
@@ -72,13 +69,12 @@ function App() {
     }, 1000);
   };
 
-  // Anti-Cheat: Forced Ad Watch Logic
   useEffect(() => {
     const handleCheck = () => {
       if (!document.hidden && isAdCooldown) {
         if (timeLeft > 0) {
-          alert(`Cheat Detected! You must stay in the ad for ${timeLeft} more seconds.`);
-          triggerDoubleAds(); // Send them back to ad
+          alert(`Cheat Detected! Please watch the ad for ${timeLeft} more seconds.`);
+          triggerDoubleAds(); 
         } else if (timeLeft === 0 && pendingReward.current) {
           processReward(pendingReward.current.type, pendingReward.current.amt);
           pendingReward.current = null;
@@ -90,7 +86,6 @@ function App() {
     return () => document.removeEventListener("visibilitychange", handleCheck);
   }, [isAdCooldown, timeLeft]);
 
-  // Sync User Data
   useEffect(() => {
     const userRef = ref(db, `users/${APP_CONFIG.MY_UID}`);
     return onValue(userRef, (snapshot) => {
@@ -99,17 +94,15 @@ function App() {
         setBalance(Number(data.balance || 0));
         setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID) || !!data.isVip);
         setCompleted(data.completed || []);
-        setWithdrawHistory(data.withdrawHistory || []);
         setReferrals(data.referrals ? Object.values(data.referrals) : []);
         setAdsWatched(data.adsWatched || 0);
       }
     });
   }, []);
 
-  // Referral System
   const handleReferral = useCallback(async () => {
     const startParam = tg?.initDataUnsafe?.start_param; 
-    const storageKey = `joined_v6_${APP_CONFIG.MY_UID}`;
+    const storageKey = `joined_v7_${APP_CONFIG.MY_UID}`;
     if (startParam && !localStorage.getItem(storageKey) && startParam !== APP_CONFIG.MY_UID) {
       const inviterRef = ref(db, `users/${startParam}`);
       get(inviterRef).then((snapshot) => {
@@ -162,15 +155,15 @@ function App() {
             {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP ⭐</span>}
         </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <small style={{opacity: 0.8}}>Total Ads Watched: {adsWatched}</small>
+        <small style={{opacity: 0.8}}>Ads Watched: {adsWatched}</small>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video To Earn TON</p>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Ad - Get TON</p>
              <button disabled={isAdCooldown} style={{...styles.btn, background: isAdCooldown ? '#444' : '#facc15', color: '#000'}} onClick={() => handleAdWatch('watch_ad')}>
-                {isAdCooldown ? `PLEASE WAIT... (${timeLeft}s)` : "WATCH ADS"}
+                {isAdCooldown ? `Wait (${timeLeft}s)` : "WATCH ADS"}
              </button>
           </div>
 
@@ -183,30 +176,33 @@ function App() {
 
           {activeTab === 'reward' && (
             <div style={styles.card}>
-                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
+                <input style={styles.input} placeholder="Enter Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
                 <button disabled={isAdCooldown} style={styles.btn} onClick={async () => {
                     const snap = await get(ref(db, `promo_codes/${rewardCodeInput}`));
                     if(snap.exists() && !completed.includes('code_'+rewardCodeInput)) {
                         handleAdWatch('code_'+rewardCodeInput, snap.val().reward);
-                    } else { alert("Code Invalid or Already Used!"); }
+                    } else { alert("Invalid or already used code!"); }
                 }}>CLAIM CODE</button>
             </div>
           )}
 
           {activeTab === 'admin' && (
             <div style={styles.card}>
-                <h4>Admin - User Management</h4>
-                <div style={{display:'flex', gap:5}}>
+                <h4>Admin - User Balance</h4>
+                <div style={{display:'flex', gap:5, marginBottom: 10}}>
                   <input style={styles.input} placeholder="User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                   <button style={{...styles.btn, width:80, background: '#f59e0b'}} onClick={async () => {
                      const snap = await get(ref(db, `users/${searchUserId}`));
-                     if(snap.exists()) { setSearchedUser(snap.val()); setNewBalanceInput(snap.val().balance); } else alert("Not Found!");
+                     if(snap.exists()) { setSearchedUser(snap.val()); setNewBalanceInput(snap.val().balance); } else alert("User not found!");
                   }}>FIND</button>
                 </div>
                 {searchedUser && (
                   <div style={{background:'#eee', padding:10, borderRadius:10, marginBottom:10}}>
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
-                    <button style={{...styles.btn, background:'green'}} onClick={() => update(ref(db, `users/${searchUserId}`), {balance: Number(newBalanceInput)})}>UPDATE BALANCE</button>
+                    <button style={{...styles.btn, background:'green'}} onClick={() => {
+                        update(ref(db, `users/${searchUserId}`), {balance: Number(newBalanceInput)});
+                        alert("Balance updated successfully!");
+                    }}>UPDATE BALANCE</button>
                   </div>
                 )}
                 <hr/>
@@ -214,9 +210,9 @@ function App() {
                 <input style={styles.input} placeholder="Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <input style={styles.input} type="number" placeholder="Reward Amount" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
                 <button style={{...styles.btn, background:'purple'}} onClick={() => {
-                    if(!adminPromoCode) return alert("Enter Code!");
+                    if(!adminPromoCode) return alert("Please enter a code name!");
                     set(ref(db, `promo_codes/${adminPromoCode}`), { reward: Number(adminPromoReward) });
-                    alert("Code Saved!");
+                    alert("Promo code saved!");
                     setAdminPromoCode('');
                 }}>SAVE CODE</button>
             </div>
@@ -231,15 +227,16 @@ function App() {
                 <h4 style={{color:'#facc15'}}>1 Refer = 0.001 TON</h4>
                 <button style={{...styles.btn, background:'#fff', color:'#000'}} onClick={() => {
                     navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`);
-                    alert("Invite Link Copied!");
+                    alert("Invite link copied to clipboard!");
                 }}>COPY LINK</button>
             </div>
             <div style={styles.card}>
-                <h4>Referral List ({referrals.length})</h4>
-                {referrals.map((r, i) => (
+                <h4>Referral Users List ({referrals.length})</h4>
+                {referrals.length === 0 ? <p style={{fontSize: 12}}>No referrals yet.</p> : 
+                  referrals.map((r, i) => (
                     <div key={i} style={{padding:8, borderBottom:'1px solid #eee', display:'flex', justifyContent:'space-between', fontSize:11}}>
                         <span>ID: <b>{r.id}</b></span>
-                        <span style={{color:'green'}}>+{r.reward || 0.001} TON</span>
+                        <span style={{color:'green', fontWeight:'bold'}}>+0.001 TON</span>
                     </div>
                 ))}
             </div>
@@ -247,25 +244,21 @@ function App() {
       )}
 
       {activeNav === 'withdraw' && (
-        <div style={styles.card}>
-            <h3>Withdraw TON</h3>
-            <input style={styles.input} placeholder="Amount (Min 0.1)" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-            <input style={styles.input} placeholder="Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
-            <button style={styles.btn} onClick={() => {
-              if (parseFloat(withdrawAmount) < APP_CONFIG.MIN_WITHDRAW) alert(`Min: ${APP_CONFIG.MIN_WITHDRAW}`);
-              else if (parseFloat(withdrawAmount) > balance) alert("Low Balance!");
-              else alert("Withdrawal Sent!");
-            }}>WITHDRAW</button>
-        </div>
+          <div style={styles.card}>
+              <h3>Withdraw TON</h3>
+              <input style={styles.input} placeholder="Amount (Min 0.1)" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+              <input style={styles.input} placeholder="Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+              <button style={styles.btn} onClick={() => alert("Withdrawal request sent!")}>WITHDRAW</button>
+          </div>
       )}
 
       {activeNav === 'profile' && (
-        <div style={styles.card}>
-            <h3>User Profile</h3>
-            <p>ID: {APP_CONFIG.MY_UID}</p>
-            <p>Role: {isVip ? "VIP ⭐" : "Basic"}</p>
-            <button style={styles.btn}>SUPPORT BOT</button>
-        </div>
+          <div style={styles.card}>
+              <h3>User Profile</h3>
+              <p>User ID: {APP_CONFIG.MY_UID}</p>
+              <p>Account Type: {isVip ? "VIP ⭐" : "Basic"}</p>
+              <button style={styles.btn} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
+          </div>
       )}
 
       <div style={styles.nav}>
