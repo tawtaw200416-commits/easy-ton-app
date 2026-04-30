@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, set, update, get } from "firebase/database";
 
@@ -37,7 +37,7 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // 9s Logic States
+  // 9s Ad Logic State
   const [lastAdClickTime, setLastAdClickTime] = useState(0);
 
   // Admin states
@@ -50,7 +50,7 @@ function App() {
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
 
-  // Combined Ad Logic
+  // Ads Trigger
   const triggerAdsSequence = useCallback(() => {
     window.open(APP_CONFIG.AD_LINK_1, '_blank');
     window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
@@ -59,7 +59,7 @@ function App() {
 
   const checkAdStay = () => {
     const timePassed = Date.now() - lastAdClickTime;
-    if (lastAdClickTime === 0 || timePassed < 9000) { // Changed to 9 seconds
+    if (lastAdClickTime === 0 || timePassed < 9000) { 
       alert("Please view Ads for 9 seconds first to verify!");
       triggerAdsSequence();
       return false;
@@ -72,12 +72,15 @@ function App() {
     const unsubscribe = onValue(userRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        setBalance(Number(data.balance || 0));
+        setBalance(parseFloat(data.balance || 0));
         setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID) || !!data.isVip);
         setCompleted(data.completed || []);
         setWithdrawHistory(data.withdrawHistory || []);
         setReferrals(data.referrals ? Object.values(data.referrals) : []);
         setAdsWatched(data.adsWatched || 0);
+      } else {
+        // Create new user if not exists
+        set(userRef, { balance: 0, completed: [], adsWatched: 0, withdrawHistory: [] });
       }
     });
 
@@ -90,10 +93,8 @@ function App() {
   }, []);
 
   const finalizeReward = (id, finalReward) => {
-    const newBal = Number((balance + finalReward).toFixed(5));
+    const newBal = parseFloat((balance + finalReward).toFixed(5));
     const newAdsCount = id === 'watch_ad' ? adsWatched + 1 : adsWatched;
-    
-    // Task logic: Add to completed list so user can't repeat
     const newCompleted = (id !== 'watch_ad' && !completed.includes(id)) ? [...completed, id] : completed;
     
     update(ref(db, `users/${APP_CONFIG.MY_UID}`), { 
@@ -101,17 +102,18 @@ function App() {
         completed: newCompleted, 
         adsWatched: newAdsCount 
     });
-    alert(`Reward Success: +${finalReward} TON`);
+    alert(`Reward: +${finalReward} TON Success!`);
     setLastAdClickTime(0); 
   };
 
   const processReward = (id, rewardAmount) => {
     if (!checkAdStay()) return;
-    if (id !== 'watch_ad' && completed.includes(id)) return alert("Already completed!");
+    if (id !== 'watch_ad' && completed.includes(id)) return alert("Already done!");
 
     let finalReward = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : rewardAmount;
     
-    if (window.Adsgram) {
+    // Only 'watch_ad' uses Adsgram
+    if (id === 'watch_ad' && window.Adsgram) {
         const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
         AdController.show().then((result) => {
           if (result.done) finalizeReward(id, finalReward);
@@ -121,6 +123,7 @@ function App() {
     }
   };
 
+  // Fixed tasks from
   const fixedBotTasks = [
     { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
     { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -154,22 +157,20 @@ function App() {
 
   return (
     <div style={styles.main}>
+      {/* Header Info */}
       <div style={styles.header}>
-        <div style={{display:'flex', justifyContent:'center', alignItems:'center', gap:5}}>
+        <div style={{display:'flex', justifyContent:'center', gap:5}}>
             <small style={{color: '#facc15'}}>TOTAL BALANCE</small>
             {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP ⭐</span>}
         </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <small style={{opacity: 0.8}}>Total Ads Watched: {adsWatched}</small>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
-             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsSequence(); processReward('watch_ad', 0); }}>
-                WATCH ADS
-             </button>
+             <p style={{fontWeight: 'bold'}}>Watch & Earn {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
+             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsSequence(); processReward('watch_ad', 0); }}>WATCH ADS</button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -182,178 +183,123 @@ function App() {
           <div style={styles.card}>
             {activeTab === 'bot' && [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')].map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
-                <span style={{fontWeight:'bold'}}>{t.name}</span>
+                <span>{t.name}</span>
                 <button onClick={() => {
                     if (completed.includes(t.id)) return alert("Already done!");
                     triggerAdsSequence();
-                    setTimeout(() => { window.open(t.link, '_blank'); }, 500);
-                    setTimeout(() => { processReward(t.id, 0.001); }, 2000); // 2s delay for ad check
-                }} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
+                    setTimeout(() => window.open(t.link, '_blank'), 500);
+                    setTimeout(() => processReward(t.id, 0.001), 2000); 
+                }} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
               </div>
             ))}
 
             {activeTab === 'social' && [...fixedSocialTasks, ...customTasks.filter(t => t.type === 'social')].map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
-                <span style={{fontWeight:'bold'}}>{t.name}</span>
+                <span>{t.name}</span>
                 <button onClick={() => {
                     if (completed.includes(t.id)) return alert("Already joined!");
                     triggerAdsSequence();
-                    setTimeout(() => { window.open(t.link, '_blank'); }, 500);
-                    setTimeout(() => { processReward(t.id, 0.001); }, 2000);
-                }} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
+                    setTimeout(() => window.open(t.link, '_blank'), 500);
+                    setTimeout(() => processReward(t.id, 0.001), 2000);
+                }} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
               </div>
             ))}
 
             {activeTab === 'reward' && (
               <div>
-                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
+                <input style={styles.input} placeholder="Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
                 <button style={styles.btn} onClick={async () => {
-                    if(!rewardCodeInput) return alert("Enter Code");
                     const codeRef = ref(db, `promo_codes/${rewardCodeInput}`);
                     get(codeRef).then((snap) => {
                         const codeData = snap.val();
                         if(codeData && !completed.includes('code_'+rewardCodeInput)) {
                             triggerAdsSequence();
                             setTimeout(() => processReward('code_'+rewardCodeInput, codeData.reward || APP_CONFIG.CODE_REWARD), 2000);
-                        } else { alert("Invalid or Already Used Code!"); }
+                        } else alert("Invalid Code!");
                     });
                 }}>CLAIM CODE</button>
               </div>
             )}
 
+            {/* Admin User Search - */}
             {activeTab === 'admin' && (
               <div>
                 <h4>Admin - User Search</h4>
                 <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
-                  <input style={{...styles.input, marginBottom: 0}} placeholder="User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
+                  <input style={styles.input} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                   <button style={{...styles.btn, width: '80px', background: '#f59e0b'}} onClick={() => {
                       get(ref(db, `users/${searchUserId}`)).then((snap) => {
-                          if(snap.val()) { setSearchedUser(snap.val()); setNewBalanceInput(snap.val().balance || 0); } else alert("Not Found");
+                          if(snap.val()) { setSearchedUser(snap.val()); setNewBalanceInput(snap.val().balance || 0); } else alert("User ID Not Found!");
                       });
                   }}>FIND</button>
                 </div>
 
                 {searchedUser && (
-                  <div style={{padding:10, background:'#eee', borderRadius:10, marginBottom:10, border:'2px solid #000'}}>
-                    <p>ID: {searchUserId} | VIP: {searchedUser.isVip ? "Yes" : "No"}</p>
+                  <div style={{padding:10, background:'#eee', borderRadius:10, border:'2px solid #000'}}>
+                    <p>ID: {searchUserId} | VIP: {searchedUser.isVip ? "YES" : "NO"}</p>
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
                     <button style={{...styles.btn, background:'green'}} onClick={() => {
-                        update(ref(db, `users/${searchUserId}`), { balance: Number(newBalanceInput) });
+                        update(ref(db, `users/${searchUserId}`), { balance: parseFloat(newBalanceInput) });
                         alert("Balance Updated!");
-                    }}>UPDATE BALANCE</button>
+                    }}>SET BALANCE</button>
                     <button style={{...styles.btn, background:'#0ea5e9', marginTop:5}} onClick={() => {
                         update(ref(db, `users/${searchUserId}`), { isVip: true });
-                        alert("VIP Status Given!");
+                        alert("User given VIP!");
                     }}>GIVE VIP</button>
                     
-                    <h5 style={{marginTop:15}}>History Status Control:</h5>
+                    <h5 style={{marginTop:15}}>Pending Withdrawals:</h5>
                     {searchedUser.withdrawHistory?.map((h, idx) => (
-                        <div key={idx} style={{fontSize:10, display:'flex', justifyContent:'space-between', marginBottom:5}}>
-                            <span>{h.amount} TON - {h.status}</span>
-                            {h.status === 'Pending' && <button onClick={() => {
+                        h.status === 'Pending' && <div key={idx} style={{display:'flex', justifyContent:'space-between', padding:5}}>
+                            <span>{h.amount} TON</span>
+                            <button onClick={() => {
                                 const newHist = [...searchedUser.withdrawHistory];
                                 newHist[idx].status = 'Success';
                                 update(ref(db, `users/${searchUserId}`), { withdrawHistory: newHist });
-                                alert("Withdraw Success!");
-                            }}>SUCCESS</button>}
+                                alert("Success!");
+                            }}>SUCCESS</button>
                         </div>
                     ))}
                   </div>
                 )}
                 
                 <hr/>
-                <h5>➕ ADD NEW TASK</h5>
+                <h5>Add New Task</h5>
                 <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
-                <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
-                  <option value="bot">BOT</option>
-                  <option value="social">SOCIAL</option>
-                </select>
                 <button style={{...styles.btn, background: 'green'}} onClick={() => {
-                   const id = 't_'+Date.now();
-                   set(ref(db, `global_tasks/${id}`), { id, name: adminTaskName, link: adminTaskLink, type: adminTaskType });
-                   alert("Saved!"); setAdminTaskName(''); setAdminTaskLink('');
+                   const tid = 't_'+Date.now();
+                   set(ref(db, `global_tasks/${tid}`), { id: tid, name: adminTaskName, link: adminTaskLink, type: adminTaskType });
+                   alert("Task Saved!");
                 }}>SAVE TASK</button>
-
-                <h5>CREATE PROMO CODE</h5>
-                <input style={styles.input} placeholder="Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
-                <input style={styles.input} type="number" placeholder="Reward Amount" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
-                <button style={{...styles.btn, background:'purple'}} onClick={() => {
-                    set(ref(db, `promo_codes/${adminPromoCode}`), { code: adminPromoCode, reward: Number(adminPromoReward) });
-                    alert("Code Created: " + adminPromoCode); setAdminPromoCode('');
-                }}>CREATE CODE</button>
               </div>
             )}
           </div>
         </>
       )}
 
-      {activeNav === 'invite' && (
-        <div style={{...styles.card, background: '#000', color: '#fff', textAlign:'center'}}>
-            <h3>Invite & Earn</h3>
-            <h4 style={{color:'#facc15'}}>1 Refer = 0.001 TON</h4>
-            <button style={{...styles.btn, background:'#fff', color:'#000'}} onClick={() => {
-                navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`);
-                alert("Invite Link Copied!");
-            }}>COPY LINK</button>
-            <div style={{marginTop: 20, textAlign:'left'}}>
-                <h4>Refer History ({referrals.length})</h4>
-                {referrals.map((r, i) => (
-                    <div key={i} style={{fontSize:11, padding:8, borderBottom:'1px solid #333'}}>ID: {r.id || r}</div>
-                ))}
-            </div>
-        </div>
-      )}
-
+      {/* Other Navs */}
       {activeNav === 'withdraw' && (
-        <>
-            <div style={styles.card}>
-                <h3 style={{color: '#0ea5e9', marginTop:0}}>💎 BUY VIP</h3>
-                <p style={{fontSize:12, margin:'5px 0'}}>Admin Wallet: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
-                <button style={{...styles.btn, padding:8, background: '#0ea5e9'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Wallet Copied!"); }}>COPY WALLET</button>
-                <p style={{fontSize:12, margin:'5px 0'}}>Required Memo: <b>{APP_CONFIG.MY_UID}</b></p>
-                <button style={{...styles.btn, padding:8, background: '#0ea5e9'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Memo Copied!"); }}>COPY MEMO</button>
-            </div>
-            <div style={styles.card}>
-                <h3>Withdraw TON</h3>
-                <input style={styles.input} placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-                <input style={styles.input} placeholder="Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
-                <button style={styles.btn} onClick={() => {
-                    const amt = parseFloat(withdrawAmount);
-                    if (amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Min ${APP_CONFIG.MIN_WITHDRAW} TON`);
-                    if (amt > balance) return alert("Insufficient balance!");
-                    
-                    const newHistory = [{amount: amt, address: withdrawAddress, date: new Date().toLocaleString(), status: 'Pending'}, ...withdrawHistory];
-                    const newBal = Number((balance - amt).toFixed(5));
-                    update(ref(db, `users/${APP_CONFIG.MY_UID}`), { balance: newBal, withdrawHistory: newHistory });
-                    alert("Withdraw Requested!");
-                }}>WITHDRAW</button>
-            </div>
-            <div style={styles.card}>
-                <h4>Withdraw History</h4>
-                {withdrawHistory.map((h, i) => (
-                    <div key={i} style={{fontSize:11, padding:8, borderBottom:'1px solid #eee', display:'flex', justifyContent:'space-between'}}>
-                        <span>{h.amount} TON</span>
-                        <span style={{color: h.status === 'Success' ? 'green' : 'orange'}}>{h.status}</span>
-                    </div>
-                ))}
-            </div>
-        </>
-      )}
-
-      {activeNav === 'profile' && (
         <div style={styles.card}>
-            <h3>User Profile</h3>
-            <p>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></p>
-            <p>User ID: <b>{APP_CONFIG.MY_UID}</b></p>
-            <p>Balance: <b>{balance.toFixed(5)} TON</b></p>
-            <button style={{...styles.btn, background: '#ef4444', marginTop: 20}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
+            <h3>Buy VIP</h3>
+            <p style={{fontSize:11}}>Admin: {APP_CONFIG.ADMIN_WALLET}</p>
+            <p style={{fontSize:11}}>Memo: {APP_CONFIG.MY_UID}</p>
+            <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Memo Copied!"); }}>COPY MEMO</button>
+            <hr/>
+            <h3>Withdraw</h3>
+            <input style={styles.input} placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+            <button style={styles.btn} onClick={() => {
+                const amt = parseFloat(withdrawAmount);
+                if(amt < APP_CONFIG.MIN_WITHDRAW) return alert("Min Withdraw 0.1");
+                const newHist = [{amount: amt, date: new Date().toLocaleString(), status:'Pending'}, ...withdrawHistory];
+                update(ref(db, `users/${APP_CONFIG.MY_UID}`), { balance: balance - amt, withdrawHistory: newHist });
+                alert("Withdraw Requested!");
+            }}>WITHDRAW</button>
         </div>
       )}
 
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => { if(checkAdStay()) setActiveNav(n) }} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
+          <button key={n} onClick={() => { if(checkAdStay()) setActiveNav(n) }} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff' }}>
             {n.toUpperCase()}
           </button>
         ))}
