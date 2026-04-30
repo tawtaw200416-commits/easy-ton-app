@@ -12,7 +12,10 @@ const APP_CONFIG = {
   WATCH_REWARD: 0.0002, 
   VIP_WATCH_REWARD: 0.0006, 
   CODE_REWARD: 0.0008,
-  REFER_REWARD: 0.001
+  REFER_REWARD: 0.001,
+  // Added Ad Links
+  ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
+  ADVERTIC_URL: "https://data527.click/a674e1237b7e268eb5f6/503a052ca1/?placementName=default"
 };
 
 const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
@@ -39,10 +42,13 @@ function App() {
   const [adminPromoCode, setAdminPromoCode] = useState('');
   const [adminVipUserId, setAdminVipUserId] = useState('');
 
-  // Admin Search State
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState(''); 
+
+  // Timer State for Ads
+  const [adTimer, setAdTimer] = useState(0);
+  const [canClaim, setCanClaim] = useState(false);
 
   const handleReferral = useCallback(async () => {
     const startParam = tg?.initDataUnsafe?.start_param; 
@@ -59,25 +65,13 @@ function App() {
 
           await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${startParam}.json`, {
             method: 'PATCH',
-            body: JSON.stringify({ 
-              balance: newInviterBalance, 
-              referrals: newInviterRefs 
-            })
+            body: JSON.stringify({ balance: newInviterBalance, referrals: newInviterRefs })
           });
-          
           localStorage.setItem(`joined_${APP_CONFIG.MY_UID}`, 'true');
         }
-      } catch (e) {
-        console.error("Referral Error:", e);
-      }
+      } catch (e) { console.error(e); }
     }
   }, []);
-
-  const checkStatus = (historyItem) => {
-    if (historyItem.status === "Success") return "Success";
-    if (!historyItem.timestamp) return "Pending";
-    return (Date.now() - historyItem.timestamp >= 300000) ? "Success" : "Pending";
-  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -98,14 +92,9 @@ function App() {
       }
 
       if (tasksData) {
-        const tasksWithIds = Object.keys(tasksData).map(key => ({
-          ...tasksData[key],
-          firebaseKey: key 
-        }));
+        const tasksWithIds = Object.keys(tasksData).map(key => ({ ...tasksData[key], firebaseKey: key }));
         setCustomTasks(tasksWithIds);
-      } else {
-        setCustomTasks([]);
-      }
+      } else { setCustomTasks([]); }
     } catch (e) { console.error(e); }
   }, []);
 
@@ -124,42 +113,60 @@ function App() {
     localStorage.setItem(`ads_watched_${APP_CONFIG.MY_UID}`, adsWatched.toString());
   }, [balance, completed, withdrawHistory, referrals, adsWatched]);
 
-  const processReward = (id, rewardAmount) => {
+  // Combined Ad Logic with 9s Timer
+  const startAdSequence = () => {
+    setCanClaim(false);
+    setAdTimer(9);
+    
+    // Open Adsterra
+    window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
+    // Open Advertic after small delay to bypass popup blockers
+    setTimeout(() => { window.open(APP_CONFIG.ADVERTIC_URL, '_blank'); }, 800);
+
+    const countdown = setInterval(() => {
+      setAdTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdown);
+          setCanClaim(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const processReward = (id, rewardAmount = 0) => {
     let finalReward = rewardAmount;
     let isWatchAd = id === 'watch_ad';
 
     if (isWatchAd) {
       finalReward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
+      setCanClaim(false); // Reset claim button
     } else if (id.startsWith('c_')) {
       finalReward = APP_CONFIG.CODE_REWARD;
     }
 
-    if (window.Adsgram) {
-      const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-      AdController.show()
-        .then((result) => {
-          if (result.done) {
-            const newBal = Number((balance + finalReward).toFixed(5));
-            const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
-            
-            setBalance(newBal);
-            if (isWatchAd) setAdsWatched(newAdsCount);
+    const newBal = Number((balance + finalReward).toFixed(5));
+    const newAdsCount = isWatchAd ? adsWatched + 1 : adsWatched;
+    setBalance(newBal);
+    if (isWatchAd) setAdsWatched(newAdsCount);
 
-            const newCompleted = !isWatchAd ? [...completed, id] : completed;
-            if (!isWatchAd) setCompleted(newCompleted);
+    const newCompleted = !isWatchAd ? [...completed, id] : completed;
+    if (!isWatchAd) setCompleted(newCompleted);
 
-            fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-              method: 'PATCH',
-              body: JSON.stringify({ 
-                balance: newBal, 
-                completed: newCompleted, 
-                adsWatched: newAdsCount
-              })
-            });
-            alert(`Reward Success: +${finalReward} TON`);
-            fetchData();
-          }
-        });
+    fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+      method: 'PATCH',
+      body: JSON.stringify({ balance: newBal, completed: newCompleted, adsWatched: newAdsCount })
+    });
+    alert(`Reward Success: +${finalReward} TON`);
+    fetchData();
+  };
+
+  const handleDeleteTask = async (firebaseKey) => {
+    if (window.confirm("Are you sure you want to delete this task?")) {
+      await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${firebaseKey}.json`, { method: 'DELETE' });
+      alert("Task deleted!");
+      fetchData();
     }
   };
 
@@ -191,13 +198,8 @@ function App() {
     { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" }
   ];
 
-  const uniqueCustomTasks = customTasks.filter(ct => 
-    !fixedBotTasks.some(ft => ft.name === ct.name || ft.link === ct.link) &&
-    !fixedSocialTasks.some(ft => ft.name === ct.name || ft.link === ct.link)
-  );
-
-  const allBotTasks = [...fixedBotTasks, ...uniqueCustomTasks.filter(t => t.type === 'bot')];
-  const allSocialTasks = [...fixedSocialTasks, ...uniqueCustomTasks.filter(t => t.type === 'social')];
+  const allBotTasks = [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')];
+  const allSocialTasks = [...fixedSocialTasks, ...customTasks.filter(t => t.type === 'social')];
 
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
@@ -222,8 +224,14 @@ function App() {
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
-             <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => processReward('watch_ad', 0)}>WATCH ADS</button>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Ads (9s) - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
+             {adTimer > 0 ? (
+                <button style={{...styles.btn, background: '#555'}} disabled>WAIT {adTimer}s</button>
+             ) : canClaim ? (
+                <button style={{...styles.btn, background: '#10b981'}} onClick={() => processReward('watch_ad')}>CLAIM REWARD</button>
+             ) : (
+                <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={startAdSequence}>WATCH ADS</button>
+             )}
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -246,123 +254,55 @@ function App() {
                 <button onClick={() => handleTaskReward(t.id, 0.001, t.link)} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
               </div>
             ))}
-            {activeTab === 'reward' && (
-              <div>
-                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
-              </div>
-            )}
             {activeTab === 'admin' && (
               <div>
                 <h4>Admin Control</h4>
-                {/* --- USER SEARCH & BALANCE MANAGER --- */}
-                <h5 style={{color: '#f59e0b', marginBottom: '10px'}}>🔍 USER DATA & BALANCE MANAGER</h5>
-                <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
-                  <input style={{...styles.input, marginBottom: 0}} placeholder="Enter User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
-                  <button style={{...styles.btn, width: '80px', background: '#f59e0b'}} onClick={async () => {
-                      if(!searchUserId) return alert("Enter ID");
-                      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
-                      const data = await res.json();
-                      if(data) {
-                          setSearchedUser(data);
-                          setNewBalanceInput(data.balance || 0); 
-                      } else alert("User not found!");
-                    }}>FIND</button>
-                </div>
+                {/* --- USER SEARCH SECTION --- */}
+                <input style={styles.input} placeholder="Search User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
+                <button style={{...styles.btn, background: '#f59e0b', marginBottom: '10px'}} onClick={async () => {
+                    const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
+                    const data = await res.json();
+                    if(data) { setSearchedUser(data); setNewBalanceInput(data.balance); } else alert("Not found");
+                }}>FIND USER</button>
 
                 {searchedUser && (
-                  <div style={{background: '#fffbeb', padding: '10px', borderRadius: '10px', border: '1px solid #f59e0b', fontSize: '12px', marginBottom: '20px'}}>
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '10px'}}>
-                         <p>💰 Balance: <b>{Number(searchedUser.balance || 0).toFixed(5)} TON</b></p>
-                         <p>📺 Ads Watched: <b>{searchedUser.adsWatched || 0} times</b></p>
-                         <p>✅ Tasks Done: <b>{searchedUser.completed ? searchedUser.completed.length : 0} tasks</b></p>
-                         <p>⭐ VIP Status: <b>{searchedUser.isVip ? "YES" : "NO"}</b></p>
-                    </div>
-                    
-                    <div style={{margin: '10px 0', padding: '10px', background: '#fff', borderRadius: '8px', border: '1px solid #ddd'}}>
-                        <label style={{fontWeight:'bold', display:'block', marginBottom:'5px'}}>Edit Balance:</label>
-                        <input 
-                            style={{...styles.input, marginBottom: '5px'}} 
-                            type="number" 
-                            value={newBalanceInput} 
-                            onChange={(e) => setNewBalanceInput(e.target.value)} 
-                        />
-                        <button 
-                            style={{...styles.btn, background: '#10b981', height: '35px', padding: '0'}} 
-                            onClick={async () => {
-                                if(newBalanceInput === '') return alert("Please enter amount");
-                                await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { 
-                                    method: 'PATCH', 
-                                    body: JSON.stringify({ balance: Number(newBalanceInput) }) 
-                                });
-                                alert("Balance Updated!");
-                                setSearchedUser({...searchedUser, balance: Number(newBalanceInput)});
-                            }}
-                        >UPDATE BALANCE</button>
-                    </div>
-                    
-                    {/* --- WITHDRAW MANAGER WITHIN SEARCH --- */}
-                    <div style={{marginTop: '10px', borderTop: '1px solid #ddd', paddingTop: '10px'}}>
-                      <p style={{fontWeight: 'bold', color: '#000'}}>Withdraw History:</p>
-                      {searchedUser.withdrawHistory && searchedUser.withdrawHistory.length > 0 ? (
-                        searchedUser.withdrawHistory.map((h, idx) => (
-                          <div key={idx} style={{background: '#fff', padding: '5px', margin: '5px 0', borderRadius: '5px', border: '1px solid #ccc'}}>
-                            <p>Amt: {h.amount} | Status: <b style={{color: h.status === 'Success' ? 'green' : 'orange'}}>{h.status || 'Pending'}</b></p>
-                            {h.status !== "Success" && (
-                              <button 
-                                style={{background: 'green', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer'}}
-                                onClick={async () => {
-                                  const updatedHistory = [...searchedUser.withdrawHistory];
-                                  updatedHistory[idx].status = "Success";
-                                  await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { 
-                                    method: 'PATCH', 
-                                    body: JSON.stringify({ withdrawHistory: updatedHistory }) 
-                                  });
-                                  alert("Status updated to Success!");
-                                  setSearchedUser({...searchedUser, withdrawHistory: updatedHistory});
-                                }}
-                              >SET SUCCESS</button>
-                            )}
-                          </div>
-                        ))
-                      ) : <p>No history found.</p>}
-                    </div>
-
-                    <button style={{...styles.btn, height: '30px', padding: '0', background: '#ef4444', fontSize: '10px', marginTop: '10px'}} onClick={() => setSearchedUser(null)}>CLOSE INFO</button>
+                  <div style={{padding:'10px', border:'1px solid #ccc', borderRadius:'10px', marginBottom:'20px'}}>
+                    <p>ID: {searchUserId} | Bal: {searchedUser.balance}</p>
+                    <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
+                    <button style={{...styles.btn, background:'green'}} onClick={async () => {
+                        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method: 'PATCH', body: JSON.stringify({ balance: Number(newBalanceInput) }) });
+                        alert("Updated");
+                    }}>UPDATE BALANCE</button>
                   </div>
                 )}
-                
-                <hr style={{margin: '15px 0', border: '1px dashed #ccc'}}/>
 
+                <hr/>
+                <h5>Add New Task</h5>
                 <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
                 <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
                   <option value="bot">BOT</option>
                   <option value="social">SOCIAL</option>
                 </select>
-                <button style={{...styles.btn, background: 'green', marginBottom: '15px'}} onClick={async () => {
-                   if(!adminTaskName || !adminTaskLink) return alert("Fill all fields");
+                <button style={{...styles.btn, background: 'green'}} onClick={async () => {
                    const id = 't_'+Date.now();
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method: 'PUT', body: JSON.stringify({ id, name: adminTaskName, link: adminTaskLink, type: adminTaskType }) });
-                   alert("Task Saved!"); fetchData();
+                   alert("Saved"); fetchData();
                 }}>SAVE TASK</button>
 
-                <hr style={{margin:'15px 0'}}/>
-                <input style={styles.input} placeholder="New Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
-                <button style={{...styles.btn, background: 'purple'}} onClick={async () => {
-                   if(!adminPromoCode) return alert("Enter code");
-                   await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify({ code: adminPromoCode, reward: APP_CONFIG.CODE_REWARD }) });
-                   alert("Code Created!"); setAdminPromoCode('');
-                }}>CREATE CODE</button>
-
-                <hr style={{margin:'15px 0'}}/>
-                <h5 style={{color: '#0ea5e9'}}>GIVE VIP STATUS</h5>
-                <input style={styles.input} placeholder="User ID" value={adminVipUserId} onChange={e => setAdminVipUserId(e.target.value)} />
-                <button style={{...styles.btn, background: '#0ea5e9'}} onClick={async () => {
-                   if(!adminVipUserId) return alert("Enter ID");
-                   await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${adminVipUserId}.json`, { method: 'PATCH', body: JSON.stringify({ isVip: true }) });
-                   alert("User is now VIP!"); setAdminVipUserId('');
-                }}>GIVE VIP</button>
+                <h5 style={{marginTop: '20px'}}>Manage Custom Tasks</h5>
+                {customTasks.map((t) => (
+                  <div key={t.firebaseKey} style={{display:'flex', justifyContent:'space-between', padding:'10px', borderBottom:'1px solid #eee'}}>
+                    <span>{t.name} ({t.type})</span>
+                    <button onClick={() => handleDeleteTask(t.firebaseKey)} style={{background:'red', color:'#fff', border:'none', padding:'5px 10px', borderRadius:'5px'}}>Delete</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {activeTab === 'reward' && (
+              <div>
+                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
+                <button style={styles.btn} onClick={() => handleTaskReward('c_'+rewardCodeInput, APP_CONFIG.CODE_REWARD)}>CLAIM</button>
               </div>
             )}
           </div>
@@ -373,37 +313,29 @@ function App() {
         <>
           <div style={styles.card}>
             <h3 style={{color: '#0ea5e9'}}>💎 BUY VIP</h3>
-            <p style={{fontSize: '14px', margin: '5px 0'}}>Top up 1 TON to withdraw instantly!</p>
-            <div style={{background: '#f0f9ff', padding: '10px', borderRadius: '10px', border: '1px solid #0ea5e9', marginBottom: '15px'}}>
-              <p style={{fontSize: '11px', margin: '5px 0'}}>Admin Wallet: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
-              <button style={{...styles.btn, background: '#0ea5e9', padding: '5px', fontSize: '10px'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Copied!"); }}>COPY WALLET</button>
-              <p style={{fontSize: '11px', margin: '10px 0 5px 0'}}>Memo (Your ID): <b>{APP_CONFIG.MY_UID}</b></p>
-              <button style={{...styles.btn, background: '#0ea5e9', padding: '5px', fontSize: '10px'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Copied!"); }}>COPY MEMO</button>
-            </div>
-            <button style={{...styles.btn, background: '#0ea5e9'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>VERIFY PAYMENT</button>
+            <p>Admin Wallet: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
+            <button style={{...styles.btn, background: '#0ea5e9'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Copied"); }}>COPY WALLET</button>
           </div>
-
           <div style={styles.card}>
             <h3>Withdraw TON</h3>
-            <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+            <input style={styles.input} placeholder="Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             <input style={styles.input} placeholder="TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background: '#3b82f6'}} onClick={() => {
                 const amt = Number(withdrawAmount);
-                if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance || !withdrawAddress) return alert("Check Input/Balance");
+                if(amt < APP_CONFIG.MIN_WITHDRAW || amt > balance) return alert("Check Balance");
                 const entry = { amount: withdrawAmount, address: withdrawAddress, timestamp: Date.now(), date: new Date().toLocaleString(), status: 'Pending' };
                 const newHistory = [entry, ...withdrawHistory];
                 const newBal = Number((balance - amt).toFixed(5));
-                setWithdrawHistory(newHistory); setBalance(newBal);
+                setBalance(newBal); setWithdrawHistory(newHistory);
                 fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { method: 'PATCH', body: JSON.stringify({ balance: newBal, withdrawHistory: newHistory }) });
-                alert("Sent.");
             }}>WITHDRAW</button>
           </div>
           <div style={styles.card}>
             <h4>History</h4>
             {withdrawHistory.map((h, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
-                <div style={{fontSize:11}}><b>{h.amount} TON</b><br/>{h.date}</div>
-                <div style={{ color: checkStatus(h) === 'Success' ? 'green' : 'orange', fontWeight: 'bold', fontSize: '12px' }}>{checkStatus(h)}</div>
+              <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #eee' }}>
+                <span>{h.amount} TON</span>
+                <span style={{color: h.status === 'Success' ? 'green' : 'orange'}}>{h.status}</span>
               </div>
             ))}
           </div>
@@ -411,37 +343,20 @@ function App() {
       )}
 
       {activeNav === 'invite' && (
-        <>
-            <div style={styles.card}>
-                <h3>Refer & Earn</h3>
-                <p style={{fontSize: '14px', marginBottom: '10px'}}>Earn {APP_CONFIG.REFER_REWARD} TON per friend!</p>
-                <button style={styles.btn} onClick={() => { 
-                    navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); 
-                    alert("Copied!"); 
-                }}>COPY LINK</button>
-            </div>
-            <div style={styles.card}>
-                <h3>Invite History</h3>
-                <div style={{maxHeight: '200px', overflowY: 'auto'}}>
-                    {referrals.map((r, i) => (
-                        <div key={i} style={{fontSize: '12px', padding: '10px 0', borderBottom: '1px solid #eee', display:'flex', justifyContent:'space-between'}}>
-                            <span>User: {r.id || r}</span>
-                            <span style={{color:'green'}}>+{APP_CONFIG.REFER_REWARD}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </>
+        <div style={styles.card}>
+          <h3>Refer & Earn</h3>
+          <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied"); }}>COPY LINK</button>
+          <h4 style={{marginTop:'20px'}}>Referrals: {referrals.length}</h4>
+        </div>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
           <h3>User Profile</h3>
-          <div style={{padding: '10px 0'}}>Status: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></div>
-          <div style={{padding: '10px 0'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></div>
-          <div style={{padding: '10px 0'}}>Balance: <b>{balance.toFixed(5)} TON</b></div>
-          <div style={{padding: '10px 0'}}>Ads Watched: <b>{adsWatched}</b></div>
-          <button style={{...styles.btn, background: '#ef4444', marginTop: '20px'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
+          <p>User ID: {APP_CONFIG.MY_UID}</p>
+          <p>Status: {isVip ? "VIP ⭐" : "Standard"}</p>
+          <p>Balance: {balance.toFixed(5)} TON</p>
+          <button style={{...styles.btn, background: '#ef4444'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>SUPPORT</button>
         </div>
       )}
 
