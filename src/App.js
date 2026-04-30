@@ -48,11 +48,12 @@ function App() {
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
 
-  // RELIABLE DATA FETCHING: Retrieves all user progress by ID
-  const syncUserData = useCallback(async () => {
+  // RELIABLE DATA SYNC: Pulls existing data based on User ID
+  const syncAllData = useCallback(async () => {
     try {
       const userRef = ref(db, `users/${APP_CONFIG.MY_UID}`);
       const snapshot = await get(userRef);
+      
       if (snapshot.exists()) {
         const data = snapshot.val();
         setBalance(Number(data.balance || 0));
@@ -62,32 +63,33 @@ function App() {
         setReferrals(data.referrals ? Object.values(data.referrals) : []);
         setAdsWatched(data.adsWatched || 0);
       } else {
-        // New user initialization
-        await set(ref(db, `users/${APP_CONFIG.MY_UID}`), {
-            id: APP_CONFIG.MY_UID,
-            balance: 0,
-            completed: [],
-            adsWatched: 0,
-            isVip: VIP_IDS.includes(APP_CONFIG.MY_UID)
+        // Initialize new user if they don't exist in DB
+        await set(userRef, {
+          id: APP_CONFIG.MY_UID,
+          balance: 0,
+          completed: [],
+          adsWatched: 0,
+          isVip: VIP_IDS.includes(APP_CONFIG.MY_UID)
         });
       }
 
+      // Fetch tasks without needing a permanent listener (better for no-VPN)
       const tasksSnap = await get(ref(db, 'global_tasks'));
       if (tasksSnap.exists()) {
         const tasksData = tasksSnap.val();
         setCustomTasks(Object.keys(tasksData).map(key => ({ ...tasksData[key], firebaseKey: key })));
       }
     } catch (e) {
-      console.log("Sync Error (Check Connection/VPN):", e);
+      console.warn("Sync failed. The app will retry automatically.");
     }
   }, []);
 
   useEffect(() => {
-    syncUserData();
-    // Auto-sync every 45 seconds to keep data fresh without heavy overhead
-    const interval = setInterval(syncUserData, 45000);
+    syncAllData();
+    // Periodic sync every 60 seconds as a fallback
+    const interval = setInterval(syncAllData, 60000);
     return () => clearInterval(interval);
-  }, [syncUserData]);
+  }, [syncAllData]);
 
   const triggerAdsSequence = useCallback(() => {
     window.open(APP_CONFIG.AD_LINK_1, '_blank');
@@ -110,12 +112,12 @@ function App() {
     const newAdsCount = id === 'watch_ad' ? adsWatched + 1 : adsWatched;
     const newCompleted = (id !== 'watch_ad' && !completed.includes(id)) ? [...completed, id] : completed;
     
-    // Update local state immediately for performance
+    // UI Update (Instant)
     setBalance(newBal);
     if (id === 'watch_ad') setAdsWatched(newAdsCount);
     if (id !== 'watch_ad') setCompleted(newCompleted);
 
-    // Persist to Database (Works without VPN due to 'update' method)
+    // DB Update (Background)
     try {
       await update(ref(db, `users/${APP_CONFIG.MY_UID}`), { 
           balance: newBal, 
@@ -123,16 +125,16 @@ function App() {
           adsWatched: newAdsCount 
       });
     } catch (err) {
-      console.error("Delayed DB sync.");
+      console.error("Database sync pending...");
     }
     
-    alert(`Success: +${finalReward} TON Received`);
+    alert(`Success: +${finalReward} TON added to your account.`);
     setLastAdClickTime(0); 
   };
 
   const processReward = (id, rewardAmount) => {
     if (!checkAdStay()) return;
-    if (id !== 'watch_ad' && completed.includes(id)) return alert("Task already recorded!");
+    if (id !== 'watch_ad' && completed.includes(id)) return alert("Already completed on this account!");
 
     let finalReward = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : rewardAmount;
     
@@ -185,15 +187,15 @@ function App() {
             {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP ⭐</span>}
         </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <small style={{opacity: 0.8}}>Ads Watched: {adsWatched}</small>
+        <small style={{opacity: 0.8}}>Total Ads Viewed: {adsWatched}</small>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch & Earn {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch & Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsSequence(); processReward('watch_ad', 0); }}>
-                CLICK TO EARN
+                EARN TON NOW
              </button>
           </div>
 
@@ -209,7 +211,7 @@ function App() {
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => {
-                    if (completed.includes(t.id)) return alert("Task Already Finished");
+                    if (completed.includes(t.id)) return alert("Done!");
                     triggerAdsSequence();
                     setTimeout(() => { window.open(t.link, '_blank'); }, 500);
                     setTimeout(() => { processReward(t.id, 0.001); }, 2000);
@@ -221,7 +223,7 @@ function App() {
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => {
-                    if (completed.includes(t.id)) return alert("Already Followed");
+                    if (completed.includes(t.id)) return alert("Already Joined");
                     triggerAdsSequence();
                     setTimeout(() => { window.open(t.link, '_blank'); }, 500);
                     setTimeout(() => { processReward(t.id, 0.001); }, 2000);
@@ -233,45 +235,46 @@ function App() {
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
                 <button style={styles.btn} onClick={async () => {
-                    if(!rewardCodeInput) return alert("Please enter code");
+                    if(!rewardCodeInput) return alert("Enter Code");
                     const codeRef = ref(db, `promo_codes/${rewardCodeInput}`);
                     const snap = await get(codeRef);
                     const codeData = snap.val();
                     if(codeData && !completed.includes('code_'+rewardCodeInput)) {
                         triggerAdsSequence();
                         setTimeout(() => processReward('code_'+rewardCodeInput, codeData.reward || APP_CONFIG.CODE_REWARD), 2000);
-                    } else { alert("Code Expired or Invalid"); }
-                }}>CLAIM NOW</button>
+                    } else { alert("Invalid or Used Code"); }
+                }}>CLAIM REWARD</button>
               </div>
             )}
 
             {activeTab === 'admin' && (
               <div>
-                <h4>Search User</h4>
+                <h4>Search Account</h4>
                 <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
                   <input style={{...styles.input, marginBottom: 0}} placeholder="User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                   <button style={{...styles.btn, width: '80px', background: '#f59e0b'}} onClick={async () => {
                       const snap = await get(ref(db, `users/${searchUserId}`));
-                      if(snap.exists()) { setSearchedUser(snap.val()); setNewBalanceInput(snap.val().balance || 0); } else alert("ID Not Found");
+                      if(snap.exists()) { setSearchedUser(snap.val()); setNewBalanceInput(snap.val().balance || 0); } else alert("No user found");
                   }}>FIND</button>
                 </div>
 
                 {searchedUser && (
                   <div style={{padding:10, background:'#eee', borderRadius:10, marginBottom:10, border:'2px solid #000'}}>
-                    <p>UID: {searchUserId} | Status: {searchedUser.isVip ? "VIP" : "Basic"}</p>
+                    <p>UID: {searchUserId} | VIP: {searchedUser.isVip ? "YES" : "NO"}</p>
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
                     <button style={{...styles.btn, background:'green'}} onClick={async () => {
                         await update(ref(db, `users/${searchUserId}`), { balance: Number(newBalanceInput) });
-                        alert("Balance Sync Successful");
-                    }}>SET BALANCE</button>
+                        alert("Balance Saved");
+                    }}>UPDATE BAL</button>
                     <button style={{...styles.btn, background:'#0ea5e9', marginTop:5}} onClick={async () => {
                         await update(ref(db, `users/${searchUserId}`), { isVip: true });
                         alert("VIP Granted");
-                    }}>ADD VIP</button>
+                    }}>GIVE VIP</button>
                   </div>
                 )}
+                
                 <hr/>
-                <h5>MANAGE TASKS</h5>
+                <h5>CREATE GLOBAL TASK</h5>
                 <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
                 <select style={styles.input} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
@@ -281,8 +284,8 @@ function App() {
                 <button style={{...styles.btn, background: 'green'}} onClick={async () => {
                    const id = 't_'+Date.now();
                    await set(ref(db, `global_tasks/${id}`), { id, name: adminTaskName, link: adminTaskLink, type: adminTaskType });
-                   alert("Task Saved"); setAdminTaskName(''); setAdminTaskLink(''); syncUserData();
-                }}>UPLOAD TASK</button>
+                   alert("Task Live!"); setAdminTaskName(''); setAdminTaskLink(''); syncAllData();
+                }}>PUBLISH</button>
               </div>
             )}
           </div>
@@ -291,16 +294,16 @@ function App() {
 
       {activeNav === 'invite' && (
         <div style={{...styles.card, background: '#000', color: '#fff', textAlign:'center'}}>
-            <h3>Affiliate Program</h3>
-            <h4 style={{color:'#facc15'}}>Reward: 0.001 TON / Invite</h4>
+            <h3>Referral Program</h3>
+            <h4 style={{color:'#facc15'}}>Reward: 0.001 TON Per Invite</h4>
             <button style={{...styles.btn, background:'#fff', color:'#000'}} onClick={() => {
                 navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`);
-                alert("Invite Link Copied!");
-            }}>COPY PERSONAL LINK</button>
+                alert("Link Copied!");
+            }}>COPY MY LINK</button>
             <div style={{marginTop: 20, textAlign:'left'}}>
-                <h4>Referral Logs ({referrals.length})</h4>
+                <h4>Your Referrals ({referrals.length})</h4>
                 {referrals.map((r, i) => (
-                    <div key={i} style={{fontSize:11, padding:8, borderBottom:'1px solid #333'}}>Member ID: {r.id || r}</div>
+                    <div key={i} style={{fontSize:11, padding:8, borderBottom:'1px solid #333'}}>UID: {r.id || r}</div>
                 ))}
             </div>
         </div>
@@ -309,20 +312,20 @@ function App() {
       {activeNav === 'withdraw' && (
         <>
             <div style={styles.card}>
-                <h3 style={{color: '#0ea5e9'}}>⭐ UPGRADE TO VIP</h3>
-                <p style={{fontSize:12, margin:'5px 0'}}>Send Payment to: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
-                <button style={{...styles.btn, padding:8, background: '#0ea5e9'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Wallet Copied!"); }}>COPY ADDRESS</button>
-                <p style={{fontSize:12, margin:'5px 0'}}>Required Comment/Memo: <b>{APP_CONFIG.MY_UID}</b></p>
-                <button style={{...styles.btn, padding:8, background: '#0ea5e9'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Memo Copied!"); }}>COPY MEMO</button>
+                <h3 style={{color: '#0ea5e9'}}>🚀 UPGRADE TO VIP</h3>
+                <p style={{fontSize:12, margin:'5px 0'}}>Send to: <b>{APP_CONFIG.ADMIN_WALLET}</b></p>
+                <button style={{...styles.btn, padding:8, background: '#0ea5e9'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Copied!"); }}>COPY WALLET</button>
+                <p style={{fontSize:12, margin:'5px 0'}}>Memo (Required): <b>{APP_CONFIG.MY_UID}</b></p>
+                <button style={{...styles.btn, padding:8, background: '#0ea5e9'}} onClick={() => { navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Copied!"); }}>COPY MEMO</button>
             </div>
             <div style={styles.card}>
-                <h3>Cashout TON</h3>
+                <h3>Withdraw TON</h3>
                 <input style={styles.input} placeholder="Amount" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-                <input style={styles.input} placeholder="Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+                <input style={styles.input} placeholder="Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
                 <button style={styles.btn} onClick={async () => {
                     const amt = parseFloat(withdrawAmount);
-                    if (amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Minimum withdrawal is ${APP_CONFIG.MIN_WITHDRAW} TON`);
-                    if (amt > balance) return alert("Insufficient Balance");
+                    if (amt < APP_CONFIG.MIN_WITHDRAW) return alert(`Min withdrawal is ${APP_CONFIG.MIN_WITHDRAW}`);
+                    if (amt > balance) return alert("Insufficient balance");
                     
                     const newHistory = [{amount: amt, address: withdrawAddress, date: new Date().toLocaleString(), status: 'Pending'}, ...withdrawHistory];
                     const newBal = Number((balance - amt).toFixed(5));
@@ -331,11 +334,11 @@ function App() {
                     setWithdrawHistory(newHistory);
                     
                     await update(ref(db, `users/${APP_CONFIG.MY_UID}`), { balance: newBal, withdrawHistory: newHistory });
-                    alert("Cashout Request Sent");
-                }}>SUBMIT WITHDRAWAL</button>
+                    alert("Request Submitted");
+                }}>WITHDRAW NOW</button>
             </div>
             <div style={styles.card}>
-                <h4>Withdrawal History</h4>
+                <h4>History</h4>
                 {withdrawHistory.map((h, i) => (
                     <div key={i} style={{fontSize:11, padding:8, borderBottom:'1px solid #eee', display:'flex', justifyContent:'space-between'}}>
                         <span>{h.amount} TON</span>
@@ -348,10 +351,10 @@ function App() {
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-            <h3>Account Settings</h3>
-            <p>Account Type: <b>{isVip ? "VIP ⭐" : "Basic ✅"}</b></p>
-            <p>Telegram ID: <b>{APP_CONFIG.MY_UID}</b></p>
-            <p>Available Balance: <b>{balance.toFixed(5)} TON</b></p>
+            <h3>Account Info</h3>
+            <p>Member: <b>{isVip ? "VIP ⭐" : "ACTIVE ✅"}</b></p>
+            <p>Your ID: <b>{APP_CONFIG.MY_UID}</b></p>
+            <p>Current Balance: <b>{balance.toFixed(5)} TON</b></p>
             <button style={{...styles.btn, background: '#ef4444', marginTop: 20}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
         </div>
       )}
