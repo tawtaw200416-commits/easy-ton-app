@@ -13,7 +13,7 @@ const APP_CONFIG = {
   MIN_WITHDRAW: 0.1,
   WATCH_REWARD: 0.0003, 
   VIP_WATCH_REWARD: 0.0008, 
-  TASK_REWARD: 0.001, // 0.001 TON for Bots/Social
+  TASK_REWARD: 0.001, // Fixed 0.001 for Bot/Social
   REFER_REWARD: 0.001,
   AD_LINK_1: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec",
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default"
@@ -61,8 +61,6 @@ function App() {
 
   useEffect(() => {
     const userRef = ref(db, `users/${APP_CONFIG.MY_UID}`);
-    
-    // Listen for data changes
     const unsubscribe = onValue(userRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -72,7 +70,7 @@ function App() {
         setWithdrawHistory(data.withdrawHistory || []);
         setAdsWatched(data.adsWatched || 0);
       } else {
-        // Initialize user in DB if they don't exist
+        // Create user if doesn't exist
         set(userRef, { balance: 0, completed: [], adsWatched: 0, withdrawHistory: [] });
       }
     });
@@ -96,7 +94,6 @@ function App() {
         const newBal = Number((currentBal + rewardAmount).toFixed(5));
         const newAdsCount = id === 'watch_ad' ? (currentData.adsWatched || 0) + 1 : (currentData.adsWatched || 0);
         
-        // Prevent duplicate rewards for tasks
         let newCompleted = currentCompleted;
         if (id !== 'watch_ad' && !currentCompleted.includes(id)) {
             newCompleted = [...currentCompleted, id];
@@ -113,7 +110,7 @@ function App() {
     });
   };
 
-  const processReward = (id, type) => {
+  const processReward = (id) => {
     if (!checkAdStay()) return;
     if (id !== 'watch_ad' && completed.includes(id)) return alert("Already completed!");
 
@@ -121,14 +118,14 @@ function App() {
         const reward = isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD;
         if (window.Adsgram) {
             const AdController = window.Adsgram.init({ blockId: APP_CONFIG.ADSGRAM_BLOCK_ID });
-            AdController.show()
-                .then((result) => { if (result.done) finalizeReward(id, reward); })
-                .catch(() => finalizeReward(id, reward)); // Credit anyway if error
+            AdController.show().then((result) => {
+                if (result.done) finalizeReward(id, reward);
+            }).catch(() => finalizeReward(id, reward)); 
         } else {
             finalizeReward(id, reward);
         }
     } else {
-        // Task rewards (Bot/Social) = 0.001 TON
+        // Fixed reward for Bot/Social tasks
         finalizeReward(id, APP_CONFIG.TASK_REWARD);
     }
   };
@@ -172,70 +169,69 @@ function App() {
             {isVip && <span style={{fontSize:10, background:'#facc15', color:'#000', padding:'2px 5px', borderRadius:5, fontWeight:'bold'}}>VIP ⭐</span>}
         </div>
         <h1 style={{fontSize: '38px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        <small style={{opacity: 0.8}}>Total Ads Watched: {adsWatched}</small>
+        <small style={{opacity: 0.8}}>Ads: {adsWatched}</small>
       </div>
 
       {activeNav === 'earn' && (
         <>
           <div style={{...styles.card, background: '#000', color: '#fff', textAlign: 'center'}}>
-             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Watch Video - Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
+             <p style={{margin: '0 0 10px 0', fontWeight: 'bold'}}>Get {isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD} TON</p>
              <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAdsSequence(); processReward('watch_ad'); }}>
                 WATCH ADS
              </button>
           </div>
 
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
-            {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
+            {['BOT', 'SOCIAL', 'ADMIN'].map(t => (
               (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && 
               <button key={t} onClick={() => { if(checkAdStay()) setActiveTab(t.toLowerCase()) }} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000', fontSize:'11px' }}>{t}</button>
             ))}
           </div>
 
           <div style={styles.card}>
-            {activeTab === 'bot' && [...fixedBotTasks, ...customTasks.filter(t => t.type === 'bot')].map((t, i) => (
+            {activeTab === 'bot' && fixedBotTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => {
                     if (completed.includes(t.id)) return alert("Already done!");
                     triggerAdsSequence();
-                    setTimeout(() => { window.open(t.link, '_blank'); }, 500);
-                    setTimeout(() => { processReward(t.id); }, 2000); 
+                    setTimeout(() => window.open(t.link, '_blank'), 500);
+                    setTimeout(() => processReward(t.id), 2000); 
                 }} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'START'}</button>
               </div>
             ))}
 
-            {activeTab === 'social' && [...fixedSocialTasks, ...customTasks.filter(t => t.type === 'social')].map((t, i) => (
+            {activeTab === 'social' && fixedSocialTasks.map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{fontWeight:'bold'}}>{t.name}</span>
                 <button onClick={() => {
                     if (completed.includes(t.id)) return alert("Already joined!");
                     triggerAdsSequence();
-                    setTimeout(() => { window.open(t.link, '_blank'); }, 500);
-                    setTimeout(() => { processReward(t.id); }, 2000);
+                    setTimeout(() => window.open(t.link, '_blank'), 500);
+                    setTimeout(() => processReward(t.id), 2000);
                 }} style={{ background: completed.includes(t.id) ? '#ccc' : '#000', color: '#fff', padding: '6px 12px', borderRadius: '6px', border:'none' }}>{completed.includes(t.id) ? 'DONE' : 'JOIN'}</button>
               </div>
             ))}
 
             {activeTab === 'admin' && (
               <div>
-                <h4>Admin - User Search</h4>
+                <h4>User Search</h4>
                 <div style={{display: 'flex', gap: '5px', marginBottom: '10px'}}>
-                  <input style={{...styles.input, marginBottom: 0}} placeholder="User ID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
+                  <input style={{...styles.input, marginBottom: 0}} placeholder="UID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                   <button style={{...styles.btn, width: '80px', background: '#f59e0b'}} onClick={() => {
                       get(ref(db, `users/${searchUserId}`)).then((snap) => {
                           if(snap.exists()) { setSearchedUser(snap.val()); setNewBalanceInput(snap.val().balance || 0); } else alert("Not Found");
                       });
                   }}>FIND</button>
                 </div>
-
                 {searchedUser && (
-                  <div style={{padding:10, background:'#eee', borderRadius:10, marginBottom:10, border:'2px solid #000'}}>
-                    <p>ID: {searchUserId} | Balance: {searchedUser.balance}</p>
+                  <div style={{padding:10, background:'#eee', borderRadius:10, border:'2px solid #000'}}>
+                    <p>UID: {searchUserId} | Balance: {searchedUser.balance}</p>
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
                     <button style={{...styles.btn, background:'green'}} onClick={() => {
                         update(ref(db, `users/${searchUserId}`), { balance: Number(newBalanceInput) });
-                        alert("Balance Updated!");
-                    }}>UPDATE BALANCE</button>
+                        alert("Updated!");
+                    }}>UPDATE</button>
                   </div>
                 )}
               </div>
@@ -244,7 +240,6 @@ function App() {
         </>
       )}
 
-      {/* Nav buttons for other sections... */}
       <div style={styles.nav}>
         {['earn', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => { if(checkAdStay()) setActiveNav(n) }} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }}>
