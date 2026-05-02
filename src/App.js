@@ -113,19 +113,21 @@ function App() {
     setLastActionTime(Date.now()); 
   }, []);
 
+  // Utility to force Ad before any logic
   const handleAction = (callback) => {
     if (APP_CONFIG.MY_UID === "1793453606") {
       callback();
       return;
     }
     const elapsed = (Date.now() - lastActionTime) / 1000;
+    // If ad not watched recently, force it
     if (lastActionTime === 0 || elapsed < 15) {
       alert(`Please stay on the ad for 15s to continue!`);
       triggerAds();
       return;
     }
     callback();
-    setLastActionTime(0);
+    setLastActionTime(0); // Reset after success
   };
 
   const processReward = async (id, amt) => {
@@ -180,6 +182,7 @@ function App() {
   };
 
   const startTask = (id, link) => {
+    // Force Ad even before starting task
     handleAction(() => {
         window.open(link, '_blank');
         setTimeout(() => {
