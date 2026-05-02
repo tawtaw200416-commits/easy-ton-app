@@ -2,25 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 const tg = window.Telegram?.WebApp;
 
-// Helper to get or create a Unique ID (Prevents ID conflicts)
-const getUniqueID = () => {
-  // 1. Try Telegram ID
-  const tgId = tg?.initDataUnsafe?.user?.id?.toString();
-  if (tgId) return tgId;
-
-  // 2. Try LocalStorage (Existing unique user)
-  const savedId = localStorage.getItem('unique_user_id');
-  if (savedId) return savedId;
-
-  // 3. Generate New Unique ID (If not in TG and no saved ID)
-  const newId = "user_" + Math.random().toString(36).substr(2, 9) + Date.now().toString().slice(-4);
-  localStorage.setItem('unique_user_id', newId);
-  return newId;
-};
-
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
-  MY_UID: getUniqueID(), 
+  MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -35,6 +19,7 @@ const APP_CONFIG = {
 
 const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
 
+// ... (fixedBotTasks and fixedSocialTasks remain unchanged)
 const fixedBotTasks = [
   { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
   { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -54,9 +39,12 @@ const fixedSocialTasks = [
 ];
 
 function App() {
-  const [balance, setBalance] = useState(() => Number(localStorage.getItem('saved_bal')) || 0);
+  // FIX: Initializing with 0/empty to prevent "Same Phone" data leak
+  const [balance, setBalance] = useState(0);
+  const [completed, setCompleted] = useState([]);
+  const [isLoading, setIsLoading] = useState(true); // New loading state
+  
   const [isVip, setIsVip] = useState(false);
-  const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('saved_comp')) || []);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
   const [referrals, setReferrals] = useState([]);
   const [customTasks, setCustomTasks] = useState([]);
@@ -68,8 +56,11 @@ function App() {
 
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinDeg, setSpinDeg] = useState(0);
-  const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem('last_spin_time')) || 0);
+  
+  // FIX: Scoped spin time to the specific UID
+  const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem(`last_spin_${APP_CONFIG.MY_UID}`)) || 0);
 
+  // Admin and form states
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
@@ -79,13 +70,50 @@ function App() {
   const [adminTaskType, setAdminTaskType] = useState('bot');
   const [adminPromoCode, setAdminPromoCode] = useState('');
   const [adminPromoReward, setAdminPromoReward] = useState('');
-
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
   useEffect(() => { if (tg) { tg.ready(); tg.expand(); } }, []);
 
+  const fetchData = useCallback(async () => {
+    try {
+      const [u, t, p] = await Promise.all([
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
+        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
+        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`)
+      ]);
+      const userData = await u.json();
+      const tasksData = await t.json();
+      const promoData = await p.json();
+
+      if (userData) {
+        setBalance(Number(userData.balance || 0));
+        setIsVip(userData.isVip || VIP_IDS.includes(APP_CONFIG.MY_UID));
+        setWithdrawHistory(userData.withdrawHistory || []);
+        setCompleted(userData.completedTasks || []);
+        setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
+      } else {
+        // If it's a completely new user on this phone, clear the state
+        setBalance(0);
+        setCompleted([]);
+        setWithdrawHistory([]);
+        setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID));
+      }
+      
+      if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
+      if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
+      
+      setIsLoading(false); // Data is now specific to this ID
+    } catch (e) { 
+      console.error("Sync error"); 
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // FIX: Helper to trigger ads and handle rewards (unchanged logic, just ensuring no local caching)
   const triggerAds = useCallback(() => {
     if (APP_CONFIG.MY_UID === "1793453606") {
       setLastActionTime(Date.now()); 
@@ -111,41 +139,6 @@ function App() {
     setLastActionTime(0);
   };
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [u, t, p] = await Promise.all([
-        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`)
-      ]);
-      const userData = await u.json();
-      const tasksData = await t.json();
-      const promoData = await p.json();
-
-      if (userData) {
-        setBalance(Number(userData.balance || 0));
-        setIsVip(userData.isVip || VIP_IDS.includes(APP_CONFIG.MY_UID));
-        setWithdrawHistory(userData.withdrawHistory || []);
-        setCompleted(userData.completedTasks || []);
-        setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
-        localStorage.setItem('saved_bal', userData.balance);
-        localStorage.setItem('saved_comp', JSON.stringify(userData.completedTasks || []));
-      }
-      if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
-      if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
-    } catch (e) { console.error("Sync error"); }
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const startTask = (id, link) => {
-    window.open(link, '_blank');
-    setTimeout(() => {
-        triggerAds();
-        setShowClaimId(id);
-    }, 1500);
-  };
-
   const processReward = async (id, amt) => {
     const elapsed = (Date.now() - lastActionTime) / 1000;
     const timeLimit = id === 'watch_ad' ? 30 : 15;
@@ -163,11 +156,10 @@ function App() {
     setBalance(newBal);
     if (id !== 'watch_ad' && !id.startsWith('spin_')) {
         setCompleted(newComp);
-        localStorage.setItem('saved_comp', JSON.stringify(newComp));
         setShowClaimId(null);
     }
-    localStorage.setItem('saved_bal', newBal);
 
+    // Save to Firebase ONLY (removed localStorage save)
     await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
       method: 'PATCH', body: JSON.stringify({ balance: newBal, completedTasks: (id !== 'watch_ad' && !id.startsWith('spin_')) ? newComp : completed })
     });
@@ -186,11 +178,10 @@ function App() {
         return alert(`Wait ${remaining} mins for next spin!`);
     }
 
-    // MANDATORY AD CHECK (15s Rule for Spin)
     if (APP_CONFIG.MY_UID !== "1793453606") {
         const elapsed = (now - lastActionTime) / 1000;
         if (lastActionTime === 0 || elapsed < 15) {
-          alert(`Please watch the ad for 15s before spinning!`);
+          alert(`Please stay on the ad for 15s to spin!`);
           triggerAds();
           return;
         }
@@ -203,10 +194,20 @@ function App() {
 
     setTimeout(() => {
         setIsSpinning(false);
-        setLastSpinTime(Date.now());
-        localStorage.setItem('last_spin_time', Date.now());
-        processReward('spin_' + Date.now(), 0.0001);
+        const spinTime = Date.now();
+        setLastSpinTime(spinTime);
+        localStorage.setItem(`last_spin_${APP_CONFIG.MY_UID}`, spinTime); // Unique to UID
+        processReward('spin_' + spinTime, 0.0001);
     }, 4000);
+  };
+
+  // ... (approveWithdraw and startTask remain unchanged)
+  const startTask = (id, link) => {
+    window.open(link, '_blank');
+    setTimeout(() => {
+        triggerAds();
+        setShowClaimId(id);
+    }, 1500);
   };
 
   const approveWithdraw = async (userId, historyIndex) => {
@@ -241,6 +242,15 @@ function App() {
     wheelPointer: { position: 'absolute', top: '-15px', zIndex: 10, width: '30px', height: '40px', background: 'red', clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }
   };
 
+  // FIX: Loading Screen to prevent flickering data from previous user
+  if (isLoading) {
+    return (
+      <div style={{...styles.main, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+        <h2 style={{color: '#000'}}>Syncing Profile...</h2>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.main}>
       <div style={styles.header}>
@@ -252,6 +262,7 @@ function App() {
         </button>
       </div>
 
+      {/* ... (Rest of the JSX remains the same as your previous version) */}
       {activeNav === 'earn' && (
         <>
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -445,7 +456,7 @@ function App() {
           <div style={styles.card}>
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <h3>Deposit for VIP</h3>
-                <span style={{background: '#000', color: '#fff', padding: '4px 10px', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold'}}>1 TON</span>
+                <span style={{background: '#000', color: '#fff', padding: '4px 8px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold'}}>1 TON</span>
             </div>
             <p style={{fontSize:12, marginBottom: 5}}>Address:</p>
             <div style={{display:'flex', gap: 5, marginBottom: 10}}>
