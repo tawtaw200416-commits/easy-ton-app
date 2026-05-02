@@ -56,7 +56,7 @@ function App() {
   const [newBalanceInput, setNewBalanceInput] = useState('');
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
-  const [adminTaskType, setAdminTaskType] = useState('bot'); // Default is bot
+  const [adminTaskType, setAdminTaskType] = useState('bot');
   const [adminPromoCode, setAdminPromoCode] = useState('');
   const [adminPromoReward, setAdminPromoReward] = useState('');
 
@@ -169,7 +169,7 @@ function App() {
       body: JSON.stringify({ withdrawHistory: updatedHistory })
     });
     
-    alert("Withdrawal Approved as Success!");
+    alert("Withdrawal Approved!");
     const refreshed = await (await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`)).json();
     setSearchedUser(refreshed);
   };
@@ -181,8 +181,7 @@ function App() {
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff', zIndex: 100 },
     smBtn: (bg) => ({ padding: '8px 12px', background: bg || '#000', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }),
-    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
-    select: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', background: '#fff' }
+    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' }
   };
 
   return (
@@ -237,33 +236,19 @@ function App() {
               <div>
                 <h4 style={{margin:'0 0 10px 0', borderBottom: '2px solid #000'}}>Admin Controls</h4>
                 
-                <h5>Add New Task</h5>
-                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
-                <input style={styles.input} placeholder="Telegram Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
-                <select style={styles.select} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
-                    <option value="bot">Type: Bot</option>
-                    <option value="social">Type: Social</option>
-                </select>
-                <button style={{...styles.btn, background:'#22c55e', marginBottom: 20}} onClick={() => handleAction(async () => {
-                    if(!adminTaskName || !adminTaskLink) return alert("Fill all fields!");
-                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method:'POST', body: JSON.stringify({name: adminTaskName, link: adminTaskLink, type: adminTaskType})});
-                    alert("Saved Successfully!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData();
-                })}>SAVE TASK</button>
-
-                <h5>Manage Existing Tasks</h5>
+                <h5>Manage Tasks</h5>
                 <div style={{maxHeight: '120px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
                     {customTasks.map((ct, idx) => (
                         <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
-                            <span>[{ct.type.toUpperCase()}] {ct.name}</span>
+                            <span>[{ct.type?.toUpperCase() || 'BOT'}] {ct.name}</span>
                             <button onClick={async () => {
                                 if(window.confirm("Delete?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' }); fetchData(); }
-                            }} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold', cursor: 'pointer'}}>DELETE</button>
+                            }} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
                         </div>
                     ))}
                 </div>
 
-                <hr/>
-                <h5>User Management</h5>
+                <h5>User Search</h5>
                 <input style={styles.input} placeholder="User UID" onChange={e => setSearchUserId(e.target.value)} />
                 <button style={styles.btn} onClick={() => handleAction(async () => {
                   const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
@@ -284,6 +269,29 @@ function App() {
                     </div>
                   </div>
                 )}
+
+                <h5 style={{marginTop: 20}}>Add New Task</h5>
+                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
+                <input style={styles.input} placeholder="Telegram Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
+                
+                {/* Task Type Dropdown */}
+                <select 
+                  style={{...styles.input, background: '#fff'}} 
+                  value={adminTaskType} 
+                  onChange={e => setAdminTaskType(e.target.value)}
+                >
+                  <option value="bot">BOT TASK</option>
+                  <option value="social">SOCIAL TASK</option>
+                </select>
+
+                <button style={{...styles.btn, background:'#22c55e'}} onClick={() => handleAction(async () => {
+                    if(!adminTaskName || !adminTaskLink) return alert("Fill Name and Link!");
+                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { 
+                        method:'POST', 
+                        body: JSON.stringify({name: adminTaskName, link: adminTaskLink, type: adminTaskType})
+                    });
+                    alert("Saved!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData();
+                })}>SAVE TASK</button>
               </div>
             )}
           </div>
@@ -301,15 +309,6 @@ function App() {
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h3>Withdraw History</h3>
-          <div style={{maxHeight: 120, overflowY: 'auto', marginBottom:10, background: '#f9f9f9', padding: 5, borderRadius: 8}}>
-              {withdrawHistory.length > 0 ? withdrawHistory.map((h, i) => (
-                  <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 5px', borderBottom:'1px solid #eee', fontSize:11}}>
-                      <span><b>{h.amount} TON</b></span>
-                      <span style={{color: h.status === 'Success' ? 'green' : 'orange'}}>{h.status}</span>
-                  </div>
-              )) : <p style={{textAlign: 'center', fontSize: 11}}>No records.</p>}
-          </div>
           <h3>New Withdrawal</h3>
           <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
           <input style={styles.input} placeholder="TON Wallet Address" onChange={e => setWithdrawAddress(e.target.value)} />
