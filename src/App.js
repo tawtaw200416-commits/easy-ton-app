@@ -56,7 +56,7 @@ function App() {
   const [newBalanceInput, setNewBalanceInput] = useState('');
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
-  const [adminTaskType, setAdminTaskType] = useState('bot');
+  const [adminTaskType, setAdminTaskType] = useState('bot'); // Default type
   const [adminPromoCode, setAdminPromoCode] = useState('');
   const [adminPromoReward, setAdminPromoReward] = useState('');
 
@@ -157,7 +157,6 @@ function App() {
     fetchData();
   };
 
-  // Admin: Withdrawal Status Update Logic
   const approveWithdraw = async (userId, historyIndex) => {
     const userToEdit = await (await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`)).json();
     if (!userToEdit || !userToEdit.withdrawHistory) return;
@@ -171,7 +170,6 @@ function App() {
     });
     
     alert("Withdrawal Approved as Success!");
-    // Refresh searched user view
     const refreshed = await (await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`)).json();
     setSearchedUser(refreshed);
   };
@@ -183,7 +181,8 @@ function App() {
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff', zIndex: 100 },
     smBtn: (bg) => ({ padding: '8px 12px', background: bg || '#000', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }),
-    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000' }
+    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000' },
+    select: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', backgroundColor: '#fff' }
   };
 
   return (
@@ -242,7 +241,7 @@ function App() {
                 <div style={{maxHeight: '120px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
                     {customTasks.map((ct, idx) => (
                         <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
-                            <span>{ct.name}</span>
+                            <span>{ct.name} ({ct.type})</span>
                             <button onClick={async () => {
                                 if(window.confirm("Delete?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' }); fetchData(); }
                             }} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
@@ -294,10 +293,28 @@ function App() {
                 })}>ADD CODE</button>
 
                 <h5 style={{marginTop: 20}}>Add New Task</h5>
+                {/* Task Type Dropdown Selection Added Here */}
+                <select 
+                  style={styles.select} 
+                  value={adminTaskType} 
+                  onChange={e => setAdminTaskType(e.target.value)}
+                >
+                  <option value="bot">BOT TASK</option>
+                  <option value="social">SOCIAL TASK</option>
+                </select>
+                
                 <input style={styles.input} placeholder="Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
                 <button style={{...styles.btn, background:'#22c55e'}} onClick={() => handleAction(async () => {
-                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method:'POST', body: JSON.stringify({name: adminTaskName, link: adminTaskLink, type: adminTaskType})});
+                    if(!adminTaskName || !adminTaskLink) return alert("Fill all fields");
+                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { 
+                      method:'POST', 
+                      body: JSON.stringify({
+                        name: adminTaskName, 
+                        link: adminTaskLink, 
+                        type: adminTaskType 
+                      })
+                    });
                     alert("Saved!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData();
                 })}>SAVE TASK</button>
               </div>
