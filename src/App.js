@@ -182,10 +182,8 @@ function App() {
         <small>{isSyncing ? "SYNCING..." : "TOTAL BALANCE"}</small>
         <h1 style={{fontSize: '32px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
         {isVip && <span style={{background:'#facc15', color:'#000', padding:'2px 8px', borderRadius:10, fontSize:12, fontWeight:'bold'}}>VIP ⭐</span>}
-        
-        {/* Updated Button Text based on User Status */}
         <button style={styles.watchBtn} onClick={() => processReward('watch_ad', 0)}>
-           WATCH ADS ({isVip ? `VIP Reward: 0.0008` : `Normal Reward: 0.0004`})
+           WATCH ADS ({isVip ? '0.0008' : '0.0004'} TON)
         </button>
       </div>
 
