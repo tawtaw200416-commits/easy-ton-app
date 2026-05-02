@@ -1,6 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
-// Note: Ensure you have firebase installed or use the database reference properly if using the SDK.
-// For this version, I am optimizing the REST fetch to be more reactive.
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 const tg = window.Telegram?.WebApp;
 
@@ -21,7 +19,6 @@ const APP_CONFIG = {
 
 const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
 
-// ... (fixedBotTasks and fixedSocialTasks preserved)
 const fixedBotTasks = [
   { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
   { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -57,7 +54,7 @@ function App() {
   const [spinDeg, setSpinDeg] = useState(0);
   const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem(`last_spin_${APP_CONFIG.MY_UID}`)) || 0);
 
-  // Form states
+  // Admin and form states
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
@@ -71,10 +68,11 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  useEffect(() => { if (tg) { tg.ready(); tg.expand(); } }, []);
+  // Use a ref to prevent multiple loading triggers
+  const isInitialLoad = useRef(true);
 
-  // Optimized fetch function - called immediately on mount
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setIsLoading(true);
     try {
       const [u, t, p] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
@@ -86,35 +84,36 @@ function App() {
       const promoData = await p.json();
 
       if (userData) {
-        setBalance(Number(userData.balance || 0));
+        setBalance(prev => Number(userData.balance) !== prev ? Number(userData.balance) : prev);
         setIsVip(userData.isVip || VIP_IDS.includes(APP_CONFIG.MY_UID));
         setWithdrawHistory(userData.withdrawHistory || []);
         setCompleted(userData.completedTasks || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
-      } else {
-        setBalance(0);
-        setCompleted([]);
-        setWithdrawHistory([]);
-        setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID));
       }
       
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
       
-      setIsLoading(false);
     } catch (e) { 
+      console.error("Sync error"); 
+    } finally {
       setIsLoading(false);
+      isInitialLoad.current = false;
     }
   }, []);
 
-  // Polling mechanism to keep data fresh every 10 seconds without "lag"
+  // FAST SYNC: Fetch once on mount, then poll every 5 seconds silently
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 10000); 
+    if (tg) { tg.ready(); tg.expand(); }
+    fetchData(); 
+
+    const interval = setInterval(() => {
+      fetchData(true); // Silent update
+    }, 5000);
+
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Logic for ads and rewards (Restored exactly as your original)
   const triggerAds = useCallback(() => {
     if (APP_CONFIG.MY_UID === "1793453606") {
       setLastActionTime(Date.now()); 
@@ -152,25 +151,27 @@ function App() {
 
     const rewardAmt = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
     const newBal = Number((balance + rewardAmt).toFixed(5));
-    const newComp = id.startsWith('promo_') || id.startsWith('spin_') || id === 'watch_ad' ? completed : [...completed, id];
+    const newComp = [...completed, id];
 
-    // Immediate UI Update
+    // Optimistic UI Update: change balance immediately before network request
     setBalance(newBal);
-    if (!id.startsWith('spin_') && id !== 'watch_ad') {
+    if (id !== 'watch_ad' && !id.startsWith('spin_')) {
         setCompleted(newComp);
         setShowClaimId(null);
     }
 
     await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-      method: 'PATCH', body: JSON.stringify({ balance: newBal, completedTasks: newComp })
+      method: 'PATCH', body: JSON.stringify({ 
+          balance: newBal, 
+          completedTasks: (id !== 'watch_ad' && !id.startsWith('spin_')) ? newComp : completed 
+      })
     });
     
     alert(`Success! +${rewardAmt} TON.`);
     setLastActionTime(0);
-    fetchData();
+    fetchData(true); 
   };
 
-  // ... (handleSpin, startTask, approveWithdraw preserved)
   const handleSpin = () => {
     const now = Date.now();
     const twoHours = 2 * 60 * 60 * 1000;
@@ -218,7 +219,7 @@ function App() {
       body: JSON.stringify({ withdrawHistory: updatedHistory })
     });
     alert("Withdrawal Approved!");
-    fetchData();
+    fetchData(true);
   };
 
   const styles = {
@@ -235,12 +236,12 @@ function App() {
     wheelPointer: { position: 'absolute', top: '-15px', zIndex: 10, width: '30px', height: '40px', background: 'red', clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }
   };
 
-  if (isLoading) {
+  if (isLoading && isInitialLoad.current) {
     return (
       <div style={{...styles.main, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
         <div style={{textAlign: 'center'}}>
-            <h2 style={{color: '#000'}}>SYNCING DATA...</h2>
-            <p style={{fontSize: 12, fontWeight: 'bold'}}>Please Wait</p>
+            <h2 style={{color: '#000'}}>EASY TON</h2>
+            <p>Loading your data...</p>
         </div>
       </div>
     );
@@ -321,17 +322,17 @@ function App() {
                 })}>SEARCH USER</button>
                 {searchedUser && (
                   <div style={{marginTop:10, padding:10, background:'#e5e7eb', borderRadius:10, border:'2px solid #000'}}>
+                    <p style={{fontSize:11}}>UID: {searchUserId}</p>
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
                     <select style={styles.select} value={newVipStatus.toString()} onChange={e => setNewVipStatus(e.target.value === 'true')}>
                         <option value="false">Standard</option><option value="true">VIP ⭐</option>
                     </select>
                     <button style={styles.btn} onClick={async () => {
                         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({balance: Number(newBalanceInput), isVip: newVipStatus}) });
-                        alert("Updated!"); fetchData();
+                        alert("User Updated!"); fetchData(true);
                     }}>SAVE CHANGES</button>
                   </div>
                 )}
-                {/* ... (Task management UI preserved) */}
               </div>
             )}
           </div>
@@ -358,20 +359,25 @@ function App() {
         <div style={styles.card}>
           <h3>Withdraw History</h3>
           <div style={{maxHeight: 120, overflowY: 'auto', marginBottom:10, background: '#f9f9f9', padding: 5, borderRadius: 8}}>
-            {withdrawHistory.map((h, i) => (
-                <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 5px', borderBottom:'1px solid #eee', fontSize:11}}>
-                    <span><b>{h.amount} TON</b></span><span style={{color: h.status === 'Success' ? 'green' : 'orange'}}>{h.status}</span>
-                </div>
-            ))}
-          </div>
-          <input style={styles.input} placeholder="Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-          <input style={styles.input} placeholder="TON Wallet" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+                {withdrawHistory.length > 0 ? withdrawHistory.map((h, i) => (
+                    <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 5px', borderBottom:'1px solid #eee', fontSize:11}}>
+                        <span><b>{h.amount} TON</b></span>
+                        <span style={{color: h.status === 'Success' ? 'green' : 'orange', fontWeight: 'bold'}}>{h.status}</span>
+                        <span style={{opacity:0.6}}>{h.date}</span>
+                    </div>
+                )) : <p style={{textAlign: 'center', fontSize: 11, opacity: 0.5}}>No records found.</p>}
+            </div>
+          <h3>New Withdrawal</h3>
+          <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} placeholder="TON Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
           <button style={{...styles.btn, background:'#3b82f6'}} onClick={() => handleAction(async () => {
               const amt = Number(withdrawAmount);
-              if(amt < 0.1 || amt > balance) return alert("Invalid!");
+              if(amt < 0.1 || amt > balance) return alert("Invalid amount!");
               const newH = [{ amount: amt, status: 'Pending', date: new Date().toLocaleString() }, ...withdrawHistory];
-              await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { method:'PATCH', body: JSON.stringify({ balance: Number((balance - amt).toFixed(5)), withdrawHistory: newH }) });
-              alert("Sent!"); fetchData();
+              await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { 
+                method:'PATCH', body: JSON.stringify({ balance: Number((balance - amt).toFixed(5)), withdrawHistory: newH })
+              });
+              alert("Request Sent!"); fetchData(true); setWithdrawAmount(''); setWithdrawAddress('');
           })}>WITHDRAW NOW</button>
         </div>
       )}
@@ -381,7 +387,7 @@ function App() {
           <h3>User Profile</h3>
           <p>User ID: <b>{APP_CONFIG.MY_UID}</b></p>
           <p>Balance: <b>{balance.toFixed(5)} TON</b></p>
-          <p>Status: {isVip ? "VIP ⭐" : "Standard"}</p>
+          <p>Status: {isVip ? "VIP Membership ⭐" : "Standard"}</p>
           <button style={{...styles.btn, background:'#ef4444'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
         </div>
       )}
