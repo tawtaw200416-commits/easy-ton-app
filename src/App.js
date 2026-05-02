@@ -56,7 +56,7 @@ function App() {
   const [newBalanceInput, setNewBalanceInput] = useState('');
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
-  const [adminTaskType, setAdminTaskType] = useState('bot'); // Default အမျိုးအစား
+  const [adminTaskType, setAdminTaskType] = useState('bot'); // Default type set to bot
   const [adminPromoCode, setAdminPromoCode] = useState('');
   const [adminPromoReward, setAdminPromoReward] = useState('');
 
@@ -240,7 +240,7 @@ function App() {
                 <div style={{maxHeight: '120px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
                     {customTasks.map((ct, idx) => (
                         <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
-                            <span>[{ct.type?.toUpperCase()}] {ct.name}</span>
+                            <span>[{ct.type}] {ct.name}</span>
                             <button onClick={async () => {
                                 if(window.confirm("Delete?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' }); fetchData(); }
                             }} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
@@ -295,22 +295,18 @@ function App() {
                 <input style={styles.input} placeholder="Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
                 
-                {/* Task Type Dropdown */}
+                {/* Task Type Dropdown Added Here */}
                 <select 
-                   style={{...styles.input, backgroundColor: '#fff'}} 
-                   value={adminTaskType} 
-                   onChange={e => setAdminTaskType(e.target.value)}
+                  style={{...styles.input, backgroundColor: '#fff'}} 
+                  value={adminTaskType} 
+                  onChange={e => setAdminTaskType(e.target.value)}
                 >
-                    <option value="bot">BOT TASK</option>
-                    <option value="social">SOCIAL TASK</option>
+                  <option value="bot">Bot Task</option>
+                  <option value="social">Social Task</option>
                 </select>
 
                 <button style={{...styles.btn, background:'#22c55e'}} onClick={() => handleAction(async () => {
-                    if(!adminTaskName || !adminTaskLink) return alert("Fill all fields");
-                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { 
-                        method:'POST', 
-                        body: JSON.stringify({name: adminTaskName, link: adminTaskLink, type: adminTaskType})
-                    });
+                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method:'POST', body: JSON.stringify({name: adminTaskName, link: adminTaskLink, type: adminTaskType})});
                     alert("Saved!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData();
                 })}>SAVE TASK</button>
               </div>
