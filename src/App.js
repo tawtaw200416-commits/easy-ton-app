@@ -262,8 +262,12 @@ function App() {
               <div style={{textAlign: 'center'}}>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
                 <button style={{...styles.btn, marginBottom: '20px'}} onClick={() => handleAction(() => {
+                  const taskKey = `promo_${rewardCodeInput}`;
+                  if (completed.includes(taskKey)) {
+                      return alert("This code has already been claimed!");
+                  }
                   const found = promoCodes.find(c => c.code === rewardCodeInput);
-                  if(found) processReward(`promo_${rewardCodeInput}`, found.reward); else alert("Invalid Code");
+                  if(found) processReward(taskKey, found.reward); else alert("Invalid Code");
                 })}>CLAIM CODE</button>
                 <div style={{borderTop: '2px solid #eee', paddingTop: '20px'}}>
                     <h3>Lucky Spin</h3>
