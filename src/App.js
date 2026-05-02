@@ -50,12 +50,10 @@ function App() {
   const [lastActionTime, setLastActionTime] = useState(0);
   const [showClaimId, setShowClaimId] = useState(null);
 
-  // New states for Spin Wheel
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinDeg, setSpinDeg] = useState(0);
   const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem('last_spin_time')) || 0);
 
-  // Admin States
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
@@ -118,7 +116,7 @@ function App() {
         localStorage.setItem('saved_comp', JSON.stringify(userData.completedTasks || []));
       }
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
-      if (promoData) setPromoCodes(Object.keys(promoCodes).map(k => ({ code: k, reward: promoData[k] })));
+      if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
     } catch (e) { console.error("Sync error"); }
   }, []);
 
@@ -163,7 +161,6 @@ function App() {
     fetchData();
   };
 
-  // Spin Logic
   const handleSpin = () => {
     const now = Date.now();
     const twoHours = 2 * 60 * 60 * 1000;
@@ -174,7 +171,7 @@ function App() {
 
     triggerAds();
     setIsSpinning(true);
-    // 0.0001 TON is at 180 degrees in our UI setup
+    // 0.0001 TON is at 180 degrees (4th position)
     const extraSpin = 180 + (360 * 5); 
     const newDeg = spinDeg + extraSpin;
     setSpinDeg(newDeg);
@@ -214,7 +211,6 @@ function App() {
     smBtn: (bg) => ({ padding: '8px 12px', background: bg || '#000', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }),
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
     select: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', background: '#fff' },
-    // Spin Styles
     wheelContainer: { position: 'relative', width: '220px', height: '220px', margin: '20px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' },
     wheel: { width: '100%', height: '100%', borderRadius: '50%', border: '5px solid #000', position: 'relative', overflow: 'hidden', transition: 'transform 4s cubic-bezier(0.15, 0, 0.15, 1)', background: '#fff' },
     wheelPointer: { position: 'absolute', top: '-10px', zIndex: 10, width: '20px', height: '30px', background: 'red', clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }
@@ -268,17 +264,16 @@ function App() {
 
                 <div style={{borderTop: '2px solid #eee', paddingTop: '20px'}}>
                     <h3 style={{margin: 0}}>Lucky Spin</h3>
-                    <p style={{fontSize: '11px', opacity: 0.6}}>Win up to 0.3 TON every 2 hours!</p>
+                    <p style={{fontSize: '12px', fontWeight: 'bold', marginBottom: '10px'}}>Try your luck for 2 hours💎</p>
                     
                     <div style={styles.wheelContainer}>
                         <div style={styles.wheelPointer}></div>
                         <div style={{...styles.wheel, transform: `rotate(${spinDeg}deg)`}}>
-                            {/* Wheel Segments */}
                             {[
                                 { t: '0.1 TON', c: '#facc15' },
                                 { t: '0.2 TON', c: '#000' },
                                 { t: '0.3 TON', c: '#facc15' },
-                                { t: 'LUCKY', c: '#000' }, // This is the 0.0001 spot (180deg)
+                                { t: '0.0001 TON', c: '#000' }, 
                                 { t: '0.001 TON', c: '#facc15' },
                                 { t: '0.01 TON', c: '#000' }
                             ].map((s, i) => (
@@ -290,8 +285,9 @@ function App() {
                                 }}>
                                     <span style={{
                                         color: s.c === '#000' ? '#fff' : '#000', 
-                                        fontSize: '10px', fontWeight: 'bold', 
-                                        marginTop: '25px', transform: 'rotate(30deg)'
+                                        fontSize: '8px', fontWeight: 'bold', 
+                                        marginTop: '15px', transform: 'rotate(30deg)',
+                                        whiteSpace: 'nowrap'
                                     }}>{s.t}</span>
                                 </div>
                             ))}
@@ -311,7 +307,6 @@ function App() {
             {activeTab === 'admin' && (
               <div>
                 <h4 style={{margin:'0 0 10px 0', borderBottom: '2px solid #000'}}>Admin Controls</h4>
-                
                 <h5 style={{marginTop: 10}}>Manage Custom Tasks</h5>
                 <div style={{maxHeight: '120px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
                     {customTasks.map((ct, idx) => (
@@ -339,16 +334,13 @@ function App() {
                 {searchedUser && (
                   <div style={{marginTop:10, padding:10, background:'#e5e7eb', borderRadius:10, border:'2px solid #000'}}>
                     <p style={{fontSize:11}}><b>UID:</b> {searchUserId}</p>
-                    
                     <label style={{fontSize: 10}}>Edit Balance:</label>
                     <input style={{...styles.input, marginBottom: 5}} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
-                    
                     <label style={{fontSize: 10}}>VIP Status:</label>
                     <select style={styles.select} value={newVipStatus.toString()} onChange={e => setNewVipStatus(e.target.value === 'true')}>
                         <option value="false">Standard</option>
                         <option value="true">VIP ⭐</option>
                     </select>
-
                     <button style={{...styles.btn, marginBottom: 15}} onClick={async () => {
                         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { 
                             method:'PATCH', 
