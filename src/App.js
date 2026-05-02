@@ -13,8 +13,6 @@ const APP_CONFIG = {
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.01,
   VIP_PRICE: 1.0,
-  SPIN_REWARD: 0.0001, // Fixed reward (hidden from UI)
-  SPIN_COOLDOWN: 2 * 60 * 60 * 1000, // 2 Hours
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec"
 };
@@ -52,10 +50,10 @@ function App() {
   const [lastActionTime, setLastActionTime] = useState(0);
   const [showClaimId, setShowClaimId] = useState(null);
 
-  // --- Spin States ---
-  const [lastSpinTime, setLastSpinTime] = useState(0);
+  // New states for Spin Wheel
   const [isSpinning, setIsSpinning] = useState(false);
-  const [spinRotation, setSpinRotation] = useState(0);
+  const [spinDeg, setSpinDeg] = useState(0);
+  const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem('last_spin_time')) || 0);
 
   // Admin States
   const [searchUserId, setSearchUserId] = useState('');
@@ -116,57 +114,15 @@ function App() {
         setWithdrawHistory(userData.withdrawHistory || []);
         setCompleted(userData.completedTasks || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
-        setLastSpinTime(userData.lastSpinTime || 0); // Get spin time
         localStorage.setItem('saved_bal', userData.balance);
         localStorage.setItem('saved_comp', JSON.stringify(userData.completedTasks || []));
       }
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
-      if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
+      if (promoData) setPromoCodes(Object.keys(promoCodes).map(k => ({ code: k, reward: promoData[k] })));
     } catch (e) { console.error("Sync error"); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  // --- Lucky Spin Function ---
-  const handleSpin = () => {
-    const now = Date.now();
-    if (now - lastSpinTime < APP_CONFIG.SPIN_COOLDOWN && APP_CONFIG.MY_UID !== "1793453606") {
-      const remain = APP_CONFIG.SPIN_COOLDOWN - (now - lastSpinTime);
-      const h = Math.floor(remain / 3600000);
-      const m = Math.floor((remain % 3600000) / 60000);
-      return alert(`Cooldown: Try again in ${h}h ${m}m!`);
-    }
-
-    const elapsed = (Date.now() - lastActionTime) / 1000;
-    if (APP_CONFIG.MY_UID !== "1793453606" && (lastActionTime === 0 || elapsed < 15)) {
-      alert(`Please watch ads first (15s) to enable spin!`);
-      triggerAds();
-      return;
-    }
-
-    setIsSpinning(true);
-    const extraDegree = 1800 + Math.floor(Math.random() * 360); // 5+ rounds
-    const newRotation = spinRotation + extraDegree;
-    setSpinRotation(newRotation);
-
-    setTimeout(async () => {
-      setIsSpinning(false);
-      const winAmt = APP_CONFIG.SPIN_REWARD;
-      const newBal = Number((balance + winAmt).toFixed(5));
-      
-      setBalance(newBal);
-      setLastSpinTime(Date.now());
-      setLastActionTime(0);
-
-      await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-        method: 'PATCH',
-        body: JSON.stringify({ balance: newBal, lastSpinTime: Date.now() })
-      });
-      
-      alert(`Luck is with you! You received your reward.`);
-      fetchData();
-    }, 4000);
-  };
 
   const startTask = (id, link) => {
     window.open(link, '_blank');
@@ -191,7 +147,7 @@ function App() {
     const newComp = [...completed, id];
 
     setBalance(newBal);
-    if (id !== 'watch_ad') {
+    if (id !== 'watch_ad' && !id.startsWith('spin_')) {
         setCompleted(newComp);
         localStorage.setItem('saved_comp', JSON.stringify(newComp));
         setShowClaimId(null);
@@ -199,12 +155,36 @@ function App() {
     localStorage.setItem('saved_bal', newBal);
 
     await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-      method: 'PATCH', body: JSON.stringify({ balance: newBal, completedTasks: id !== 'watch_ad' ? newComp : completed })
+      method: 'PATCH', body: JSON.stringify({ balance: newBal, completedTasks: (id !== 'watch_ad' && !id.startsWith('spin_')) ? newComp : completed })
     });
     
     alert(`Success! +${rewardAmt} TON.`);
     setLastActionTime(0);
     fetchData();
+  };
+
+  // Spin Logic
+  const handleSpin = () => {
+    const now = Date.now();
+    const twoHours = 2 * 60 * 60 * 1000;
+    if (now - lastSpinTime < twoHours) {
+        const remaining = Math.ceil((twoHours - (now - lastSpinTime)) / 60000);
+        return alert(`Wait ${remaining} mins for next spin!`);
+    }
+
+    triggerAds();
+    setIsSpinning(true);
+    // 0.0001 TON is at 180 degrees in our UI setup
+    const extraSpin = 180 + (360 * 5); 
+    const newDeg = spinDeg + extraSpin;
+    setSpinDeg(newDeg);
+
+    setTimeout(() => {
+        setIsSpinning(false);
+        setLastSpinTime(Date.now());
+        localStorage.setItem('last_spin_time', Date.now());
+        processReward('spin_' + Date.now(), 0.0001);
+    }, 4000);
   };
 
   const approveWithdraw = async (userId, historyIndex) => {
@@ -235,10 +215,9 @@ function App() {
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
     select: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', background: '#fff' },
     // Spin Styles
-    wheelBox: { position: 'relative', width: '200px', height: '200px', margin: '20px auto' },
-    wheel: { width: '100%', height: '100%', borderRadius: '50%', border: '5px solid #000', transition: 'transform 4s cubic-bezier(0.1, 0, 0.2, 1)', background: 'conic-gradient(#000 0% 12.5%, #facc15 12.5% 25%, #000 25% 37.5%, #facc15 37.5% 50%, #000 50% 62.5%, #facc15 62.5% 75%, #000 75% 87.5%, #facc15 87.5% 100%)' },
-    pointer: { position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', width: '0', height: '0', borderLeft: '15px solid transparent', borderRight: '15px solid transparent', borderTop: '30px solid red', zIndex: '5' },
-    wheelText: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontWeight: 'bold', color: '#fff', textShadow: '2px 2px #000' }
+    wheelContainer: { position: 'relative', width: '220px', height: '220px', margin: '20px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    wheel: { width: '100%', height: '100%', borderRadius: '50%', border: '5px solid #000', position: 'relative', overflow: 'hidden', transition: 'transform 4s cubic-bezier(0.15, 0, 0.15, 1)', background: '#fff' },
+    wheelPointer: { position: 'absolute', top: '-10px', zIndex: 10, width: '20px', height: '30px', background: 'red', clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }
   };
 
   return (
@@ -280,31 +259,51 @@ function App() {
             ))}
 
             {activeTab === 'reward' && (
-              <div>
+              <div style={{textAlign: 'center'}}>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={styles.btn} onClick={() => handleAction(() => {
+                <button style={{...styles.btn, marginBottom: '20px'}} onClick={() => handleAction(() => {
                   const found = promoCodes.find(c => c.code === rewardCodeInput);
                   if(found) processReward(`promo_${rewardCodeInput}`, found.reward); else alert("Invalid Code");
                 })}>CLAIM CODE</button>
 
-                {/* --- Spin Wheel UI --- */}
-                <div style={{textAlign: 'center', marginTop: '30px', borderTop: '2px solid #eee', paddingTop: '20px'}}>
-                  <h3 style={{margin: '0 0 10px 0'}}>🎡 Lucky Spin</h3>
-                  <p style={{fontSize: '10px', color: '#666'}}>Every 2 Hours • Big Rewards Inside!</p>
-                  
-                  <div style={styles.wheelBox}>
-                    <div style={styles.pointer}></div>
-                    <div style={{...styles.wheel, transform: `rotate(${spinRotation}deg)`}}></div>
-                    <div style={styles.wheelText}>LUCKY</div>
-                  </div>
-
-                  <button 
-                    style={{...styles.btn, background: isSpinning ? '#555' : '#000'}} 
-                    disabled={isSpinning}
-                    onClick={handleSpin}
-                  >
-                    {isSpinning ? "SPINNING..." : "WATCH AD & SPIN"}
-                  </button>
+                <div style={{borderTop: '2px solid #eee', paddingTop: '20px'}}>
+                    <h3 style={{margin: 0}}>Lucky Spin</h3>
+                    <p style={{fontSize: '11px', opacity: 0.6}}>Win up to 0.3 TON every 2 hours!</p>
+                    
+                    <div style={styles.wheelContainer}>
+                        <div style={styles.wheelPointer}></div>
+                        <div style={{...styles.wheel, transform: `rotate(${spinDeg}deg)`}}>
+                            {/* Wheel Segments */}
+                            {[
+                                { t: '0.1 TON', c: '#facc15' },
+                                { t: '0.2 TON', c: '#000' },
+                                { t: '0.3 TON', c: '#facc15' },
+                                { t: 'LUCKY', c: '#000' }, // This is the 0.0001 spot (180deg)
+                                { t: '0.001 TON', c: '#facc15' },
+                                { t: '0.01 TON', c: '#000' }
+                            ].map((s, i) => (
+                                <div key={i} style={{
+                                    position: 'absolute', width: '100%', height: '100%',
+                                    transform: `rotate(${i * 60}deg)`,
+                                    clipPath: 'polygon(50% 50%, 50% 0, 100% 0, 100% 50%)',
+                                    background: s.c, display: 'flex', alignItems: 'flex-start', justifyContent: 'center'
+                                }}>
+                                    <span style={{
+                                        color: s.c === '#000' ? '#fff' : '#000', 
+                                        fontSize: '10px', fontWeight: 'bold', 
+                                        marginTop: '25px', transform: 'rotate(30deg)'
+                                    }}>{s.t}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <button 
+                        disabled={isSpinning} 
+                        style={{...styles.btn, background: isSpinning ? '#666' : '#000'}} 
+                        onClick={handleSpin}
+                    >
+                        {isSpinning ? 'SPINNING...' : 'SPIN NOW'}
+                    </button>
                 </div>
               </div>
             )}
@@ -312,13 +311,92 @@ function App() {
             {activeTab === 'admin' && (
               <div>
                 <h4 style={{margin:'0 0 10px 0', borderBottom: '2px solid #000'}}>Admin Controls</h4>
-                {/* Admin user management... (unchanged) */}
+                
+                <h5 style={{marginTop: 10}}>Manage Custom Tasks</h5>
+                <div style={{maxHeight: '120px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
+                    {customTasks.map((ct, idx) => (
+                        <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
+                            <span>[{ct.type.toUpperCase()}] {ct.name}</span>
+                            <button onClick={async () => {
+                                if(window.confirm("Delete?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' }); fetchData(); }
+                            }} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
+                        </div>
+                    ))}
+                </div>
+
+                <h5>User Management</h5>
                 <input style={styles.input} placeholder="Enter User UID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                 <button style={styles.btn} onClick={() => handleAction(async () => {
                   const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
                   const data = await res.json();
-                  if(data) { setSearchedUser(data); setNewBalanceInput(data.balance); setNewVipStatus(data.isVip || false); } else alert("Not found");
+                  if(data) {
+                    setSearchedUser(data);
+                    setNewBalanceInput(data.balance);
+                    setNewVipStatus(data.isVip || false);
+                  } else alert("User not found!");
                 })}>SEARCH USER</button>
+
+                {searchedUser && (
+                  <div style={{marginTop:10, padding:10, background:'#e5e7eb', borderRadius:10, border:'2px solid #000'}}>
+                    <p style={{fontSize:11}}><b>UID:</b> {searchUserId}</p>
+                    
+                    <label style={{fontSize: 10}}>Edit Balance:</label>
+                    <input style={{...styles.input, marginBottom: 5}} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
+                    
+                    <label style={{fontSize: 10}}>VIP Status:</label>
+                    <select style={styles.select} value={newVipStatus.toString()} onChange={e => setNewVipStatus(e.target.value === 'true')}>
+                        <option value="false">Standard</option>
+                        <option value="true">VIP ⭐</option>
+                    </select>
+
+                    <button style={{...styles.btn, marginBottom: 15}} onClick={async () => {
+                        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { 
+                            method:'PATCH', 
+                            body: JSON.stringify({balance: Number(newBalanceInput), isVip: newVipStatus})
+                        });
+                        alert("User Updated!");
+                        fetchData();
+                    }}>SAVE USER CHANGES</button>
+
+                    <h6 style={{margin:'5px 0'}}>Withdrawal Requests:</h6>
+                    <div style={{maxHeight: 100, overflowY: 'auto', background: '#fff', padding: 5, borderRadius: 5}}>
+                        {searchedUser.withdrawHistory ? searchedUser.withdrawHistory.map((h, idx) => (
+                            <div key={idx} style={{display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:10, padding:'4px 0', borderBottom:'1px solid #eee'}}>
+                                <span>{h.amount} TON ({h.status})</span>
+                                {h.status === 'Pending' && (
+                                    <button onClick={() => approveWithdraw(searchUserId, idx)} style={{background:'green', color:'#fff', border:'none', borderRadius:4, padding:'2px 6px', fontSize:9}}>Approve</button>
+                                )}
+                            </div>
+                        )) : <p style={{fontSize:9}}>No history</p>}
+                    </div>
+                  </div>
+                )}
+
+                <h5 style={{marginTop: 20}}>Add New Task</h5>
+                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
+                <input style={styles.input} placeholder="Task Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
+                <select style={styles.select} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
+                    <option value="bot">Bot Task</option>
+                    <option value="social">Social Task</option>
+                </select>
+                <button style={{...styles.btn, background:'#22c55e'}} onClick={() => handleAction(async () => {
+                    if(!adminTaskName || !adminTaskLink) return alert("Fill all!");
+                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { 
+                        method:'POST', 
+                        body: JSON.stringify({name: adminTaskName, link: adminTaskLink, type: adminTaskType})
+                    });
+                    alert("Task Added!"); 
+                    setAdminTaskName(''); setAdminTaskLink(''); 
+                    fetchData();
+                })}>ADD TASK</button>
+
+                <h5 style={{marginTop: 20}}>Add Promo Code</h5>
+                <input style={styles.input} placeholder="Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
+                <input style={styles.input} placeholder="Reward" type="number" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
+                <button style={{...styles.btn, background: '#8b5cf6'}} onClick={() => handleAction(async () => {
+                    await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify(Number(adminPromoReward)) });
+                    alert("Promo Added!"); setAdminPromoCode(''); setAdminPromoReward(''); fetchData();
+                })}>ADD PROMO</button>
               </div>
             )}
           </div>
@@ -331,11 +409,36 @@ function App() {
           <p>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
           <input style={styles.input} readOnly value={`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`} />
           <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!"); }}>COPY LINK</button>
+          
+          <h4 style={{marginTop: 20}}>Invite History</h4>
+          <div style={{maxHeight: 150, overflowY: 'auto'}}>
+            {referrals.map((r, i) => (
+                <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #eee', fontSize:12}}>
+                    <span>User: {r.id || "Verified"}</span>
+                    <span style={{color:'green'}}>Success ✅</span>
+                </div>
+            ))}
+          </div>
         </div>
       )}
 
       {activeNav === 'withdraw' && (
-        <div style={styles.card}>
+        <>
+          <div style={styles.card}>
+            <h3>Deposit for VIP</h3>
+            <p style={{fontSize:12, marginBottom: 5}}>Address:</p>
+            <div style={{display:'flex', gap: 5, marginBottom: 10}}>
+                <input style={{...styles.input, marginBottom: 0, flex: 1, fontSize: 11}} readOnly value={APP_CONFIG.ADMIN_WALLET} />
+                <button style={styles.smBtn()} onClick={()=> {navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Copied!");}}>Copy</button>
+            </div>
+            <p style={{fontSize:12, marginBottom: 5}}>Memo (UID):</p>
+            <div style={{display:'flex', gap: 5}}>
+                <input style={{...styles.input, marginBottom: 0, flex: 1}} readOnly value={APP_CONFIG.MY_UID} />
+                <button style={styles.smBtn()} onClick={()=> {navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Copied!");}}>Copy</button>
+            </div>
+          </div>
+
+          <div style={styles.card}>
             <h3>Withdraw History</h3>
             <div style={{maxHeight: 120, overflowY: 'auto', marginBottom:10, background: '#f9f9f9', padding: 5, borderRadius: 8}}>
                 {withdrawHistory.length > 0 ? withdrawHistory.map((h, i) => (
@@ -359,7 +462,8 @@ function App() {
               });
               alert("Request Sent!"); fetchData(); setWithdrawAmount(''); setWithdrawAddress('');
             })}>WITHDRAW NOW</button>
-        </div>
+          </div>
+        </>
       )}
 
       {activeNav === 'profile' && (
