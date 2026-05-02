@@ -181,26 +181,26 @@ function App() {
 
   const startTask = (id, link) => {
     handleAction(() => {
-        window.open(link, '_blank');
-        setTimeout(() => {
-            setShowClaimId(id);
-        }, 1500);
+      window.open(link, '_blank');
+      setTimeout(() => {
+          setShowClaimId(id);
+      }, 1500);
     });
   };
 
   const approveWithdraw = async (userId, historyIndex) => {
     handleAction(async () => {
-        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
-        const userToEdit = await res.json();
-        if (!userToEdit || !userToEdit.withdrawHistory) return;
-        const updatedHistory = [...userToEdit.withdrawHistory];
-        updatedHistory[historyIndex].status = "Success";
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
-          method: 'PATCH',
-          body: JSON.stringify({ withdrawHistory: updatedHistory })
-        });
-        alert("Withdrawal Approved!");
-        fetchData(true);
+      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
+      const userToEdit = await res.json();
+      if (!userToEdit || !userToEdit.withdrawHistory) return;
+      const updatedHistory = [...userToEdit.withdrawHistory];
+      updatedHistory[historyIndex].status = "Success";
+      await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
+        method: 'PATCH',
+        body: JSON.stringify({ withdrawHistory: updatedHistory })
+      });
+      alert("Withdrawal Approved!");
+      fetchData(true);
     });
   };
 
@@ -366,6 +366,14 @@ function App() {
           <p>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
           <input style={styles.input} readOnly value={`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`} />
           <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!"); }}>COPY LINK</button>
+          <h4 style={{marginTop: 20}}>Invite History</h4>
+          <div style={{maxHeight: 150, overflowY: 'auto'}}>
+            {referrals.map((r, i) => (
+                <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #eee', fontSize:12}}>
+                    <span>User: {r.id || "Verified"}</span><span style={{color:'green'}}>Success ✅</span>
+                </div>
+            ))}
+          </div>
         </div>
       )}
 
