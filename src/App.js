@@ -67,7 +67,6 @@ function App() {
   useEffect(() => { if (tg) { tg.ready(); tg.expand(); } }, []);
 
   const triggerAds = useCallback(() => {
-    // အစ်ကို့ ID ဖြစ်တဲ့ 1793453606 အတွက် Ads မပွင့်အောင် စစ်ထားပါတယ်
     if (APP_CONFIG.MY_UID === "1793453606") {
       setLastActionTime(Date.now()); 
       return;
@@ -78,12 +77,10 @@ function App() {
   }, []);
 
   const handleAction = (callback) => {
-    // Admin အတွက်ဆိုရင် Ads စောင့်စရာမလိုအောင် လုပ်ထားပါတယ်
     if (APP_CONFIG.MY_UID === "1793453606") {
       callback();
       return;
     }
-
     const elapsed = (Date.now() - lastActionTime) / 1000;
     if (lastActionTime === 0 || elapsed < 15) {
       alert(`Please stay on the ad for 15s to continue!`);
@@ -130,7 +127,6 @@ function App() {
   };
 
   const processReward = async (id, amt) => {
-    // အစ်ကို့ ID အတွက်ဆိုရင် အချိန်စောင့်စရာမလိုဘဲ တန်း claim လို့ရအောင် လုပ်ထားပါတယ်
     const elapsed = (Date.now() - lastActionTime) / 1000;
     const timeLimit = id === 'watch_ad' ? 30 : 15;
 
@@ -159,6 +155,25 @@ function App() {
     alert(`Success! +${rewardAmt} TON.`);
     setLastActionTime(0);
     fetchData();
+  };
+
+  // Admin: Withdrawal Status Update Logic
+  const approveWithdraw = async (userId, historyIndex) => {
+    const userToEdit = await (await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`)).json();
+    if (!userToEdit || !userToEdit.withdrawHistory) return;
+
+    const updatedHistory = [...userToEdit.withdrawHistory];
+    updatedHistory[historyIndex].status = "Success";
+
+    await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
+      method: 'PATCH',
+      body: JSON.stringify({ withdrawHistory: updatedHistory })
+    });
+    
+    alert("Withdrawal Approved as Success!");
+    // Refresh searched user view
+    const refreshed = await (await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`)).json();
+    setSearchedUser(refreshed);
   };
 
   const styles = {
@@ -223,66 +238,67 @@ function App() {
               <div>
                 <h4 style={{margin:'0 0 10px 0', borderBottom: '2px solid #000'}}>Admin Controls</h4>
                 
-                <h5 style={{marginTop: 10}}>Manage Custom Tasks</h5>
-                <div style={{maxHeight: '150px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
-                    {customTasks.length > 0 ? customTasks.map((ct, idx) => (
-                        <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 12}}>
-                            <span>{ct.name} ({ct.type})</span>
+                <h5 style={{marginTop: 10}}>Manage Tasks</h5>
+                <div style={{maxHeight: '120px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
+                    {customTasks.map((ct, idx) => (
+                        <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
+                            <span>{ct.name}</span>
                             <button onClick={async () => {
-                                if(window.confirm("Delete this task?")) {
-                                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' });
-                                    alert("Deleted!"); fetchData();
-                                }
-                            }} style={{color: 'red', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold'}}>X</button>
+                                if(window.confirm("Delete?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' }); fetchData(); }
+                            }} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
                         </div>
-                    )) : <p style={{fontSize: 11, textAlign: 'center'}}>No custom tasks</p>}
+                    ))}
                 </div>
 
-                <h5 style={{marginTop: 10}}>User Search & Edit</h5>
-                <input style={styles.input} placeholder="User ID" onChange={e => setSearchUserId(e.target.value)} />
+                <h5>User UID Search & History Edit</h5>
+                <input style={styles.input} placeholder="Enter User UID to search" onChange={e => setSearchUserId(e.target.value)} />
                 <button style={styles.btn} onClick={() => handleAction(async () => {
                   const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
                   const data = await res.json();
                   setSearchedUser(data);
-                  if(data) setNewBalanceInput(data.balance); else alert("Not Found");
-                })}>Find User</button>
+                  if(data) setNewBalanceInput(data.balance); else alert("User not found!");
+                })}>SEARCH USER</button>
+
                 {searchedUser && (
-                  <div style={{marginTop:10, padding:10, background:'#f8f8f8', borderRadius:10, border:'2px solid #000'}}>
-                    <p style={{fontSize:12}}><b>Balance:</b> {searchedUser.balance} | <b>VIP:</b> {searchedUser.isVip ? "Yes" : "No"}</p>
-                    <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
-                    <div style={{display:'flex', gap:5}}>
-                        <button style={{...styles.smBtn(), flex:1}} onClick={() => handleAction(async () => {
+                  <div style={{marginTop:10, padding:10, background:'#e5e7eb', borderRadius:10, border:'2px solid #000'}}>
+                    <p style={{fontSize:11}}><b>UID:</b> {searchUserId} | <b>Bal:</b> {searchedUser.balance}</p>
+                    
+                    <h6 style={{margin:'10px 0 5px 0'}}>Withdrawal Requests:</h6>
+                    <div style={{maxHeight: 100, overflowY: 'auto', background: '#fff', padding: 5, borderRadius: 5}}>
+                        {searchedUser.withdrawHistory ? searchedUser.withdrawHistory.map((h, idx) => (
+                            <div key={idx} style={{display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:10, padding:'4px 0', borderBottom:'1px solid #eee'}}>
+                                <span>{h.amount} TON ({h.status})</span>
+                                {h.status === 'Pending' && (
+                                    <button onClick={() => approveWithdraw(searchUserId, idx)} style={{background:'green', color:'#fff', border:'none', borderRadius:4, padding:'2px 6px', fontSize:9}}>Approve Success</button>
+                                )}
+                            </div>
+                        )) : <p style={{fontSize:9}}>No history</p>}
+                    </div>
+
+                    <div style={{marginTop: 10, display:'flex', gap:5}}>
+                        <input style={{...styles.input, marginBottom:0, flex:1}} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
+                        <button style={styles.smBtn()} onClick={async () => {
                             await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({balance: Number(newBalanceInput)})});
-                            alert("Success!"); fetchData();
-                        })}>Update Balance</button>
-                        <button style={{...styles.smBtn('orange'), flex:1}} onClick={() => handleAction(async () => {
-                            await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({isVip: !searchedUser.isVip})});
-                            alert("VIP Updated!"); fetchData();
-                        })}>VIP Toggle</button>
+                            alert("Updated Balance!");
+                        }}>Update</button>
                     </div>
                   </div>
                 )}
 
-                <h5 style={{marginTop: 20}}>Add Reward Code</h5>
-                <input style={styles.input} placeholder="Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
-                <input style={styles.input} placeholder="Reward Amount" type="number" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
+                <h5 style={{marginTop: 20}}>Add Promo Code</h5>
+                <input style={styles.input} placeholder="Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
+                <input style={styles.input} placeholder="Reward" type="number" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
                 <button style={{...styles.btn, background: '#8b5cf6'}} onClick={() => handleAction(async () => {
-                    if(!adminPromoCode || !adminPromoReward) return alert("Fill all!");
                     await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify(Number(adminPromoReward)) });
                     alert("Added!"); setAdminPromoCode(''); setAdminPromoReward(''); fetchData();
-                })}>ADD PROMO CODE</button>
+                })}>ADD CODE</button>
 
                 <h5 style={{marginTop: 20}}>Add New Task</h5>
-                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
+                <input style={styles.input} placeholder="Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
-                <select style={{...styles.input, appearance:'none'}} onChange={e => setAdminTaskType(e.target.value)}>
-                    <option value="bot">BOT</option>
-                    <option value="social">SOCIAL</option>
-                </select>
                 <button style={{...styles.btn, background:'#22c55e'}} onClick={() => handleAction(async () => {
-                    if(!adminTaskName || !adminTaskLink) return alert("Fill all!");
                     await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method:'POST', body: JSON.stringify({name: adminTaskName, link: adminTaskLink, type: adminTaskType})});
-                    alert("Task Saved!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData();
+                    alert("Saved!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData();
                 })}>SAVE TASK</button>
               </div>
             )}
@@ -341,8 +357,7 @@ function App() {
             <input style={styles.input} placeholder="Your TON Wallet Address" onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background:'#3b82f6'}} onClick={() => handleAction(async () => {
               const amt = Number(withdrawAmount);
-              if(amt < 0.1 || amt > balance) return alert("Invalid amount or Insufficient balance!");
-              if(!withdrawAddress) return alert("Please enter wallet address!");
+              if(amt < 0.1 || amt > balance) return alert("Invalid amount!");
               const newH = [{ amount: amt, status: 'Pending', date: new Date().toLocaleString() }, ...withdrawHistory];
               await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { 
                 method:'PATCH', body: JSON.stringify({ balance: Number((balance - amt).toFixed(5)), withdrawHistory: newH })
