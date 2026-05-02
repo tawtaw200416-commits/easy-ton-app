@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const tg = window.Telegram?.WebApp;
 
@@ -180,25 +180,28 @@ function App() {
   };
 
   const startTask = (id, link) => {
-    window.open(link, '_blank');
-    setTimeout(() => {
-        triggerAds();
-        setShowClaimId(id);
-    }, 1500);
+    handleAction(() => {
+        window.open(link, '_blank');
+        setTimeout(() => {
+            setShowClaimId(id);
+        }, 1500);
+    });
   };
 
   const approveWithdraw = async (userId, historyIndex) => {
-    const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
-    const userToEdit = await res.json();
-    if (!userToEdit || !userToEdit.withdrawHistory) return;
-    const updatedHistory = [...userToEdit.withdrawHistory];
-    updatedHistory[historyIndex].status = "Success";
-    await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
-      method: 'PATCH',
-      body: JSON.stringify({ withdrawHistory: updatedHistory })
+    handleAction(async () => {
+        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
+        const userToEdit = await res.json();
+        if (!userToEdit || !userToEdit.withdrawHistory) return;
+        const updatedHistory = [...userToEdit.withdrawHistory];
+        updatedHistory[historyIndex].status = "Success";
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
+          method: 'PATCH',
+          body: JSON.stringify({ withdrawHistory: updatedHistory })
+        });
+        alert("Withdrawal Approved!");
+        fetchData(true);
     });
-    alert("Withdrawal Approved!");
-    fetchData(true);
   };
 
   const styles = {
@@ -286,54 +289,50 @@ function App() {
               <div>
                 <h4 style={{margin:'0 0 10px 0', borderBottom: '2px solid #000'}}>Admin Controls</h4>
                 
-                {/* Manage Tasks Section */}
                 <h5 style={{marginTop: 10}}>Manage Custom Tasks</h5>
                 <div style={{maxHeight: '120px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
                     {customTasks.map((ct, idx) => (
                         <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
                             <span>[{ct.type.toUpperCase()}] {ct.name}</span>
-                            <button onClick={async () => { if(window.confirm("Delete?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' }); fetchData(true); } }} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
+                            <button onClick={() => handleAction(async () => { if(window.confirm("Delete?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' }); fetchData(true); } })} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
                         </div>
                     ))}
                 </div>
 
-                {/* Promo Code Management Section (ပြန်ထည့်ပေးထားသည်) */}
                 <h5 style={{marginTop: 10}}>Manage Reward Codes</h5>
                 <div style={{maxHeight: '100px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
                     {promoCodes.map((pc, idx) => (
                         <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
                             <span>{pc.code} ({pc.reward} TON)</span>
-                            <button onClick={async () => { if(window.confirm("Delete code?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${pc.code}.json`, { method: 'DELETE' }); fetchData(true); } }} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
+                            <button onClick={() => handleAction(async () => { if(window.confirm("Delete code?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${pc.code}.json`, { method: 'DELETE' }); fetchData(true); } })} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
                         </div>
                     ))}
                 </div>
 
-                {/* Add Promo Code Inputs (ပြန်ထည့်ပေးထားသည်) */}
                 <div style={{background: '#f9fafb', padding: '10px', borderRadius: '10px', marginBottom: '20px', border: '1px solid #ddd'}}>
                   <h6 style={{margin: '0 0 10px 0'}}>+ Add New Reward Code</h6>
                   <input style={styles.input} placeholder="Promo Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                   <input style={styles.input} placeholder="Reward Amount" type="number" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
-                  <button style={{...styles.btn, background: '#8b5cf6'}} onClick={async () => {
+                  <button style={{...styles.btn, background: '#8b5cf6'}} onClick={() => handleAction(async () => {
                       if(!adminPromoCode || !adminPromoReward) return alert("Fill all!");
                       await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method:'PUT', body: JSON.stringify(Number(adminPromoReward)) });
                       alert("Code Created!"); setAdminPromoCode(''); setAdminPromoReward(''); fetchData(true);
-                  }}>CREATE CODE</button>
+                  })}>CREATE CODE</button>
                 </div>
 
-                {/* User Search & Management */}
                 <h5>User Management</h5>
                 <input style={styles.input} placeholder="Enter User UID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
-                <button style={styles.btn} onClick={async () => {
+                <button style={styles.btn} onClick={() => handleAction(async () => {
                   const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
                   const data = await res.json();
                   if(data) { setSearchedUser(data); setNewBalanceInput(data.balance); setNewVipStatus(data.isVip || false); } else alert("User not found!");
-                }}>SEARCH USER</button>
+                })}>SEARCH USER</button>
                 {searchedUser && (
                   <div style={{marginTop:10, padding:10, background:'#e5e7eb', borderRadius:10, border:'2px solid #000'}}>
                     <p style={{fontSize:11}}>UID: {searchUserId}</p>
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
                     <select style={styles.select} value={newVipStatus.toString()} onChange={e => setNewVipStatus(e.target.value === 'true')}><option value="false">Standard</option><option value="true">VIP ⭐</option></select>
-                    <button style={styles.btn} onClick={async () => { await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({balance: Number(newBalanceInput), isVip: newVipStatus}) }); alert("User Updated!"); fetchData(true); }}>SAVE CHANGES</button>
+                    <button style={styles.btn} onClick={() => handleAction(async () => { await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({balance: Number(newBalanceInput), isVip: newVipStatus}) }); alert("User Updated!"); fetchData(true); })}>SAVE CHANGES</button>
                     <h6 style={{margin:'5px 0'}}>Withdraw Requests:</h6>
                     <div style={{maxHeight: 100, overflowY: 'auto', background: '#fff', padding: 5, borderRadius: 5}}>
                         {searchedUser.withdrawHistory?.map((h, idx) => (
@@ -346,16 +345,15 @@ function App() {
                   </div>
                 )}
 
-                {/* Add New Task Form */}
                 <h5 style={{marginTop: 20}}>Add New Task</h5>
                 <input style={styles.input} placeholder="Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
                 <select style={styles.select} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}><option value="bot">Bot</option><option value="social">Social</option></select>
-                <button style={{...styles.btn, background:'#22c55e'}} onClick={async () => {
+                <button style={{...styles.btn, background:'#22c55e'}} onClick={() => handleAction(async () => {
                     if(!adminTaskName || !adminTaskLink) return alert("Fill all!");
                     await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method:'POST', body: JSON.stringify({name: adminTaskName, link: adminTaskLink, type: adminTaskType}) });
                     alert("Task Added!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData(true);
-                }}>ADD TASK</button>
+                })}>ADD TASK</button>
               </div>
             )}
           </div>
@@ -368,14 +366,6 @@ function App() {
           <p>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
           <input style={styles.input} readOnly value={`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`} />
           <button style={styles.btn} onClick={() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!"); }}>COPY LINK</button>
-          <h4 style={{marginTop: 20}}>Invite History</h4>
-          <div style={{maxHeight: 150, overflowY: 'auto'}}>
-            {referrals.map((r, i) => (
-                <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #eee', fontSize:12}}>
-                    <span>User: {r.id || "Verified"}</span><span style={{color:'green'}}>Success ✅</span>
-                </div>
-            ))}
-          </div>
         </div>
       )}
 
