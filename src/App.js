@@ -50,12 +50,10 @@ function App() {
   const [lastActionTime, setLastActionTime] = useState(0);
   const [showClaimId, setShowClaimId] = useState(null);
 
-  // Spin States
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinDeg, setSpinDeg] = useState(0);
   const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem('last_spin_time')) || 0);
 
-  // Admin States
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
@@ -163,7 +161,6 @@ function App() {
     fetchData();
   };
 
-  // Spin Logic
   const handleSpin = () => {
     const now = Date.now();
     const twoHours = 2 * 60 * 60 * 1000;
@@ -174,10 +171,8 @@ function App() {
 
     triggerAds();
     setIsSpinning(true);
-    // Rewards Mapping: [0.1, 0.2, 0.3, 0.0001, 0.001, 0.01]
-    const rewardsArr = [0.1, 0.2, 0.3, 0.0001, 0.001, 0.01];
-    // Landing on 0.0001 (Index 3 -> 180 degrees)
-    const extraSpin = (3 * 60) + (360 * 5); 
+    // Index 3 is 0.0001 TON (180 deg)
+    const extraSpin = 180 + (360 * 5); 
     const newDeg = spinDeg + extraSpin;
     setSpinDeg(newDeg);
 
@@ -217,9 +212,9 @@ function App() {
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
     select: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', background: '#fff' },
     // Spin Styles
-    wheelContainer: { position: 'relative', width: '250px', height: '250px', margin: '20px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    wheelContainer: { position: 'relative', width: '260px', height: '260px', margin: '20px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' },
     wheel: { width: '100%', height: '100%', borderRadius: '50%', border: '5px solid #000', position: 'relative', overflow: 'hidden', transition: 'transform 4s cubic-bezier(0.15, 0, 0.15, 1)', background: '#fff' },
-    wheelPointer: { position: 'absolute', top: '-10px', zIndex: 10, width: '25px', height: '35px', background: 'red', clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }
+    wheelPointer: { position: 'absolute', top: '-15px', zIndex: 10, width: '30px', height: '40px', background: 'red', clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }
   };
 
   return (
@@ -269,8 +264,8 @@ function App() {
                 })}>CLAIM CODE</button>
 
                 <div style={{borderTop: '2px solid #eee', paddingTop: '20px'}}>
-                    <h3 style={{margin: 0}}>Lucky Spin</h3>
-                    <p style={{fontSize: '13px', fontWeight: 'bold', color: '#000', marginBottom: '10px'}}>Try your luck for 2 hours💎</p>
+                    <h3 style={{margin: '0 0 5px 0'}}>Lucky Spin</h3>
+                    <p style={{fontSize: '13px', fontWeight: 'bold', color: '#000', marginBottom: '15px'}}>Try your luck for 2 hours💎</p>
                     
                     <div style={styles.wheelContainer}>
                         <div style={styles.wheelPointer}></div>
@@ -291,9 +286,9 @@ function App() {
                                 }}>
                                     <span style={{
                                         color: s.c === '#000' ? '#fff' : '#000', 
-                                        fontSize: '8px', fontWeight: 'bold', 
-                                        marginTop: '35px', transform: 'rotate(30deg)',
-                                        whiteSpace: 'nowrap'
+                                        fontSize: '9px', fontWeight: 'bold', 
+                                        marginTop: '40px', transform: 'rotate(30deg)',
+                                        whiteSpace: 'nowrap', width: '80px', textAlign: 'center'
                                     }}>{s.t}</span>
                                 </div>
                             ))}
