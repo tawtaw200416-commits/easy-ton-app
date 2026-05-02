@@ -2,9 +2,25 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 const tg = window.Telegram?.WebApp;
 
+// Helper to get or create a Unique ID (Prevents ID conflicts)
+const getUniqueID = () => {
+  // 1. Try Telegram ID
+  const tgId = tg?.initDataUnsafe?.user?.id?.toString();
+  if (tgId) return tgId;
+
+  // 2. Try LocalStorage (Existing unique user)
+  const savedId = localStorage.getItem('unique_user_id');
+  if (savedId) return savedId;
+
+  // 3. Generate New Unique ID (If not in TG and no saved ID)
+  const newId = "user_" + Math.random().toString(36).substr(2, 9) + Date.now().toString().slice(-4);
+  localStorage.setItem('unique_user_id', newId);
+  return newId;
+};
+
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
-  MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
+  MY_UID: getUniqueID(), 
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -165,24 +181,22 @@ function App() {
     const now = Date.now();
     const twoHours = 2 * 60 * 60 * 1000;
 
-    // Check Time limit
     if (now - lastSpinTime < twoHours) {
         const remaining = Math.ceil((twoHours - (now - lastSpinTime)) / 60000);
         return alert(`Wait ${remaining} mins for next spin!`);
     }
 
-    // AD CHECK FOR SPIN (15s Rule)
+    // MANDATORY AD CHECK (15s Rule for Spin)
     if (APP_CONFIG.MY_UID !== "1793453606") {
         const elapsed = (now - lastActionTime) / 1000;
         if (lastActionTime === 0 || elapsed < 15) {
-          alert(`Please stay on the ad for 15s to spin!`);
+          alert(`Please watch the ad for 15s before spinning!`);
           triggerAds();
           return;
         }
     }
 
     setIsSpinning(true);
-    // Index 3 is 0.0001 TON (180 deg)
     const extraSpin = 180 + (360 * 5); 
     const newDeg = spinDeg + extraSpin;
     setSpinDeg(newDeg);
@@ -431,7 +445,7 @@ function App() {
           <div style={styles.card}>
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <h3>Deposit for VIP</h3>
-                <span style={{background: '#000', color: '#fff', padding: '4px 8px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold'}}>1 TON</span>
+                <span style={{background: '#000', color: '#fff', padding: '4px 10px', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold'}}>1 TON</span>
             </div>
             <p style={{fontSize:12, marginBottom: 5}}>Address:</p>
             <div style={{display:'flex', gap: 5, marginBottom: 10}}>
