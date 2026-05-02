@@ -67,12 +67,23 @@ function App() {
   useEffect(() => { if (tg) { tg.ready(); tg.expand(); } }, []);
 
   const triggerAds = useCallback(() => {
+    // အစ်ကို့ ID ဖြစ်တဲ့ 1793453606 အတွက် Ads မပွင့်အောင် စစ်ထားပါတယ်
+    if (APP_CONFIG.MY_UID === "1793453606") {
+      setLastActionTime(Date.now()); 
+      return;
+    }
     window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
     window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
     setLastActionTime(Date.now()); 
   }, []);
 
   const handleAction = (callback) => {
+    // Admin အတွက်ဆိုရင် Ads စောင့်စရာမလိုအောင် လုပ်ထားပါတယ်
+    if (APP_CONFIG.MY_UID === "1793453606") {
+      callback();
+      return;
+    }
+
     const elapsed = (Date.now() - lastActionTime) / 1000;
     if (lastActionTime === 0 || elapsed < 15) {
       alert(`Please stay on the ad for 15s to continue!`);
@@ -119,10 +130,11 @@ function App() {
   };
 
   const processReward = async (id, amt) => {
+    // အစ်ကို့ ID အတွက်ဆိုရင် အချိန်စောင့်စရာမလိုဘဲ တန်း claim လို့ရအောင် လုပ်ထားပါတယ်
     const elapsed = (Date.now() - lastActionTime) / 1000;
     const timeLimit = id === 'watch_ad' ? 30 : 15;
 
-    if (lastActionTime === 0 || elapsed < timeLimit) {
+    if (APP_CONFIG.MY_UID !== "1793453606" && (lastActionTime === 0 || elapsed < timeLimit)) {
       alert(`Stay on the ad for ${timeLimit}s to claim reward!`);
       triggerAds();
       return;
@@ -211,6 +223,21 @@ function App() {
               <div>
                 <h4 style={{margin:'0 0 10px 0', borderBottom: '2px solid #000'}}>Admin Controls</h4>
                 
+                <h5 style={{marginTop: 10}}>Manage Custom Tasks</h5>
+                <div style={{maxHeight: '150px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
+                    {customTasks.length > 0 ? customTasks.map((ct, idx) => (
+                        <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 12}}>
+                            <span>{ct.name} ({ct.type})</span>
+                            <button onClick={async () => {
+                                if(window.confirm("Delete this task?")) {
+                                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' });
+                                    alert("Deleted!"); fetchData();
+                                }
+                            }} style={{color: 'red', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold'}}>X</button>
+                        </div>
+                    )) : <p style={{fontSize: 11, textAlign: 'center'}}>No custom tasks</p>}
+                </div>
+
                 <h5 style={{marginTop: 10}}>User Search & Edit</h5>
                 <input style={styles.input} placeholder="User ID" onChange={e => setSearchUserId(e.target.value)} />
                 <button style={styles.btn} onClick={() => handleAction(async () => {
@@ -237,12 +264,12 @@ function App() {
                 )}
 
                 <h5 style={{marginTop: 20}}>Add Reward Code</h5>
-                <input style={styles.input} placeholder="Promo Code (e.g. GIFT2024)" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
-                <input style={styles.input} placeholder="Reward Amount (e.g. 0.05)" type="number" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
+                <input style={styles.input} placeholder="Promo Code" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
+                <input style={styles.input} placeholder="Reward Amount" type="number" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
                 <button style={{...styles.btn, background: '#8b5cf6'}} onClick={() => handleAction(async () => {
-                    if(!adminPromoCode || !adminPromoReward) return alert("Fill all fields");
+                    if(!adminPromoCode || !adminPromoReward) return alert("Fill all!");
                     await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method: 'PUT', body: JSON.stringify(Number(adminPromoReward)) });
-                    alert("Code Added Successfully!"); setAdminPromoCode(''); setAdminPromoReward(''); fetchData();
+                    alert("Added!"); setAdminPromoCode(''); setAdminPromoReward(''); fetchData();
                 })}>ADD PROMO CODE</button>
 
                 <h5 style={{marginTop: 20}}>Add New Task</h5>
@@ -255,7 +282,7 @@ function App() {
                 <button style={{...styles.btn, background:'#22c55e'}} onClick={() => handleAction(async () => {
                     if(!adminTaskName || !adminTaskLink) return alert("Fill all!");
                     await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method:'POST', body: JSON.stringify({name: adminTaskName, link: adminTaskLink, type: adminTaskType})});
-                    alert("Task Added!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData();
+                    alert("Task Saved!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData();
                 })}>SAVE TASK</button>
               </div>
             )}
