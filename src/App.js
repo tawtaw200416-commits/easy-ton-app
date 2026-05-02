@@ -85,11 +85,6 @@ function App() {
         setWithdrawHistory(userData.withdrawHistory || []);
         setCompleted(userData.completedTasks || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
-      } else {
-        setBalance(0);
-        setCompleted([]);
-        setWithdrawHistory([]);
-        setIsVip(VIP_IDS.includes(APP_CONFIG.MY_UID));
       }
       
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
@@ -97,7 +92,6 @@ function App() {
       
       setIsLoading(false);
     } catch (e) { 
-      console.error("Sync error"); 
       setIsLoading(false);
     }
   }, []);
@@ -291,6 +285,8 @@ function App() {
             {activeTab === 'admin' && (
               <div>
                 <h4 style={{margin:'0 0 10px 0', borderBottom: '2px solid #000'}}>Admin Controls</h4>
+                
+                {/* Manage Tasks Section */}
                 <h5 style={{marginTop: 10}}>Manage Custom Tasks</h5>
                 <div style={{maxHeight: '120px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
                     {customTasks.map((ct, idx) => (
@@ -300,6 +296,31 @@ function App() {
                         </div>
                     ))}
                 </div>
+
+                {/* Promo Code Management Section (ပြန်ထည့်ပေးထားသည်) */}
+                <h5 style={{marginTop: 10}}>Manage Reward Codes</h5>
+                <div style={{maxHeight: '100px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
+                    {promoCodes.map((pc, idx) => (
+                        <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
+                            <span>{pc.code} ({pc.reward} TON)</span>
+                            <button onClick={async () => { if(window.confirm("Delete code?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${pc.code}.json`, { method: 'DELETE' }); fetchData(true); } }} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Add Promo Code Inputs (ပြန်ထည့်ပေးထားသည်) */}
+                <div style={{background: '#f9fafb', padding: '10px', borderRadius: '10px', marginBottom: '20px', border: '1px solid #ddd'}}>
+                  <h6 style={{margin: '0 0 10px 0'}}>+ Add New Reward Code</h6>
+                  <input style={styles.input} placeholder="Promo Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
+                  <input style={styles.input} placeholder="Reward Amount" type="number" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
+                  <button style={{...styles.btn, background: '#8b5cf6'}} onClick={async () => {
+                      if(!adminPromoCode || !adminPromoReward) return alert("Fill all!");
+                      await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method:'PUT', body: JSON.stringify(Number(adminPromoReward)) });
+                      alert("Code Created!"); setAdminPromoCode(''); setAdminPromoReward(''); fetchData(true);
+                  }}>CREATE CODE</button>
+                </div>
+
+                {/* User Search & Management */}
                 <h5>User Management</h5>
                 <input style={styles.input} placeholder="Enter User UID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                 <button style={styles.btn} onClick={async () => {
@@ -324,6 +345,8 @@ function App() {
                     </div>
                   </div>
                 )}
+
+                {/* Add New Task Form */}
                 <h5 style={{marginTop: 20}}>Add New Task</h5>
                 <input style={styles.input} placeholder="Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
                 <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
