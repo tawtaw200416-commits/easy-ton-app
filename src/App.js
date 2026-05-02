@@ -50,10 +50,12 @@ function App() {
   const [lastActionTime, setLastActionTime] = useState(0);
   const [showClaimId, setShowClaimId] = useState(null);
 
+  // Spin States
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinDeg, setSpinDeg] = useState(0);
   const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem('last_spin_time')) || 0);
 
+  // Admin States
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
@@ -161,6 +163,7 @@ function App() {
     fetchData();
   };
 
+  // Spin Logic
   const handleSpin = () => {
     const now = Date.now();
     const twoHours = 2 * 60 * 60 * 1000;
@@ -171,8 +174,10 @@ function App() {
 
     triggerAds();
     setIsSpinning(true);
-    // 0.0001 TON is at 180 degrees (4th position)
-    const extraSpin = 180 + (360 * 5); 
+    // Rewards Mapping: [0.1, 0.2, 0.3, 0.0001, 0.001, 0.01]
+    const rewardsArr = [0.1, 0.2, 0.3, 0.0001, 0.001, 0.01];
+    // Landing on 0.0001 (Index 3 -> 180 degrees)
+    const extraSpin = (3 * 60) + (360 * 5); 
     const newDeg = spinDeg + extraSpin;
     setSpinDeg(newDeg);
 
@@ -211,9 +216,10 @@ function App() {
     smBtn: (bg) => ({ padding: '8px 12px', background: bg || '#000', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }),
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
     select: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', background: '#fff' },
-    wheelContainer: { position: 'relative', width: '220px', height: '220px', margin: '20px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    // Spin Styles
+    wheelContainer: { position: 'relative', width: '250px', height: '250px', margin: '20px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' },
     wheel: { width: '100%', height: '100%', borderRadius: '50%', border: '5px solid #000', position: 'relative', overflow: 'hidden', transition: 'transform 4s cubic-bezier(0.15, 0, 0.15, 1)', background: '#fff' },
-    wheelPointer: { position: 'absolute', top: '-10px', zIndex: 10, width: '20px', height: '30px', background: 'red', clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }
+    wheelPointer: { position: 'absolute', top: '-10px', zIndex: 10, width: '25px', height: '35px', background: 'red', clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }
   };
 
   return (
@@ -264,7 +270,7 @@ function App() {
 
                 <div style={{borderTop: '2px solid #eee', paddingTop: '20px'}}>
                     <h3 style={{margin: 0}}>Lucky Spin</h3>
-                    <p style={{fontSize: '12px', fontWeight: 'bold', marginBottom: '10px'}}>Try your luck for 2 hours💎</p>
+                    <p style={{fontSize: '13px', fontWeight: 'bold', color: '#000', marginBottom: '10px'}}>Try your luck for 2 hours💎</p>
                     
                     <div style={styles.wheelContainer}>
                         <div style={styles.wheelPointer}></div>
@@ -273,7 +279,7 @@ function App() {
                                 { t: '0.1 TON', c: '#facc15' },
                                 { t: '0.2 TON', c: '#000' },
                                 { t: '0.3 TON', c: '#facc15' },
-                                { t: '0.0001 TON', c: '#000' }, 
+                                { t: '0.0001 TON', c: '#000' },
                                 { t: '0.001 TON', c: '#facc15' },
                                 { t: '0.01 TON', c: '#000' }
                             ].map((s, i) => (
@@ -286,7 +292,7 @@ function App() {
                                     <span style={{
                                         color: s.c === '#000' ? '#fff' : '#000', 
                                         fontSize: '8px', fontWeight: 'bold', 
-                                        marginTop: '15px', transform: 'rotate(30deg)',
+                                        marginTop: '35px', transform: 'rotate(30deg)',
                                         whiteSpace: 'nowrap'
                                     }}>{s.t}</span>
                                 </div>
@@ -341,6 +347,7 @@ function App() {
                         <option value="false">Standard</option>
                         <option value="true">VIP ⭐</option>
                     </select>
+
                     <button style={{...styles.btn, marginBottom: 15}} onClick={async () => {
                         await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { 
                             method:'PATCH', 
