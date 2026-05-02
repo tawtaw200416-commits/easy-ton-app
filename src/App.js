@@ -12,6 +12,7 @@ const APP_CONFIG = {
   VIP_WATCH_REWARD: 0.0008, 
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.01,
+  VIP_PRICE: 1, // Updated to 1 TON
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec"
 };
@@ -36,7 +37,7 @@ function App() {
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
   const [lastAdClickTime, setLastAdClickTime] = useState(0);
-  const [pendingTask, setPendingTask] = useState(null);
+  const [pendingClaim, setPendingClaim] = useState(null); // Track which task is waiting for verification
 
   // Admin States
   const [adminTaskName, setAdminTaskName] = useState('');
@@ -99,7 +100,7 @@ function App() {
   };
 
   const handleAction = (callback) => {
-    callback();
+    callback(); 
   };
 
   const fetchData = useCallback(async () => {
@@ -154,14 +155,8 @@ function App() {
     });
     alert(`Success! +${rewardAmt} TON added.`);
     setLastAdClickTime(0);
-    setPendingTask(null);
+    setPendingClaim(null);
     fetchData();
-  };
-
-  const startTask = (task) => {
-    setPendingTask(task.id);
-    triggerAdsSequence();
-    window.open(task.link, '_blank');
   };
 
   const copyText = (text) => {
@@ -210,13 +205,16 @@ function App() {
                   <span style={{color: '#888', fontWeight:'bold'}}>DONE</span>
                 ) : (
                   <div style={{display:'flex', gap:'5px'}}>
-                    <button onClick={() => startTask(t)} style={styles.adminBtn}>START</button>
-                    {pendingTask === t.id && <button onClick={() => processReward(t.id, 0.001)} style={styles.claimBtn}>CLAIM</button>}
+                    <button 
+                      onClick={() => { triggerAdsSequence(); window.open(t.link); setPendingClaim(t.id); }} 
+                      style={styles.adminBtn}>START</button>
+                    {pendingClaim === t.id && (
+                      <button onClick={() => processReward(t.id, 0.001)} style={styles.claimBtn}>CLAIM</button>
+                    )}
                   </div>
                 )}
               </div>
             ))}
-
             {activeTab === 'social' && [...fixedSocialTasks, ...customTasks.filter(t => t.type === 'social')].map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems:'center', padding: '10px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{opacity: completed.includes(t.id) ? 0.5 : 1}}>{t.name}</span>
@@ -224,13 +222,16 @@ function App() {
                   <span style={{color: '#888', fontWeight:'bold'}}>DONE</span>
                 ) : (
                   <div style={{display:'flex', gap:'5px'}}>
-                    <button onClick={() => startTask(t)} style={styles.adminBtn}>JOIN</button>
-                    {pendingTask === t.id && <button onClick={() => processReward(t.id, 0.001)} style={styles.claimBtn}>CLAIM</button>}
+                    <button 
+                      onClick={() => { triggerAdsSequence(); window.open(t.link); setPendingClaim(t.id); }} 
+                      style={styles.adminBtn}>JOIN</button>
+                    {pendingClaim === t.id && (
+                      <button onClick={() => processReward(t.id, 0.001)} style={styles.claimBtn}>CLAIM</button>
+                    )}
                   </div>
                 )}
               </div>
             ))}
-
             {activeTab === 'reward' && (
               <div>
                 <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
@@ -239,12 +240,11 @@ function App() {
                   const found = promoCodes.find(c => c.code === rewardCodeInput);
                   if(found) {
                     triggerAdsSequence();
-                    setTimeout(() => processReward(`promo_${rewardCodeInput}`, found.reward), 2000);
+                    setTimeout(() => processReward(`promo_${rewardCodeInput}`, found.reward), 1000);
                   } else alert("Invalid Code");
                 }}>CLAIM CODE</button>
               </div>
             )}
-
             {activeTab === 'admin' && (
               <div>
                 <h3 style={{borderBottom:'2px solid #000', paddingBottom: 5}}>Admin Dashboard</h3>
@@ -266,6 +266,7 @@ function App() {
                     }}>Update Balance</button>
                   </div>
                 )}
+                {/* Simplified Admin for brevity, original functionality remains available in previous tabs */}
               </div>
             )}
           </div>
@@ -275,26 +276,33 @@ function App() {
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3>Invite Friends</h3>
-          <p>Get <b>{APP_CONFIG.REFER_REWARD} TON</b> for each friend!</p>
+          <p>Get <b>{APP_CONFIG.REFER_REWARD} TON</b> for each friend you invite!</p>
           <input style={styles.input} readOnly value={`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`} />
           <button style={styles.btn} onClick={() => copyText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`)}>COPY LINK</button>
-          <h4 style={{marginTop: 15}}>Referrals: {referrals.length}</h4>
+          <h4 style={{marginTop: 15}}>Total Referrals: {referrals.length}</h4>
         </div>
       )}
 
       {activeNav === 'withdraw' && (
         <>
           <div style={styles.card}>
-            <h3>Deposit for VIP (0.5 TON)</h3>
-            <p style={{fontSize: 12}}>TON Address:</p>
-            <input style={styles.input} readOnly value={APP_CONFIG.ADMIN_WALLET} />
-            <button style={styles.btn} onClick={() => copyText(APP_CONFIG.ADMIN_WALLET)}>COPY ADDRESS</button>
+            <h3>Buy VIP Membership (1 TON)</h3>
+            <p style={{fontSize: 12}}>Send 1 TON to the address below:</p>
+            <div style={{display:'flex', gap: 5, marginBottom: 10}}>
+                <input style={{...styles.input, marginBottom:0}} readOnly value={APP_CONFIG.ADMIN_WALLET} />
+                <button style={{...styles.adminBtn, height: 40}} onClick={() => copyText(APP_CONFIG.ADMIN_WALLET)}>Copy</button>
+            </div>
+            <p style={{fontSize: 12}}>Memo (UID):</p>
+            <div style={{display:'flex', gap: 5}}>
+                <input style={{...styles.input, marginBottom:0}} readOnly value={APP_CONFIG.MY_UID} />
+                <button style={{...styles.adminBtn, height: 40}} onClick={() => copyText(APP_CONFIG.MY_UID)}>Copy</button>
+            </div>
           </div>
 
           <div style={styles.card}>
             <h3>Withdraw TON</h3>
             <input style={styles.input} placeholder="Min 0.1 TON" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-            <input style={styles.input} placeholder="TON Address" onChange={e => setWithdrawAddress(e.target.value)} />
+            <input style={styles.input} placeholder="TON Wallet Address" onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background:'#3b82f6'}} onClick={() => {
               const amount = Number(withdrawAmount);
               if(amount < 0.1) return alert("Minimum withdrawal is 0.1 TON.");
@@ -307,13 +315,14 @@ function App() {
                   method:'PATCH', 
                   body: JSON.stringify({balance: Number((balance - amount).toFixed(5)), withdrawHistory: h})
                 });
-                alert("Withdrawal Requested!"); fetchData();
-              }, 2000);
+                alert("Withdrawal Requested! Success in 5 mins."); fetchData();
+                setWithdrawAmount('');
+              }, 1500);
             }}>WITHDRAW NOW</button>
           </div>
 
           <div style={styles.card}>
-            <h3>History</h3>
+            <h3>Withdrawal History</h3>
             {withdrawHistory.map((w, i) => (
                <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #eee'}}>
                   <span>{w.amount} TON</span>
@@ -329,7 +338,7 @@ function App() {
           <h3>User Profile</h3>
           <p>User ID: <b>{APP_CONFIG.MY_UID}</b></p>
           <p>Balance: <b>{balance.toFixed(5)} TON</b></p>
-          <p>Status: {isVip ? "VIP Membership ⭐" : "Standard"}</p>
+          <p>Status: {isVip ? "VIP Membership ⭐" : "Standard User"}</p>
           <button style={{...styles.btn, background:'#ef4444'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
         </div>
       )}
@@ -351,8 +360,8 @@ const fixedBotTasks = [
 ];
 
 const fixedSocialTasks = [
-  { id: 's1', name: "Join GrowTea News", link: "https://t.me/GrowTeaNews" },
-  { id: 's10', name: "Follow EasyTon Channel", link: "https://t.me/easytonfree" }
+  { id: 's1', name: "Subscribe to GrowTea News", link: "https://t.me/GrowTeaNews" },
+  { id: 's10', name: "Join EasyTon Channel", link: "https://t.me/easytonfree" }
 ];
 
 export default App;
