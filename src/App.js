@@ -31,7 +31,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('bot');
   const [isSyncing, setIsSyncing] = useState(false);
   
-  // New State for strict ad verification
+  // Timer Overlay States
   const [isVerifying, setIsVerifying] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
@@ -53,15 +53,14 @@ function App() {
     if (tg) { tg.ready(); tg.expand(); }
   }, []);
 
-  // Opens both Advertica and Adsterra
-  const triggerAdsSequence = useCallback(() => {
+  const triggerDualAds = useCallback(() => {
     window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
     window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
   }, []);
 
-  // Strict Verification Timer Logic
-  const startVerification = (seconds, callback) => {
-    triggerAdsSequence();
+  // Verification Logic (15s or 30s)
+  const startVerification = (seconds, onFinish) => {
+    triggerDualAds();
     setCountdown(seconds);
     setIsVerifying(true);
     
@@ -70,7 +69,7 @@ function App() {
         if (prev <= 1) {
           clearInterval(timer);
           setIsVerifying(false);
-          if (callback) callback();
+          if (onFinish) onFinish();
           return 0;
         }
         return prev - 1;
@@ -124,7 +123,7 @@ function App() {
       await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
         method: 'PATCH', body: JSON.stringify(updates)
       });
-      alert(`Verified! +${rewardAmt} TON added.`);
+      alert(`Success! +${rewardAmt} TON rewarded.`);
       fetchData();
     });
   };
@@ -136,7 +135,7 @@ function App() {
 
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
-    overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.96)', zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: '#fff', textAlign: 'center' },
+    overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.98)', zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: '#fff', textAlign: 'center' },
     header: { textAlign: 'center', background: '#000', padding: '20px', borderRadius: '20px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
@@ -148,11 +147,12 @@ function App() {
 
   return (
     <div style={styles.main}>
-      {/* Strict Verification Screen */}
+      {/* Verification Overlay */}
       {isVerifying && (
         <div style={styles.overlay}>
-          <h1 style={{fontSize: '40px', color: '#facc15'}}>{countdown}s</h1>
-          <p style={{padding: '0 20px'}}>Please stay on the ad page to verify your reward!<br/>Ads help us pay you TON.</p>
+          <h1 style={{fontSize: '50px', color: '#facc15'}}>{countdown}s</h1>
+          <h3 style={{margin: '10px'}}>STAY ON AD PAGE</h3>
+          <p style={{padding: '0 20px'}}>Please stay on the advertisement page until the timer ends to receive your TON reward.</p>
         </div>
       )}
 
@@ -161,7 +161,7 @@ function App() {
         <h1 style={{fontSize: '32px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
         {isVip && <span style={{background:'#facc15', color:'#000', padding:'2px 8px', borderRadius:10, fontSize:12, fontWeight:'bold'}}>VIP ⭐</span>}
         <button style={styles.watchBtn} onClick={() => processReward('watch_ad', 0)}>
-           WATCH ADS (30s REWARD)
+           WATCH ADS (30s FOR REWARD)
         </button>
       </div>
 
@@ -187,6 +187,7 @@ function App() {
                 <button onClick={() => { window.open(t.link); processReward(t.id, 0.001); }} style={styles.adminBtn}>JOIN</button>
               </div>
             ))}
+            {/* Admin and Reward tabs remain consistent with original logic */}
           </div>
         </>
       )}
@@ -206,7 +207,11 @@ function App() {
           <input style={styles.input} placeholder="TON Address" onChange={e => setWithdrawAddress(e.target.value)} />
           <button style={{...styles.btn, background:'#3b82f6'}} onClick={() => {
             if(Number(withdrawAmount) < 0.1 || Number(withdrawAmount) > balance) return alert("Invalid amount");
-            processReward('withdraw_click', 0); // Trigger 15s ad before allowing
+            startVerification(15, async () => {
+              const h = [{amount: withdrawAmount, status: 'Pending', date: new Date().toLocaleDateString()}, ...withdrawHistory];
+              await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { method:'PATCH', body: JSON.stringify({balance: balance - Number(withdrawAmount), withdrawHistory: h})});
+              alert("Withdrawal Requested!"); fetchData();
+            });
           }}>WITHDRAW NOW</button>
         </div>
       )}
