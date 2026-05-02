@@ -164,12 +164,23 @@ function App() {
   const handleSpin = () => {
     const now = Date.now();
     const twoHours = 2 * 60 * 60 * 1000;
+
+    // Check Time limit
     if (now - lastSpinTime < twoHours) {
         const remaining = Math.ceil((twoHours - (now - lastSpinTime)) / 60000);
         return alert(`Wait ${remaining} mins for next spin!`);
     }
 
-    triggerAds();
+    // AD CHECK FOR SPIN (15s Rule)
+    if (APP_CONFIG.MY_UID !== "1793453606") {
+        const elapsed = (now - lastActionTime) / 1000;
+        if (lastActionTime === 0 || elapsed < 15) {
+          alert(`Please stay on the ad for 15s to spin!`);
+          triggerAds();
+          return;
+        }
+    }
+
     setIsSpinning(true);
     // Index 3 is 0.0001 TON (180 deg)
     const extraSpin = 180 + (360 * 5); 
@@ -211,7 +222,6 @@ function App() {
     smBtn: (bg) => ({ padding: '8px 12px', background: bg || '#000', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }),
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
     select: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', background: '#fff' },
-    // Spin Styles
     wheelContainer: { position: 'relative', width: '260px', height: '260px', margin: '20px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' },
     wheel: { width: '100%', height: '100%', borderRadius: '50%', border: '5px solid #000', position: 'relative', overflow: 'hidden', transition: 'transform 4s cubic-bezier(0.15, 0, 0.15, 1)', background: '#fff' },
     wheelPointer: { position: 'absolute', top: '-15px', zIndex: 10, width: '30px', height: '40px', background: 'red', clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }
@@ -419,7 +429,10 @@ function App() {
       {activeNav === 'withdraw' && (
         <>
           <div style={styles.card}>
-            <h3>Deposit for VIP</h3>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                <h3>Deposit for VIP</h3>
+                <span style={{background: '#000', color: '#fff', padding: '4px 8px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold'}}>1 TON</span>
+            </div>
             <p style={{fontSize:12, marginBottom: 5}}>Address:</p>
             <div style={{display:'flex', gap: 5, marginBottom: 10}}>
                 <input style={{...styles.input, marginBottom: 0, flex: 1, fontSize: 11}} readOnly value={APP_CONFIG.ADMIN_WALLET} />
