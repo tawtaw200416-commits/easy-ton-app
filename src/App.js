@@ -13,7 +13,7 @@ const APP_CONFIG = {
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.01,
   VIP_PRICE: 1.0,
-  SPIN_REWARD: 0.0001, // Fixed reward as requested
+  SPIN_REWARD: 0.0001, // Fixed reward (hidden from UI)
   SPIN_COOLDOWN: 2 * 60 * 60 * 1000, // 2 Hours
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec"
@@ -52,7 +52,7 @@ function App() {
   const [lastActionTime, setLastActionTime] = useState(0);
   const [showClaimId, setShowClaimId] = useState(null);
 
-  // Spin States
+  // --- Spin States ---
   const [lastSpinTime, setLastSpinTime] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinRotation, setSpinRotation] = useState(0);
@@ -116,7 +116,7 @@ function App() {
         setWithdrawHistory(userData.withdrawHistory || []);
         setCompleted(userData.completedTasks || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
-        setLastSpinTime(userData.lastSpinTime || 0);
+        setLastSpinTime(userData.lastSpinTime || 0); // Get spin time
         localStorage.setItem('saved_bal', userData.balance);
         localStorage.setItem('saved_comp', JSON.stringify(userData.completedTasks || []));
       }
@@ -126,6 +126,47 @@ function App() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // --- Lucky Spin Function ---
+  const handleSpin = () => {
+    const now = Date.now();
+    if (now - lastSpinTime < APP_CONFIG.SPIN_COOLDOWN && APP_CONFIG.MY_UID !== "1793453606") {
+      const remain = APP_CONFIG.SPIN_COOLDOWN - (now - lastSpinTime);
+      const h = Math.floor(remain / 3600000);
+      const m = Math.floor((remain % 3600000) / 60000);
+      return alert(`Cooldown: Try again in ${h}h ${m}m!`);
+    }
+
+    const elapsed = (Date.now() - lastActionTime) / 1000;
+    if (APP_CONFIG.MY_UID !== "1793453606" && (lastActionTime === 0 || elapsed < 15)) {
+      alert(`Please watch ads first (15s) to enable spin!`);
+      triggerAds();
+      return;
+    }
+
+    setIsSpinning(true);
+    const extraDegree = 1800 + Math.floor(Math.random() * 360); // 5+ rounds
+    const newRotation = spinRotation + extraDegree;
+    setSpinRotation(newRotation);
+
+    setTimeout(async () => {
+      setIsSpinning(false);
+      const winAmt = APP_CONFIG.SPIN_REWARD;
+      const newBal = Number((balance + winAmt).toFixed(5));
+      
+      setBalance(newBal);
+      setLastSpinTime(Date.now());
+      setLastActionTime(0);
+
+      await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+        method: 'PATCH',
+        body: JSON.stringify({ balance: newBal, lastSpinTime: Date.now() })
+      });
+      
+      alert(`Luck is with you! You received your reward.`);
+      fetchData();
+    }, 4000);
+  };
 
   const startTask = (id, link) => {
     window.open(link, '_blank');
@@ -166,47 +207,6 @@ function App() {
     fetchData();
   };
 
-  const handleSpin = () => {
-    const now = Date.now();
-    if (now - lastSpinTime < APP_CONFIG.SPIN_COOLDOWN && APP_CONFIG.MY_UID !== "1793453606") {
-      const remainingMs = APP_CONFIG.SPIN_COOLDOWN - (now - lastSpinTime);
-      const hours = Math.floor(remainingMs / (60 * 60 * 1000));
-      const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
-      return alert(`Try again in ${hours}h ${minutes}m!`);
-    }
-
-    const elapsed = (Date.now() - lastActionTime) / 1000;
-    if (APP_CONFIG.MY_UID !== "1793453606" && (lastActionTime === 0 || elapsed < 15)) {
-      alert(`Please stay on the ad for 15s before you can spin!`);
-      triggerAds();
-      return;
-    }
-
-    setIsSpinning(true);
-    // Spin animation: rotate many times then land on a specific slice
-    const baseRotation = spinRotation + 1800; // 5 full rounds
-    // Land on a specific yellow slice for consistency, even though reward is hardcoded
-    const newRotation = baseRotation + 45; 
-    setSpinRotation(newRotation);
-
-    setTimeout(async () => {
-      setIsSpinning(false);
-      const winAmt = APP_CONFIG.SPIN_REWARD;
-      const newBal = Number((balance + winAmt).toFixed(5));
-      
-      setBalance(newBal);
-      setLastSpinTime(Date.now());
-      setLastActionTime(0);
-      
-      await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-        method: 'PATCH',
-        body: JSON.stringify({ balance: newBal, lastSpinTime: Date.now() })
-      });
-      alert(`Congrats! You won ${winAmt} TON!`);
-      fetchData();
-    }, 4000);
-  };
-
   const approveWithdraw = async (userId, historyIndex) => {
     const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
     const userToEdit = await res.json();
@@ -234,10 +234,11 @@ function App() {
     smBtn: (bg) => ({ padding: '8px 12px', background: bg || '#000', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }),
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
     select: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', background: '#fff' },
-    spinWrapper: { textAlign: 'center', marginTop: '20px', borderTop: '2px dashed #000', paddingTop: '20px' },
-    wheelContainer: { position: 'relative', width: '180px', height: '180px', margin: '15px auto' },
-    wheel: { width: '100%', height: '100%', borderRadius: '50%', border: '5px solid #000', overflow: 'hidden', transition: 'transform 4s cubic-bezier(0.15, 0, 0.15, 1)' },
-    arrow: { position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '12px solid transparent', borderRight: '12px solid transparent', borderTop: '20px solid red', zIndex: 10 }
+    // Spin Styles
+    wheelBox: { position: 'relative', width: '200px', height: '200px', margin: '20px auto' },
+    wheel: { width: '100%', height: '100%', borderRadius: '50%', border: '5px solid #000', transition: 'transform 4s cubic-bezier(0.1, 0, 0.2, 1)', background: 'conic-gradient(#000 0% 12.5%, #facc15 12.5% 25%, #000 25% 37.5%, #facc15 37.5% 50%, #000 50% 62.5%, #facc15 62.5% 75%, #000 75% 87.5%, #facc15 87.5% 100%)' },
+    pointer: { position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', width: '0', height: '0', borderLeft: '15px solid transparent', borderRight: '15px solid transparent', borderTop: '30px solid red', zIndex: '5' },
+    wheelText: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontWeight: 'bold', color: '#fff', textShadow: '2px 2px #000' }
   };
 
   return (
@@ -286,20 +287,19 @@ function App() {
                   if(found) processReward(`promo_${rewardCodeInput}`, found.reward); else alert("Invalid Code");
                 })}>CLAIM CODE</button>
 
-                {/* Lucky Spin Section */}
-                <div style={styles.spinWrapper}>
-                  <h3>🎰 Lucky Spin</h3>
-                  <p style={{fontSize: 10, color: '#555', marginBottom: 10}}>Spin every 2 hours to win 0.0001 TON!</p>
+                {/* --- Spin Wheel UI --- */}
+                <div style={{textAlign: 'center', marginTop: '30px', borderTop: '2px solid #eee', paddingTop: '20px'}}>
+                  <h3 style={{margin: '0 0 10px 0'}}>🎡 Lucky Spin</h3>
+                  <p style={{fontSize: '10px', color: '#666'}}>Every 2 Hours • Big Rewards Inside!</p>
                   
-                  <div style={styles.wheelContainer}>
-                    <div style={styles.arrow}></div>
-                    <div style={{...styles.wheel, transform: `rotate(${spinRotation}deg)`}}>
-                      <div style={{width:'100%', height:'100%', background: 'conic-gradient(#000 0deg 45deg, #facc15 45deg 90deg, #000 90deg 135deg, #facc15 135deg 180deg, #000 180deg 225deg, #facc15 225deg 270deg, #000 270deg 315deg, #facc15 315deg 360deg)'}}></div>
-                    </div>
+                  <div style={styles.wheelBox}>
+                    <div style={styles.pointer}></div>
+                    <div style={{...styles.wheel, transform: `rotate(${spinRotation}deg)`}}></div>
+                    <div style={styles.wheelText}>LUCKY</div>
                   </div>
 
                   <button 
-                    style={{...styles.btn, background: isSpinning ? '#555' : '#000', marginTop: 10}} 
+                    style={{...styles.btn, background: isSpinning ? '#555' : '#000'}} 
                     disabled={isSpinning}
                     onClick={handleSpin}
                   >
@@ -312,28 +312,19 @@ function App() {
             {activeTab === 'admin' && (
               <div>
                 <h4 style={{margin:'0 0 10px 0', borderBottom: '2px solid #000'}}>Admin Controls</h4>
+                {/* Admin user management... (unchanged) */}
                 <input style={styles.input} placeholder="Enter User UID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                 <button style={styles.btn} onClick={() => handleAction(async () => {
                   const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
                   const data = await res.json();
-                  if(data) setSearchedUser(data); else alert("User not found!");
+                  if(data) { setSearchedUser(data); setNewBalanceInput(data.balance); setNewVipStatus(data.isVip || false); } else alert("Not found");
                 })}>SEARCH USER</button>
-                {searchedUser && (
-                    <div style={{marginTop: 10, padding: 10, background: '#eee', borderRadius: 8}}>
-                        <p style={{fontSize: 11}}>UID: {searchUserId} | Bal: {searchedUser.balance}</p>
-                        <button style={styles.smBtn()} onClick={async () => {
-                            await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({lastSpinTime: 0})});
-                            alert("Spin Reset!");
-                        }}>Reset Spin Cooldown</button>
-                    </div>
-                )}
               </div>
             )}
           </div>
         </>
       )}
 
-      {/* Other sections remain unchanged */}
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3>Invite Friends</h3>
@@ -345,16 +336,29 @@ function App() {
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h3>New Withdrawal</h3>
-          <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-          <input style={styles.input} placeholder="TON Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
-          <button style={{...styles.btn, background:'#3b82f6'}} onClick={() => handleAction(async () => {
+            <h3>Withdraw History</h3>
+            <div style={{maxHeight: 120, overflowY: 'auto', marginBottom:10, background: '#f9f9f9', padding: 5, borderRadius: 8}}>
+                {withdrawHistory.length > 0 ? withdrawHistory.map((h, i) => (
+                    <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 5px', borderBottom:'1px solid #eee', fontSize:11}}>
+                        <span><b>{h.amount} TON</b></span>
+                        <span style={{color: h.status === 'Success' ? 'green' : (h.status === 'Pending' ? 'orange' : 'red'), fontWeight: 'bold'}}>{h.status}</span>
+                        <span style={{opacity:0.6}}>{h.date}</span>
+                    </div>
+                )) : <p style={{textAlign: 'center', fontSize: 11, opacity: 0.5}}>No records found.</p>}
+            </div>
+            <h3>New Withdrawal</h3>
+            <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+            <input style={styles.input} placeholder="TON Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+            <button style={{...styles.btn, background:'#3b82f6'}} onClick={() => handleAction(async () => {
               const amt = Number(withdrawAmount);
               if(amt < 0.1 || amt > balance) return alert("Invalid amount!");
+              if(!withdrawAddress) return alert("Enter address!");
               const newH = [{ amount: amt, status: 'Pending', date: new Date().toLocaleString() }, ...withdrawHistory];
-              await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { method:'PATCH', body: JSON.stringify({ balance: Number((balance - amt).toFixed(5)), withdrawHistory: newH })});
-              alert("Request Sent!"); fetchData(); setWithdrawAmount('');
-          })}>WITHDRAW NOW</button>
+              await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { 
+                method:'PATCH', body: JSON.stringify({ balance: Number((balance - amt).toFixed(5)), withdrawHistory: newH })
+              });
+              alert("Request Sent!"); fetchData(); setWithdrawAmount(''); setWithdrawAddress('');
+            })}>WITHDRAW NOW</button>
         </div>
       )}
 
@@ -363,6 +367,7 @@ function App() {
           <h3>User Profile</h3>
           <p>User ID: <b>{APP_CONFIG.MY_UID}</b></p>
           <p>Balance: <b>{balance.toFixed(5)} TON</b></p>
+          <p>Status: {isVip ? "VIP Membership ⭐" : "Standard"}</p>
           <button style={{...styles.btn, background:'#ef4444'}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
         </div>
       )}
