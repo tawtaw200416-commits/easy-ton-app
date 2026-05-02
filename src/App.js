@@ -58,7 +58,6 @@ function App() {
       let hasUpdates = false;
       
       const updatedHistory = withdrawHistory.map(item => {
-        // If pending and older than 5 minutes (300,000 ms)
         if (item.status === 'Pending' && item.timestamp && (now - item.timestamp) > 300000) {
           hasUpdates = true;
           return { ...item, status: 'Success' };
@@ -68,13 +67,12 @@ function App() {
 
       if (hasUpdates) {
         setWithdrawHistory(updatedHistory);
-        // Sync back to Firebase
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
           method: 'PATCH',
           body: JSON.stringify({ withdrawHistory: updatedHistory })
         });
       }
-    }, 10000); // Check every 10 seconds
+    }, 10000);
 
     return () => clearInterval(timer);
   }, [withdrawHistory]);
@@ -137,7 +135,6 @@ function App() {
     const timeLimit = id === 'watch_ad' ? 30 : 15;
     if (!checkAdStay(timeLimit)) return;
 
-    // FIX: Block repetitive tasks
     if (id !== 'watch_ad' && completed.includes(id)) {
         alert("You have already completed this task!");
         return;
@@ -252,10 +249,14 @@ function App() {
                       await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({balance: Number(newBalanceInput)})});
                       alert("Update Success! ✅");
                     }}>Update Balance</button>
+                    <button style={{...styles.adminBtn, background: searchedUser.isVip ? '#ef4444' : '#22c55e', marginLeft: 5}} onClick={async () => {
+                        const newVip = !searchedUser.isVip;
+                        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({isVip: newVip})});
+                        alert(`VIP Status: ${newVip ? 'Activated' : 'Deactivated'} ✅`);
+                    }}>Toggle VIP</button>
                   </div>
                 )}
 
-                {/* NEW: Admin Reward Code Section */}
                 <h5 style={{marginTop: 20}}>Add Reward Code</h5>
                 <input style={styles.input} placeholder="Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                 <input style={styles.input} placeholder="Reward (e.g. 0.05)" type="number" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
@@ -277,28 +278,65 @@ function App() {
                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${id}.json`, { method:'PUT', body: JSON.stringify({id, name: adminTaskName, link: adminTaskLink, type: adminTaskType})});
                    alert("Task Saved Success! ✅"); setAdminTaskName(''); setAdminTaskLink(''); fetchData();
                 }}>Save Task</button>
+
+                <div style={{marginTop: 15}}>
+                    {customTasks.map(t => (
+                        <div key={t.firebaseKey} style={{display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #ddd'}}>
+                            <span style={{fontSize: 12}}>{t.name}</span>
+                            <button style={styles.delBtn} onClick={async () => {
+                                if(window.confirm("Delete Task?")) {
+                                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${t.firebaseKey}.json`, { method:'DELETE' });
+                                    fetchData();
+                                }
+                            }}>DEL</button>
+                        </div>
+                    ))}
+                </div>
               </div>
             )}
           </div>
         </>
       )}
 
+      {activeNav === 'invite' && (
+        <div style={styles.card}>
+          <h3>Invite Friends</h3>
+          <p>Get <b>{APP_CONFIG.REFER_REWARD} TON</b> for each friend you invite!</p>
+          <input style={styles.input} readOnly value={`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`} />
+          <button style={styles.btn} onClick={() => copyText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`)}>COPY LINK</button>
+          <h4 style={{marginTop: 15}}>Referrals: {referrals.length}</h4>
+        </div>
+      )}
+
       {activeNav === 'withdraw' && (
         <>
+          <div style={styles.card}>
+            <h3>Deposit for VIP (0.5 TON)</h3>
+            <p style={{fontSize: 12}}>TON Address:</p>
+            <div style={{display:'flex', gap: 5, marginBottom: 10}}>
+                <input style={{...styles.input, marginBottom:0}} readOnly value={APP_CONFIG.ADMIN_WALLET} />
+                <button style={{...styles.adminBtn, height: 40}} onClick={() => copyText(APP_CONFIG.ADMIN_WALLET)}>Copy</button>
+            </div>
+            <p style={{fontSize: 12}}>Memo (UID):</p>
+            <div style={{display:'flex', gap: 5}}>
+                <input style={{...styles.input, marginBottom:0}} readOnly value={APP_CONFIG.MY_UID} />
+                <button style={{...styles.adminBtn, height: 40}} onClick={() => copyText(APP_CONFIG.MY_UID)}>Copy</button>
+            </div>
+          </div>
+
           <div style={styles.card}>
             <h3>Withdraw TON</h3>
             <input style={styles.input} placeholder="Min 0.1 TON" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
             <input style={styles.input} placeholder="TON Address" onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background:'#3b82f6'}} onClick={() => handleAction(async () => {
               const amount = Number(withdrawAmount);
-              // FIX: Balance check
               if(amount < 0.1) return alert("Minimum withdrawal is 0.1 TON.");
               if(amount > balance) return alert("Insufficient balance.");
               
               const h = [{
                 amount: amount, 
                 status: 'Pending', 
-                timestamp: Date.now(), // Store time for auto-success
+                timestamp: Date.now(), 
                 date: new Date().toLocaleString()
               }, ...withdrawHistory];
 
