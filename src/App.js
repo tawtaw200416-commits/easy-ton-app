@@ -14,7 +14,7 @@ const APP_CONFIG = {
   REFER_REWARD: 0.01,
   VIP_PRICE: 1.0,
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
-  ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec"
+  ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/pmi0yt9u?key=3580805003ccb6983acba9b61b6cb7e2"
 };
 
 const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
