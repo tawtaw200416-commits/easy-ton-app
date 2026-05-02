@@ -181,26 +181,26 @@ function App() {
 
   const startTask = (id, link) => {
     handleAction(() => {
-      window.open(link, '_blank');
-      setTimeout(() => {
-          setShowClaimId(id);
-      }, 1500);
+        window.open(link, '_blank');
+        setTimeout(() => {
+            setShowClaimId(id);
+        }, 1500);
     });
   };
 
   const approveWithdraw = async (userId, historyIndex) => {
     handleAction(async () => {
-      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
-      const userToEdit = await res.json();
-      if (!userToEdit || !userToEdit.withdrawHistory) return;
-      const updatedHistory = [...userToEdit.withdrawHistory];
-      updatedHistory[historyIndex].status = "Success";
-      await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
-        method: 'PATCH',
-        body: JSON.stringify({ withdrawHistory: updatedHistory })
-      });
-      alert("Withdrawal Approved!");
-      fetchData(true);
+        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
+        const userToEdit = await res.json();
+        if (!userToEdit || !userToEdit.withdrawHistory) return;
+        const updatedHistory = [...userToEdit.withdrawHistory];
+        updatedHistory[historyIndex].status = "Success";
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
+          method: 'PATCH',
+          body: JSON.stringify({ withdrawHistory: updatedHistory })
+        });
+        alert("Withdrawal Approved!");
+        fetchData(true);
     });
   };
 
