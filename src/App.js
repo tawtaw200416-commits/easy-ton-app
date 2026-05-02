@@ -14,6 +14,8 @@ const APP_CONFIG = {
   REFER_REWARD: 0.01,
   VIP_PRICE: 1.0,
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
+  HILLTOP_URL: "https://plump-plastic.com/rPI51u",
+
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/pmi0yt9u?key=3580805003ccb6983acba9b61b6cb7e2"
 };
 
