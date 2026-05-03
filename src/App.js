@@ -72,6 +72,7 @@ function App() {
         setWatchCount(Number(userData.watchCount || 0));
         setIsVip(userData.isVip || VIP_IDS.includes(APP_CONFIG.MY_UID));
         setWithdrawHistory(userData.withdrawHistory || []);
+        // Consistently load task history from Firebase
         setCompleted(userData.completedTasks || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
         localStorage.setItem('cache_bal', userData.balance);
@@ -137,7 +138,12 @@ function App() {
     const newBal = Number((balance + rewardAmt).toFixed(5));
     const newWatchCount = id === 'watch_ad' ? (watchCount + 1) : watchCount;
     const isSpin = id.startsWith('spin_');
-    const newComp = isSpin ? completed : [...completed, id];
+    
+    // FIX: Merge new task with existing history so old ones don't disappear
+    let newComp = [...completed]; 
+    if (!isSpin && id !== 'watch_ad' && !newComp.includes(id)) {
+        newComp.push(id);
+    }
 
     setBalance(newBal);
     if (id === 'watch_ad') setWatchCount(newWatchCount);
@@ -272,7 +278,7 @@ function App() {
                             <label style={{display:'block', marginBottom:10}}><input type="checkbox" checked={newVipInput} onChange={e=>setNewVipInput(e.target.checked)}/> Give VIP</label>
                             <button style={styles.btn} onClick={async () => {
                                 await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({balance: Number(newBalanceInput), isVip: newVipInput}) });
-                                alert("Success Updated!"); fetchData(true);
+                                alert("Successfully Updated!"); fetchData(true);
                             }}>SAVE UPDATES</button>
                         </div>
                     )}
