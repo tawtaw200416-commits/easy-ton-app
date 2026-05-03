@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const tg = window.Telegram?.WebApp;
 
@@ -13,7 +13,7 @@ const APP_CONFIG = {
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.01,
   VIP_PRICE: 1.0,
-  // Hilltop and Adsterra URLs (Advertica removed)
+  // Hilltop and Adsterra Only
   HILLTOP_URL: "https://plump-plastic.com/rPI51u",
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/pmi0yt9u?key=3580805003ccb6983acba9b61b6cb7e2"
 };
@@ -55,7 +55,6 @@ function App() {
   const [spinDeg, setSpinDeg] = useState(0);
   const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem(`last_spin_${APP_CONFIG.MY_UID}`)) || 0);
 
-  // Form states
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
@@ -69,19 +68,20 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  const fetchData = useCallback(async (isBackground = false) => {
+  // Speed Optimized FetchData
+  const fetchData = useCallback(async (isSilent = false) => {
     try {
-      const [u, t, p] = await Promise.all([
-        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`)
-      ]);
-      const userData = await u.json();
-      const tasksData = await t.json();
-      const promoData = await p.json();
+      const endpoints = [
+        `${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`,
+        `${APP_CONFIG.FIREBASE_URL}/global_tasks.json`,
+        `${APP_CONFIG.FIREBASE_URL}/promo_codes.json`
+      ];
+
+      const responses = await Promise.all(endpoints.map(url => fetch(url)));
+      const [userData, tasksData, promoData] = await Promise.all(responses.map(res => res.json()));
 
       if (userData) {
-        setBalance(Number(userData.balance || 0));
+        setBalance(prev => prev !== userData.balance ? Number(userData.balance || 0) : prev);
         setIsVip(userData.isVip || VIP_IDS.includes(APP_CONFIG.MY_UID));
         setWithdrawHistory(userData.withdrawHistory || []);
         setCompleted(userData.completedTasks || []);
@@ -91,27 +91,28 @@ function App() {
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
       
-      setIsLoading(false);
+      if (!isSilent) setIsLoading(false);
     } catch (e) { 
-      setIsLoading(false);
+      if (!isSilent) setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     fetchData();
+    // Fast Background Refresh
     const interval = setInterval(() => fetchData(true), 3000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Updated: Triggers Hilltop or Adsterra (50/50 Split)
+  // Ads logic: 50% Hilltop, 50% Adsterra
   const triggerAds = useCallback(() => {
     if (APP_CONFIG.MY_UID === "1793453606") {
       setLastActionTime(Date.now()); 
       return;
     }
-    const adToOpen = Math.random() < 0.5 ? APP_CONFIG.HILLTOP_URL : APP_CONFIG.ADSTERRA_URL;
-    window.open(adToOpen, '_blank');
+    const selectedAd = Math.random() < 0.5 ? APP_CONFIG.HILLTOP_URL : APP_CONFIG.ADSTERRA_URL;
+    window.open(selectedAd, '_blank');
     setLastActionTime(Date.now()); 
   }, []);
 
