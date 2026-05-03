@@ -13,9 +13,9 @@ const APP_CONFIG = {
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.01,
   VIP_PRICE: 1.0,
+  // Combined Ad URLs
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
   HILLTOP_URL: "https://plump-plastic.com/rPI51u",
-
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/pmi0yt9u?key=3580805003ccb6983acba9b61b6cb7e2"
 };
 
@@ -105,13 +105,16 @@ function App() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
+  // Updated to trigger all 3 Ad Networks
   const triggerAds = useCallback(() => {
     if (APP_CONFIG.MY_UID === "1793453606") {
       setLastActionTime(Date.now()); 
       return;
     }
+    // Open sequentially
     window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
-    window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
+    setTimeout(() => window.open(APP_CONFIG.HILLTOP_URL, '_blank'), 500);
+    setTimeout(() => window.open(APP_CONFIG.ADSTERRA_URL, '_blank'), 1000);
     setLastActionTime(Date.now()); 
   }, []);
 
