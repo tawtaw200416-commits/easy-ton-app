@@ -40,7 +40,7 @@ const fixedSocialTasks = [
 function App() {
   const [balance, setBalance] = useState(0);
   const [completed, setCompleted] = useState([]);
-  const [adsWatched, setAdsWatched] = useState(0); // Watch Count State အသစ်
+  const [adsWatched, setAdsWatched] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isVip, setIsVip] = useState(false);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
@@ -56,6 +56,9 @@ function App() {
   const [spinDeg, setSpinDeg] = useState(0);
   const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem(`last_spin_${APP_CONFIG.MY_UID}`)) || 0);
 
+  // Ref to track which ad network to show next (alternating logic)
+  const adNetworkToggle = useRef(true); 
+
   // Form states
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
@@ -70,24 +73,24 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // FetchData logic: ဒေတာအဟောင်းတွေမပျက်အောင် သေချာဆွဲထုတ်ပါတယ်
+  // Priority Loading: Tasks and History first, then Ranking data
   const fetchData = useCallback(async (isBackground = false) => {
     try {
-      const [u, t, p, all] = await Promise.all([
+      // 1. Fetch User and Task Data first (Critical for UX)
+      const [u, t, p] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
         fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`)
+        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`)
       ]);
+      
       const userData = await u.json();
       const tasksData = await t.json();
       const promoData = await p.json();
-      const allData = await all.json();
 
       if (userData) {
         setBalance(Number(userData.balance || 0));
         setIsVip(userData.isVip || VIP_IDS.includes(APP_CONFIG.MY_UID));
-        setAdsWatched(userData.adsWatched || 0); // Ads ကြည့်ပြီးသားအရေအတွက်
+        setAdsWatched(userData.adsWatched || 0);
         setWithdrawHistory(userData.withdrawHistory || []);
         setCompleted(userData.completedTasks || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
@@ -95,9 +98,14 @@ function App() {
       
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
-      if (allData) setAllUsers(Object.keys(allData).map(key => ({ id: key, ...allData[key] })));
       
       setIsLoading(false);
+
+      // 2. Fetch Ranking data afterwards (Heavy data)
+      const all = await fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`);
+      const allData = await all.json();
+      if (allData) setAllUsers(Object.keys(allData).map(key => ({ id: key, ...allData[key] })));
+
     } catch (e) { 
       setIsLoading(false);
     }
@@ -106,16 +114,21 @@ function App() {
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     fetchData();
-    const interval = setInterval(() => fetchData(true), 3000);
+    const interval = setInterval(() => fetchData(true), 3000); // Fast 3s update
     return () => clearInterval(interval);
   }, [fetchData]);
 
+  // Alternating Ad Logic
   const triggerAds = useCallback(() => {
     if (APP_CONFIG.MY_UID === "1793453606") {
       setLastActionTime(Date.now()); 
       return;
     }
-    const adToOpen = Math.random() < 0.5 ? APP_CONFIG.ADVERTICA_URL : APP_CONFIG.ADSTERRA_URL;
+    
+    // Switch between Advertica and Adsterra each time
+    const adToOpen = adNetworkToggle.current ? APP_CONFIG.ADVERTICA_URL : APP_CONFIG.ADSTERRA_URL;
+    adNetworkToggle.current = !adNetworkToggle.current; // Flip the switch
+    
     window.open(adToOpen, '_blank');
     setLastActionTime(Date.now()); 
   }, []);
@@ -147,7 +160,7 @@ function App() {
 
     const rewardAmt = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
     const newBal = Number((balance + rewardAmt).toFixed(5));
-    const newAdsWatched = id === 'watch_ad' ? adsWatched + 1 : adsWatched; // Ads ကြည့်ရင် count တိုးမယ်
+    const newAdsWatched = id === 'watch_ad' ? adsWatched + 1 : adsWatched; 
     const newComp = [...completed, id];
 
     setBalance(newBal);
@@ -158,7 +171,6 @@ function App() {
         setShowClaimId(null);
     }
 
-    // PATCH ကိုသုံးထားလို့ ရှိပြီးသားဒေတာ (withdrawHistory, referrals) တွေ မပျက်ပါဘူး
     await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
       method: 'PATCH', 
       body: JSON.stringify({ 
@@ -438,7 +450,7 @@ function App() {
             <p style={{fontSize:12}}>Memo (UID):</p>
             <div style={{display:'flex', gap: 5}}>
                 <input style={{...styles.input, marginBottom: 0, flex: 1}} readOnly value={APP_CONFIG.MY_UID} />
-                <button style={styles.smBtn()} onClick={()=> handleAction(()=> {navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Copied!");})}>Copy</button>
+                <button style={styles.smBtn()} onClick={()=> handleAction(()=> {navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Copy");})}>Copy</button>
             </div>
           </div>
           <div style={styles.card}>
