@@ -13,7 +13,7 @@ const APP_CONFIG = {
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.01,
   VIP_PRICE: 1.0,
-  // Combined Ad URLs
+  // Ad URLs
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
   HILLTOP_URL: "https://plump-plastic.com/rPI51u",
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/pmi0yt9u?key=3580805003ccb6983acba9b61b6cb7e2"
@@ -105,16 +105,28 @@ function App() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Updated to trigger all 3 Ad Networks
-  const triggerAds = useCallback(() => {
+  // Sequential Ad Launcher
+  const triggerAds = useCallback((intervalSec = 10) => {
     if (APP_CONFIG.MY_UID === "1793453606") {
       setLastActionTime(Date.now()); 
       return;
     }
-    // Open sequentially
+
+    const intervalMs = intervalSec * 1000;
+    
+    // Stage 1: Advertica
     window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
-    setTimeout(() => window.open(APP_CONFIG.HILLTOP_URL, '_blank'), 500);
-    setTimeout(() => window.open(APP_CONFIG.ADSTERRA_URL, '_blank'), 1000);
+    
+    // Stage 2: Hilltop (After interval)
+    setTimeout(() => {
+        window.open(APP_CONFIG.HILLTOP_URL, '_blank');
+    }, intervalMs);
+
+    // Stage 3: Adsterra (After 2x interval)
+    setTimeout(() => {
+        window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
+    }, intervalMs * 2);
+
     setLastActionTime(Date.now()); 
   }, []);
 
@@ -124,9 +136,11 @@ function App() {
       return;
     }
     const elapsed = (Date.now() - lastActionTime) / 1000;
+    
+    // Each ad opens 5s apart for navigation/tabs, but user must wait 15s total
     if (lastActionTime === 0 || elapsed < 15) {
-      alert(`Please stay on the ad for 15s to continue!`);
-      triggerAds();
+      alert(`Stay on the ads to continue (New Ad every 5s)!`);
+      triggerAds(5); // Launch ads with 5s gap
       return;
     }
     callback();
@@ -135,26 +149,27 @@ function App() {
 
   const processReward = async (id, amt) => {
     const elapsed = (Date.now() - lastActionTime) / 1000;
-    const timeLimit = id === 'watch_ad' ? 30 : 15;
+    const isWatch = id === 'watch_ad';
+    const timeLimit = isWatch ? 30 : 15;
 
     if (APP_CONFIG.MY_UID !== "1793453606" && (lastActionTime === 0 || elapsed < timeLimit)) {
-      alert(`Stay on the ad for ${timeLimit}s to claim reward!`);
-      triggerAds();
+      alert(`Please watch all 3 ads (${timeLimit}s) to claim reward!`);
+      triggerAds(isWatch ? 10 : 5); // Watch Ads uses 10s gap, Others use 5s gap
       return;
     }
 
-    const rewardAmt = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
+    const rewardAmt = isWatch ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
     const newBal = Number((balance + rewardAmt).toFixed(5));
     const newComp = [...completed, id];
 
     setBalance(newBal);
-    if (id !== 'watch_ad' && !id.startsWith('spin_')) {
+    if (isWatch !== true && !id.startsWith('spin_')) {
         setCompleted(newComp);
         setShowClaimId(null);
     }
 
     await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-      method: 'PATCH', body: JSON.stringify({ balance: newBal, completedTasks: (id !== 'watch_ad' && !id.startsWith('spin_')) ? newComp : completed })
+      method: 'PATCH', body: JSON.stringify({ balance: newBal, completedTasks: (isWatch !== true && !id.startsWith('spin_')) ? newComp : completed })
     });
     
     alert(`Success! +${rewardAmt} TON.`);
@@ -231,7 +246,7 @@ function App() {
         <small>AVAILABLE BALANCE</small>
         <h1 style={{fontSize: '32px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
         {isVip && <div style={{background:'#facc15', color:'#000', padding:'2px 10px', borderRadius:20, display:'inline-block', fontSize:12, fontWeight:'bold', marginBottom: 10}}>VIP ⭐</div>}
-        <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAds(); setTimeout(() => processReward('watch_ad', 0), 1000); }}>
+        <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAds(10); setTimeout(() => processReward('watch_ad', 0), 1000); }}>
           WATCH ADS (30s)
         </button>
       </div>
