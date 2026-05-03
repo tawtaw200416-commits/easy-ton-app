@@ -13,7 +13,7 @@ const APP_CONFIG = {
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.01,
   VIP_PRICE: 1.0,
-  TOTAL_PRIZE_POOL: 10, // Total TON for the event
+  TOTAL_PRIZE_POOL: 10,
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/pmi0yt9u?key=3580805003ccb6983acba9b61b6cb7e2"
 };
@@ -71,12 +71,11 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // OPTIMIZED DATA FETCHING (FAST LOAD)
   const fetchData = useCallback(async (isBackground = false) => {
     try {
-      // Fetch everything in one go for speed
-      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/.json`);
-      const data = await res.json();
+      // Faster: One request for all data
+      const response = await fetch(`${APP_CONFIG.FIREBASE_URL}/.json`);
+      const data = await response.json();
 
       if (data) {
         const userData = data.users?.[APP_CONFIG.MY_UID];
@@ -107,15 +106,14 @@ function App() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // PRIZE CALCULATION LOGIC
-  const getPrizeShare = (rank) => {
-    if (rank > 30) return 0;
-    // Distribution for 10 TON Pool
+  // Prize Distribution Logic for 10 TON
+  const getPrizeAmount = (rank) => {
     if (rank === 1) return 2.5;
     if (rank === 2) return 1.5;
     if (rank === 3) return 1.0;
-    if (rank <= 10) return 0.35; // Ranks 4-10
-    return 0.125; // Ranks 11-30
+    if (rank >= 4 && rank <= 10) return 0.35;
+    if (rank >= 11 && rank <= 30) return 0.125;
+    return 0;
   };
 
   const triggerAds = useCallback(() => {
@@ -336,8 +334,7 @@ function App() {
 
       {activeNav === 'rank' && (
         <div style={styles.card}>
-          <h3 style={{textAlign: 'center', marginBottom: '5px'}}>Top Watchers - 10 TON Prize</h3>
-          <p style={{textAlign: 'center', fontSize: '10px', color: '#666', marginBottom: '15px'}}>Prizes shared among top 30 active users</p>
+          <h3 style={{textAlign: 'center', marginBottom: '10px'}}>Ads Watchers - 10 TON Pool</h3>
           <div style={{maxHeight: '400px', overflowY: 'auto'}}>
              <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '11px'}}>
                 <thead style={{background: '#000', color: '#fff'}}>
@@ -354,13 +351,13 @@ function App() {
                         .slice(0, 50)
                         .map((user, index) => {
                             const rank = index + 1;
-                            const prize = getPrizeShare(rank);
+                            const prize = getPrizeAmount(rank);
                             return (
                                 <tr key={index} style={{textAlign: 'center', borderBottom: '1px solid #eee', background: user.id === APP_CONFIG.MY_UID ? '#fef08a' : 'transparent'}}>
                                     <td style={{padding: '10px'}}>{rank}</td>
                                     <td style={{padding: '10px', fontWeight: 'bold'}}>{user.id.substring(0,8)}...</td>
                                     <td style={{padding: '10px'}}>{user.watchCount || 0}</td>
-                                    <td style={{padding: '10px', color: 'green', fontWeight: 'bold'}}>{prize > 0 ? `${prize} TON` : '-'}</td>
+                                    <td style={{padding: '10px', color: prize > 0 ? 'green' : '#999', fontWeight: 'bold'}}>{prize > 0 ? `${prize} TON` : '-'}</td>
                                 </tr>
                             );
                         })
@@ -371,7 +368,6 @@ function App() {
         </div>
       )}
 
-      {/* Other tabs follow same structure */}
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3>Invite Friends</h3>
@@ -416,6 +412,7 @@ function App() {
           <p>Balance: <b>{balance.toFixed(5)} TON</b></p>
           <p>Ads Watched: <b>{watchCount}</b></p>
           <p>Status: {isVip ? "VIP Membership ⭐" : "Standard"}</p>
+          <button style={{...styles.btn, background:'#ef4444'}} onClick={() => handleAction(() => window.open(APP_CONFIG.SUPPORT_BOT))}>CONTACT SUPPORT</button>
         </div>
       )}
 
