@@ -13,7 +13,7 @@ const APP_CONFIG = {
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.01,
   VIP_PRICE: 1.0,
-  // Ad URLs
+  // Hilltop and Adsterra URLs (Advertica removed)
   HILLTOP_URL: "https://plump-plastic.com/rPI51u",
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/pmi0yt9u?key=3580805003ccb6983acba9b61b6cb7e2"
 };
@@ -104,14 +104,14 @@ function App() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
+  // Updated: Triggers Hilltop or Adsterra (50/50 Split)
   const triggerAds = useCallback(() => {
     if (APP_CONFIG.MY_UID === "1793453606") {
       setLastActionTime(Date.now()); 
       return;
     }
-    // Only Hilltop and Adsterra
-    window.open(APP_CONFIG.HILLTOP_URL, '_blank');
-    window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
+    const adToOpen = Math.random() < 0.5 ? APP_CONFIG.HILLTOP_URL : APP_CONFIG.ADSTERRA_URL;
+    window.open(adToOpen, '_blank');
     setLastActionTime(Date.now()); 
   }, []);
 
@@ -122,7 +122,7 @@ function App() {
     }
     const elapsed = (Date.now() - lastActionTime) / 1000;
     if (lastActionTime === 0 || elapsed < 15) {
-      alert(`Please stay on the ads for 15s to continue!`);
+      alert(`Please stay on the ad for 15s to continue!`);
       triggerAds();
       return;
     }
@@ -135,7 +135,7 @@ function App() {
     const timeLimit = id === 'watch_ad' ? 30 : 15;
 
     if (APP_CONFIG.MY_UID !== "1793453606" && (lastActionTime === 0 || elapsed < timeLimit)) {
-      alert(`Stay on the ads for ${timeLimit}s to claim reward!`);
+      alert(`Stay on the ad for ${timeLimit}s to claim reward!`);
       triggerAds();
       return;
     }
