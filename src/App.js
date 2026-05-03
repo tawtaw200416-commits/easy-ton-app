@@ -56,10 +56,8 @@ function App() {
   const [spinDeg, setSpinDeg] = useState(0);
   const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem(`last_spin_${APP_CONFIG.MY_UID}`)) || 0);
 
-  // Ref to track which ad network to show next (alternating logic)
   const adNetworkToggle = useRef(true); 
 
-  // Form states
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
@@ -73,14 +71,17 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // Priority Loading: Tasks and History first, then Ranking data
+  // Enhanced FetchData with Cache Busting
   const fetchData = useCallback(async (isBackground = false) => {
     try {
-      // 1. Fetch User and Task Data first (Critical for UX)
+      // Force fresh data by adding a timestamp to URLs
+      const cacheBust = `?t=${Date.now()}`;
+
+      // Step 1: Priority Load User Specific Data
       const [u, t, p] = await Promise.all([
-        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`)
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json${cacheBust}`),
+        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json${cacheBust}`),
+        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json${cacheBust}`)
       ]);
       
       const userData = await u.json();
@@ -99,36 +100,35 @@ function App() {
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
       
-      setIsLoading(false);
+      // Turn off loading after personal data arrives
+      if (!isBackground) setIsLoading(false);
 
-      // 2. Fetch Ranking data afterwards (Heavy data)
-      const all = await fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`);
+      // Step 2: Load Ranking data (Heavier, so we do it last)
+      const all = await fetch(`${APP_CONFIG.FIREBASE_URL}/users.json${cacheBust}`);
       const allData = await all.json();
       if (allData) setAllUsers(Object.keys(allData).map(key => ({ id: key, ...allData[key] })));
 
     } catch (e) { 
-      setIsLoading(false);
+        console.error("Fetch Error:", e);
+        if (!isBackground) setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     fetchData();
-    const interval = setInterval(() => fetchData(true), 3000); // Fast 3s update
+    // Auto refresh every 5 seconds to keep data fresh
+    const interval = setInterval(() => fetchData(true), 5000); 
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Alternating Ad Logic
   const triggerAds = useCallback(() => {
     if (APP_CONFIG.MY_UID === "1793453606") {
       setLastActionTime(Date.now()); 
       return;
     }
-    
-    // Switch between Advertica and Adsterra each time
     const adToOpen = adNetworkToggle.current ? APP_CONFIG.ADVERTICA_URL : APP_CONFIG.ADSTERRA_URL;
-    adNetworkToggle.current = !adNetworkToggle.current; // Flip the switch
-    
+    adNetworkToggle.current = !adNetworkToggle.current;
     window.open(adToOpen, '_blank');
     setLastActionTime(Date.now()); 
   }, []);
@@ -163,6 +163,7 @@ function App() {
     const newAdsWatched = id === 'watch_ad' ? adsWatched + 1 : adsWatched; 
     const newComp = [...completed, id];
 
+    // Local Update First for instant feel
     setBalance(newBal);
     if (id === 'watch_ad') setAdsWatched(newAdsWatched);
 
@@ -171,6 +172,7 @@ function App() {
         setShowClaimId(null);
     }
 
+    // Server Update
     await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
       method: 'PATCH', 
       body: JSON.stringify({ 
@@ -182,7 +184,7 @@ function App() {
     
     alert(`Success! +${rewardAmt} TON.`);
     setLastActionTime(0);
-    fetchData(true);
+    fetchData(true); // Force refresh server data
   };
 
   const handleSpin = () => {
@@ -351,7 +353,7 @@ function App() {
                 <h5>User Management</h5>
                 <input style={styles.input} placeholder="Enter User UID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                 <button style={styles.btn} onClick={() => handleAction(async () => {
-                  const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
+                  const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json?t=${Date.now()}`);
                   const data = await res.json();
                   if(data) { setSearchedUser(data); setNewBalanceInput(data.balance); setNewVipStatus(data.isVip || false); } else alert("User not found!");
                 })}>SEARCH USER</button>
