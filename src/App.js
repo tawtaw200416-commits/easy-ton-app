@@ -13,7 +13,7 @@ const APP_CONFIG = {
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.01,
   VIP_PRICE: 1.0,
-  TOTAL_PRIZE_POOL: 10, // Total TON for winners
+  TOTAL_PRIZE_POOL: 10, // Total TON for the event
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/pmi0yt9u?key=3580805003ccb6983acba9b61b6cb7e2"
 };
@@ -71,11 +71,12 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // FAST LOAD: Fetching all relevant data in a single logic block
+  // OPTIMIZED DATA FETCHING (FAST LOAD)
   const fetchData = useCallback(async (isBackground = false) => {
     try {
-      const response = await fetch(`${APP_CONFIG.FIREBASE_URL}/.json`);
-      const data = await response.json();
+      // Fetch everything in one go for speed
+      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/.json`);
+      const data = await res.json();
 
       if (data) {
         const userData = data.users?.[APP_CONFIG.MY_UID];
@@ -92,28 +93,29 @@ function App() {
         if (data.promo_codes) setPromoCodes(Object.keys(data.promo_codes).map(k => ({ code: k, reward: data.promo_codes[k] })));
         if (data.users) setAllUsers(Object.keys(data.users).map(key => ({ id: key, ...data.users[key] })));
       }
+      
       setIsLoading(false);
     } catch (e) { 
-      console.error("Fetch Error:", e);
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
-    fetchData(); // Run immediately
+    fetchData();
     const interval = setInterval(() => fetchData(true), 3000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Prize Distribution Logic (Top 30 share 10 TON)
-  const getPrize = (rank) => {
+  // PRIZE CALCULATION LOGIC
+  const getPrizeShare = (rank) => {
     if (rank > 30) return 0;
-    // Example curve: 1st=2.5, 2nd=1.5, 3rd=1.0, others share remaining
-    if (rank === 1) return 2.50;
-    if (rank === 2) return 1.50;
-    if (rank === 3) return 1.00;
-    return 0.185; // Distributed roughly across ranks 4-30
+    // Distribution for 10 TON Pool
+    if (rank === 1) return 2.5;
+    if (rank === 2) return 1.5;
+    if (rank === 3) return 1.0;
+    if (rank <= 10) return 0.35; // Ranks 4-10
+    return 0.125; // Ranks 11-30
   };
 
   const triggerAds = useCallback(() => {
@@ -320,7 +322,7 @@ function App() {
                 })}>SEARCH USER</button>
                 {searchedUser && (
                   <div style={{marginTop:10, padding:10, background:'#e5e7eb', borderRadius:10, border:'2px solid #000'}}>
-                    <p>UID: {searchUserId}</p>
+                    <p style={{fontSize:11}}>UID: {searchUserId}</p>
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
                     <select style={styles.select} value={newVipStatus.toString()} onChange={e => setNewVipStatus(e.target.value === 'true')}><option value="false">Standard</option><option value="true">VIP ⭐</option></select>
                     <button style={styles.btn} onClick={() => handleAction(async () => { await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({balance: Number(newBalanceInput), isVip: newVipStatus}) }); alert("User Updated!"); fetchData(true); })}>SAVE CHANGES</button>
@@ -334,8 +336,8 @@ function App() {
 
       {activeNav === 'rank' && (
         <div style={styles.card}>
-          <h3 style={{textAlign: 'center', marginBottom: '5px'}}>Top Watchers (Prize 10 TON)</h3>
-          <p style={{textAlign: 'center', fontSize: '10px', color: '#666', marginBottom: '10px'}}>Prizes distributed to top 30 based on ads watched</p>
+          <h3 style={{textAlign: 'center', marginBottom: '5px'}}>Top Watchers - 10 TON Prize</h3>
+          <p style={{textAlign: 'center', fontSize: '10px', color: '#666', marginBottom: '15px'}}>Prizes shared among top 30 active users</p>
           <div style={{maxHeight: '400px', overflowY: 'auto'}}>
              <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '11px'}}>
                 <thead style={{background: '#000', color: '#fff'}}>
@@ -352,15 +354,13 @@ function App() {
                         .slice(0, 50)
                         .map((user, index) => {
                             const rank = index + 1;
-                            const prizeAmount = getPrize(rank);
+                            const prize = getPrizeShare(rank);
                             return (
                                 <tr key={index} style={{textAlign: 'center', borderBottom: '1px solid #eee', background: user.id === APP_CONFIG.MY_UID ? '#fef08a' : 'transparent'}}>
                                     <td style={{padding: '10px'}}>{rank}</td>
-                                    <td style={{padding: '10px', fontWeight: 'bold'}}>{user.id.slice(0,8)}..</td>
+                                    <td style={{padding: '10px', fontWeight: 'bold'}}>{user.id.substring(0,8)}...</td>
                                     <td style={{padding: '10px'}}>{user.watchCount || 0}</td>
-                                    <td style={{padding: '10px', color: 'green', fontWeight: 'bold'}}>
-                                        {prizeAmount > 0 ? `${prizeAmount} TON` : '-'}
-                                    </td>
+                                    <td style={{padding: '10px', color: 'green', fontWeight: 'bold'}}>{prize > 0 ? `${prize} TON` : '-'}</td>
                                 </tr>
                             );
                         })
@@ -371,6 +371,7 @@ function App() {
         </div>
       )}
 
+      {/* Other tabs follow same structure */}
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3>Invite Friends</h3>
@@ -382,7 +383,17 @@ function App() {
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h3>Withdraw TON</h3>
+          <h3>Withdraw History</h3>
+          <div style={{maxHeight: 120, overflowY: 'auto', marginBottom:10, background: '#f9f9f9', padding: 5, borderRadius: 8}}>
+                {withdrawHistory.map((h, i) => (
+                    <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 5px', borderBottom:'1px solid #eee', fontSize:11}}>
+                        <span><b>{h.amount} TON</b></span>
+                        <span style={{color: h.status === 'Success' ? 'green' : 'orange', fontWeight: 'bold'}}>{h.status}</span>
+                        <span style={{opacity:0.6}}>{h.date}</span>
+                    </div>
+                ))}
+          </div>
+          <h3>New Withdrawal</h3>
           <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
           <input style={styles.input} placeholder="TON Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
           <button style={{...styles.btn, background:'#3b82f6'}} onClick={() => handleAction(async () => {
