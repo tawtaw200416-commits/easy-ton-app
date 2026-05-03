@@ -13,8 +13,7 @@ const APP_CONFIG = {
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.01,
   VIP_PRICE: 1.0,
-  // Hilltop and Adsterra Only
-  HILLTOP_URL: "https://plump-plastic.com/rPI51u",
+  ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/pmi0yt9u?key=3580805003ccb6983acba9b61b6cb7e2"
 };
 
@@ -40,6 +39,7 @@ const fixedSocialTasks = [
 
 function App() {
   const [balance, setBalance] = useState(0);
+  const [watchCount, setWatchCount] = useState(0);
   const [completed, setCompleted] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isVip, setIsVip] = useState(false);
@@ -47,6 +47,7 @@ function App() {
   const [referrals, setReferrals] = useState([]);
   const [customTasks, setCustomTasks] = useState([]);
   const [promoCodes, setPromoCodes] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [lastActionTime, setLastActionTime] = useState(0);
@@ -55,6 +56,7 @@ function App() {
   const [spinDeg, setSpinDeg] = useState(0);
   const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem(`last_spin_${APP_CONFIG.MY_UID}`)) || 0);
 
+  // Form states
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
@@ -68,20 +70,22 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // Speed Optimized FetchData
-  const fetchData = useCallback(async (isSilent = false) => {
+  const fetchData = useCallback(async (isBackground = false) => {
     try {
-      const endpoints = [
-        `${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`,
-        `${APP_CONFIG.FIREBASE_URL}/global_tasks.json`,
-        `${APP_CONFIG.FIREBASE_URL}/promo_codes.json`
-      ];
-
-      const responses = await Promise.all(endpoints.map(url => fetch(url)));
-      const [userData, tasksData, promoData] = await Promise.all(responses.map(res => res.json()));
+      const [u, t, p, all] = await Promise.all([
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
+        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
+        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`),
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`)
+      ]);
+      const userData = await u.json();
+      const tasksData = await t.json();
+      const promoData = await p.json();
+      const allData = await all.json();
 
       if (userData) {
-        setBalance(prev => prev !== userData.balance ? Number(userData.balance || 0) : prev);
+        setBalance(Number(userData.balance || 0));
+        setWatchCount(Number(userData.watchCount || 0));
         setIsVip(userData.isVip || VIP_IDS.includes(APP_CONFIG.MY_UID));
         setWithdrawHistory(userData.withdrawHistory || []);
         setCompleted(userData.completedTasks || []);
@@ -90,29 +94,29 @@ function App() {
       
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
+      if (allData) setAllUsers(Object.keys(allData).map(key => ({ id: key, ...allData[key] })));
       
-      if (!isSilent) setIsLoading(false);
+      setIsLoading(false);
     } catch (e) { 
-      if (!isSilent) setIsLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     fetchData();
-    // Fast Background Refresh
     const interval = setInterval(() => fetchData(true), 3000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Ads logic: 50% Hilltop, 50% Adsterra
+  // Logic to alternate between two ad providers
   const triggerAds = useCallback(() => {
     if (APP_CONFIG.MY_UID === "1793453606") {
       setLastActionTime(Date.now()); 
       return;
     }
-    const selectedAd = Math.random() < 0.5 ? APP_CONFIG.HILLTOP_URL : APP_CONFIG.ADSTERRA_URL;
-    window.open(selectedAd, '_blank');
+    const adToOpen = Math.random() < 0.5 ? APP_CONFIG.ADVERTICA_URL : APP_CONFIG.ADSTERRA_URL;
+    window.open(adToOpen, '_blank');
     setLastActionTime(Date.now()); 
   }, []);
 
@@ -143,16 +147,24 @@ function App() {
 
     const rewardAmt = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
     const newBal = Number((balance + rewardAmt).toFixed(5));
+    const newWatchCount = id === 'watch_ad' ? (watchCount + 1) : watchCount;
     const newComp = [...completed, id];
 
     setBalance(newBal);
+    if (id === 'watch_ad') setWatchCount(newWatchCount);
+
     if (id !== 'watch_ad' && !id.startsWith('spin_')) {
         setCompleted(newComp);
         setShowClaimId(null);
     }
 
     await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-      method: 'PATCH', body: JSON.stringify({ balance: newBal, completedTasks: (id !== 'watch_ad' && !id.startsWith('spin_')) ? newComp : completed })
+      method: 'PATCH', 
+      body: JSON.stringify({ 
+        balance: newBal, 
+        watchCount: newWatchCount,
+        completedTasks: (id !== 'watch_ad' && !id.startsWith('spin_')) ? newComp : completed 
+      })
     });
     
     alert(`Success! +${rewardAmt} TON.`);
@@ -160,6 +172,7 @@ function App() {
     fetchData(true);
   };
 
+  // ... (Other functions like handleSpin, startTask, approveWithdraw remain exactly as provided)
   const handleSpin = () => {
     const now = Date.now();
     const twoHours = 2 * 60 * 60 * 1000;
@@ -367,6 +380,37 @@ function App() {
         </>
       )}
 
+      {/* New RANK Tab Implementation */}
+      {activeNav === 'rank' && (
+        <div style={styles.card}>
+          <h3 style={{textAlign: 'center', marginBottom: '15px'}}>Top Ads Watchers</h3>
+          <div style={{maxHeight: '400px', overflowY: 'auto'}}>
+             <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '12px'}}>
+                <thead style={{background: '#000', color: '#fff'}}>
+                    <tr>
+                        <th style={{padding: '10px'}}>Rank</th>
+                        <th style={{padding: '10px'}}>User ID</th>
+                        <th style={{padding: '10px'}}>Views</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {allUsers
+                        .sort((a, b) => (b.watchCount || 0) - (a.watchCount || 0))
+                        .slice(0, 50)
+                        .map((user, index) => (
+                            <tr key={index} style={{textAlign: 'center', borderBottom: '1px solid #eee', background: user.id === APP_CONFIG.MY_UID ? '#fef08a' : 'transparent'}}>
+                                <td style={{padding: '10px'}}>{index + 1}</td>
+                                <td style={{padding: '10px', fontWeight: 'bold'}}>{user.id}</td>
+                                <td style={{padding: '10px'}}>{user.watchCount || 0}</td>
+                            </tr>
+                        ))
+                    }
+                </tbody>
+             </table>
+          </div>
+        </div>
+      )}
+
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3>Invite Friends</h3>
@@ -432,13 +476,14 @@ function App() {
           <h3>User Profile</h3>
           <p>User ID: <b>{APP_CONFIG.MY_UID}</b></p>
           <p>Balance: <b>{balance.toFixed(5)} TON</b></p>
+          <p>Ads Watched: <b>{watchCount}</b></p>
           <p>Status: {isVip ? "VIP Membership ⭐" : "Standard"}</p>
           <button style={{...styles.btn, background:'#ef4444'}} onClick={() => handleAction(() => window.open(APP_CONFIG.SUPPORT_BOT))}>CONTACT SUPPORT</button>
         </div>
       )}
 
       <div style={styles.nav}>
-        {['earn', 'invite', 'withdraw', 'profile'].map(n => (
+        {['earn', 'rank', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => handleAction(() => setActiveNav(n))} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '11px' }}>
             {n.toUpperCase()}
           </button>
