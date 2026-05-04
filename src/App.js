@@ -102,7 +102,15 @@ function App() {
       
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
-      if (allData) setAllUsers(Object.keys(allData).map(key => ({ id: key, ...allData[key] })));
+      
+      // Fix Rank Error: Map the keys (UIDs) into the user objects correctly
+      if (allData) {
+        const userList = Object.keys(allData).map(key => ({
+          id: key,
+          ...allData[key]
+        }));
+        setAllUsers(userList);
+      }
       
       setIsLoading(false);
     } catch (e) { 
@@ -123,7 +131,6 @@ function App() {
       return;
     }
     
-    // Logic to alternate between Adsterra and Advertica
     const adToOpen = adTurn % 2 === 0 ? APP_CONFIG.ADVERTICA_URL : APP_CONFIG.ADSTERRA_URL;
     window.open(adToOpen, '_blank');
     
@@ -214,22 +221,6 @@ function App() {
         setTimeout(() => {
             setShowClaimId(id);
         }, 1500);
-    });
-  };
-
-  const approveWithdraw = async (userId, historyIndex) => {
-    handleAction(async () => {
-        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
-        const userToEdit = await res.json();
-        if (!userToEdit || !userToEdit.withdrawHistory) return;
-        const updatedHistory = [...userToEdit.withdrawHistory];
-        updatedHistory[historyIndex].status = "Success";
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
-          method: 'PATCH',
-          body: JSON.stringify({ withdrawHistory: updatedHistory })
-        });
-        alert("Withdrawal Approved!");
-        fetchData(true);
     });
   };
 
