@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 const tg = window.Telegram?.WebApp;
 
@@ -40,7 +40,7 @@ const fixedSocialTasks = [
 function App() {
   const [balance, setBalance] = useState(0);
   const [completed, setCompleted] = useState([]);
-  const [adsWatched, setAdsWatched] = useState(0);
+  const [adsWatched, setAdsWatched] = useState(0); 
   const [isLoading, setIsLoading] = useState(true);
   const [isVip, setIsVip] = useState(false);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
@@ -56,7 +56,7 @@ function App() {
   const [spinDeg, setSpinDeg] = useState(0);
   const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem(`last_spin_${APP_CONFIG.MY_UID}`)) || 0);
 
-  // Form states
+  // Admin and Forms
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
@@ -78,6 +78,7 @@ function App() {
         fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`),
         fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`)
       ]);
+      
       const userData = await u.json();
       const tasksData = await t.json();
       const promoData = await p.json();
@@ -94,10 +95,18 @@ function App() {
       
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
-      if (allData) setAllUsers(Object.keys(allData).map(key => ({ id: key, ...allData[key] })));
+      
+      if (allData) {
+        const formattedUsers = Object.keys(allData).map(key => ({
+          id: key, 
+          ...allData[key]
+        }));
+        setAllUsers(formattedUsers);
+      }
       
       setIsLoading(false);
     } catch (e) { 
+      console.error("Fetch Error:", e);
       setIsLoading(false);
     }
   }, []);
@@ -152,20 +161,18 @@ function App() {
     setBalance(newBal);
     if (id === 'watch_ad') setAdsWatched(newAdsWatched);
 
-    const updateData = { 
-        balance: newBal, 
-        adsWatched: newAdsWatched 
-    };
-
     if (id !== 'watch_ad' && !id.startsWith('spin_')) {
-        updateData.completedTasks = newComp;
         setCompleted(newComp);
         setShowClaimId(null);
     }
 
     await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
       method: 'PATCH', 
-      body: JSON.stringify(updateData)
+      body: JSON.stringify({ 
+        balance: newBal, 
+        adsWatched: newAdsWatched,
+        completedTasks: (id !== 'watch_ad' && !id.startsWith('spin_')) ? newComp : completed 
+      })
     });
     
     alert(`Success! +${rewardAmt} TON.`);
@@ -221,7 +228,7 @@ function App() {
   };
 
   const styles = {
-    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif', boxSizing: 'border-box' },
+    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: '#000', padding: '20px', borderRadius: '20px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
@@ -252,7 +259,7 @@ function App() {
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
               (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && 
-              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000' }}>{t}</button>
+              <button key={t} onClick={() => handleAction(() => setActiveTab(t.toLowerCase()))} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000' }}>{t}</button>
             ))}
           </div>
 
@@ -283,7 +290,7 @@ function App() {
                 })}>CLAIM CODE</button>
                 <div style={{borderTop: '2px solid #eee', paddingTop: '20px'}}>
                     <h3>Lucky Spin</h3>
-                    <p style={{fontSize: '13px', fontWeight: 'bold', color: '#000', marginBottom: '15px'}}>Try your luck for 2 hours💎</p>
+                    <p style={{fontSize: '13px', fontWeight: 'bold', color: '#000', marginBottom: '15px'}}>Try your luck every 2 hours💎</p>
                     <div style={styles.wheelContainer}>
                         <div style={styles.wheelPointer}></div>
                         <div style={{...styles.wheel, transform: `rotate(${spinDeg}deg)`}}>
@@ -301,7 +308,7 @@ function App() {
               </div>
             )}
 
-            {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
+            {activeTab === 'admin' && (
               <div>
                 <h4 style={{margin:'0 0 10px 0', borderBottom: '2px solid #000'}}>Admin Controls</h4>
                 
@@ -315,12 +322,22 @@ function App() {
                     ))}
                 </div>
 
+                <h5 style={{marginTop: 10}}>Manage Reward Codes</h5>
+                <div style={{maxHeight: '100px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
+                    {promoCodes.map((pc, idx) => (
+                        <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
+                            <span>{pc.code} ({pc.reward} TON)</span>
+                            <button onClick={() => handleAction(async () => { if(window.confirm("Delete code?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${pc.code}.json`, { method: 'DELETE' }); fetchData(true); } })} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
+                        </div>
+                    ))}
+                </div>
+
                 <div style={{background: '#f9fafb', padding: '10px', borderRadius: '10px', marginBottom: '20px', border: '1px solid #ddd'}}>
                   <h6 style={{margin: '0 0 10px 0'}}>+ Add New Reward Code</h6>
                   <input style={styles.input} placeholder="Promo Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
                   <input style={styles.input} placeholder="Reward Amount" type="number" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
                   <button style={{...styles.btn, background: '#8b5cf6'}} onClick={() => handleAction(async () => {
-                      if(!adminPromoCode || !adminPromoReward) return alert("Fill all!");
+                      if(!adminPromoCode || !adminPromoReward) return alert("Fill all fields!");
                       await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method:'PUT', body: JSON.stringify(Number(adminPromoReward)) });
                       alert("Code Created!"); setAdminPromoCode(''); setAdminPromoReward(''); fetchData(true);
                   })}>CREATE CODE</button>
@@ -352,11 +369,11 @@ function App() {
                 )}
 
                 <h5 style={{marginTop: 20}}>Add New Task</h5>
-                <input style={styles.input} placeholder="Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
-                <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
+                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
+                <input style={styles.input} placeholder="Task Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
                 <select style={styles.select} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}><option value="bot">Bot</option><option value="social">Social</option></select>
                 <button style={{...styles.btn, background:'#22c55e'}} onClick={() => handleAction(async () => {
-                    if(!adminTaskName || !adminTaskLink) return alert("Fill all!");
+                    if(!adminTaskName || !adminTaskLink) return alert("Fill all fields!");
                     await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method:'POST', body: JSON.stringify({name: adminTaskName, link: adminTaskLink, type: adminTaskType}) });
                     alert("Task Added!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData(true);
                 })}>ADD TASK</button>
@@ -386,7 +403,7 @@ function App() {
                       {allUsers.sort((a, b) => (b.balance || 0) - (a.balance || 0)).slice(0, 30).map((user, index) => (
                           <tr key={index} style={{borderBottom: '1px solid #eee', fontSize: '11px', background: user.id === APP_CONFIG.MY_UID ? '#fef08a' : 'transparent'}}>
                               <td style={{padding: '10px', fontWeight: 'bold'}}>#{index + 1}</td>
-                              <td style={{padding: '10px'}}>{user.id} {user.isVip && '⭐'}</td>
+                              <td style={{padding: '10px', wordBreak: 'break-all'}}>{user.id} {user.isVip && '⭐'}</td>
                               <td style={{padding: '10px', textAlign: 'right'}}>{(user.balance || 0).toFixed(4)}</td>
                               <td style={{padding: '10px', textAlign: 'right', color: 'green', fontWeight: 'bold'}}>
                                   {index === 0 ? "5.00" : index === 1 ? "3.00" : index === 2 ? "1.00" : (1 / 27).toFixed(2)} TON
