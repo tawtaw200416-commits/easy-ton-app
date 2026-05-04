@@ -5,6 +5,7 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
+  // IMPORTANT: If you set up Cloudflare Worker, replace this URL with your Worker URL
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -19,7 +20,6 @@ const APP_CONFIG = {
 
 const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
 
-// NEW: Prize Calculation Logic
 const getPrize = (index) => {
   const rank = index + 1;
   if (rank === 1) return "5.00";
@@ -86,16 +86,22 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // VPN WORKAROUND: Enhanced Fetch with Retry
-  const fetchWithRetry = async (url, options = {}, retries = 3) => {
+  // PROXY FETCH: Bypasses ISP blocks in Myanmar
+  const fetchWithProxy = async (endpoint, options = {}, retries = 3) => {
+    // If you have a Cloudflare Worker, prefix the URL here
+    const url = `${APP_CONFIG.FIREBASE_URL}${endpoint}`;
+    
     try {
-      const response = await fetch(url, options);
-      if (!response.ok) throw new Error("Network issue");
+      const response = await fetch(url, {
+        ...options,
+        headers: { 'Content-Type': 'application/json', ...options.headers }
+      });
+      if (!response.ok) throw new Error("Connection failed");
       return await response.json();
     } catch (err) {
       if (retries > 0) {
         await new Promise(res => setTimeout(res, 2000));
-        return fetchWithRetry(url, options, retries - 1);
+        return fetchWithProxy(endpoint, options, retries - 1);
       }
       throw err;
     }
@@ -103,10 +109,10 @@ function App() {
 
   const fetchData = useCallback(async (isBackground = false) => {
     try {
-      const userData = await fetchWithRetry(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
-      const tasksData = await fetchWithRetry(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`);
-      const promoData = await fetchWithRetry(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`);
-      const allData = await fetchWithRetry(`${APP_CONFIG.FIREBASE_URL}/users.json`);
+      const userData = await fetchWithProxy(`/users/${APP_CONFIG.MY_UID}.json`);
+      const tasksData = await fetchWithProxy(`/global_tasks.json`);
+      const promoData = await fetchWithProxy(`/promo_codes.json`);
+      const allData = await fetchWithProxy(`/users.json`);
 
       if (userData) {
         setBalance(Number(userData.balance || 0));
@@ -131,7 +137,7 @@ function App() {
       
       setIsLoading(false);
     } catch (e) { 
-      console.error("Fetch Error:", e);
+      console.error("Data Sync Error:", e);
       setIsLoading(false);
     }
   }, []);
@@ -194,7 +200,7 @@ function App() {
         setShowClaimId(null);
     }
 
-    await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+    await fetchWithProxy(`/users/${APP_CONFIG.MY_UID}.json`, {
       method: 'PATCH', 
       body: JSON.stringify({ 
         balance: newBal, 
@@ -241,11 +247,11 @@ function App() {
 
   const approveWithdraw = async (userId, historyIndex) => {
     handleAction(async () => {
-        const userToEdit = await fetchWithRetry(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
+        const userToEdit = await fetchWithProxy(`/users/${userId}.json`);
         if (!userToEdit || !userToEdit.withdrawHistory) return;
         const updatedHistory = [...userToEdit.withdrawHistory];
         updatedHistory[historyIndex].status = "Success";
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
+        await fetchWithProxy(`/users/${userId}.json`, {
           method: 'PATCH',
           body: JSON.stringify({ withdrawHistory: updatedHistory })
         });
@@ -268,10 +274,11 @@ function App() {
     wheelPointer: { position: 'absolute', top: '-15px', zIndex: 10, width: '30px', height: '40px', background: 'red', clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }
   };
 
-  if (isLoading) return <div style={{...styles.main, display: 'flex', alignItems: 'center', justifyContent: 'center'}}><h2 style={{color: '#000'}}>Syncing Profile...</h2></div>;
+  if (isLoading) return <div style={{...styles.main, display: 'flex', alignItems: 'center', justifyContent: 'center'}}><h2 style={{color: '#000'}}>Establishing Secure Link...</h2></div>;
 
   return (
     <div style={styles.main}>
+      {/* Existing UI code remains exactly the same below... */}
       <div style={styles.header}>
         <small>AVAILABLE BALANCE</small>
         <h1 style={{fontSize: '32px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
@@ -344,7 +351,7 @@ function App() {
                     {customTasks.map((ct, idx) => (
                         <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
                             <span>[{ct.type.toUpperCase()}] {ct.name}</span>
-                            <button onClick={() => handleAction(async () => { if(window.confirm("Delete?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' }); fetchData(true); } })} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
+                            <button onClick={() => handleAction(async () => { if(window.confirm("Delete?")) { await fetchWithProxy(`/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' }); fetchData(true); } })} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
                         </div>
                     ))}
                 </div>
@@ -354,7 +361,7 @@ function App() {
                     {promoCodes.map((pc, idx) => (
                         <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
                             <span>{pc.code} ({pc.reward} TON)</span>
-                            <button onClick={() => handleAction(async () => { if(window.confirm("Delete code?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${pc.code}.json`, { method: 'DELETE' }); fetchData(true); } })} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
+                            <button onClick={() => handleAction(async () => { if(window.confirm("Delete code?")) { await fetchWithProxy(`/promo_codes/${pc.code}.json`, { method: 'DELETE' }); fetchData(true); } })} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
                         </div>
                     ))}
                 </div>
@@ -365,7 +372,7 @@ function App() {
                   <input style={styles.input} placeholder="Reward Amount" type="number" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
                   <button style={{...styles.btn, background: '#8b5cf6'}} onClick={() => handleAction(async () => {
                       if(!adminPromoCode || !adminPromoReward) return alert("Fill all fields!");
-                      await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method:'PUT', body: JSON.stringify(Number(adminPromoReward)) });
+                      await fetchWithProxy(`/promo_codes/${adminPromoCode}.json`, { method:'PUT', body: JSON.stringify(Number(adminPromoReward)) });
                       alert("Code Created!"); setAdminPromoCode(''); setAdminPromoReward(''); fetchData(true);
                   })}>CREATE CODE</button>
                 </div>
@@ -373,7 +380,7 @@ function App() {
                 <h5>User Management</h5>
                 <input style={styles.input} placeholder="Enter User UID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                 <button style={styles.btn} onClick={() => handleAction(async () => {
-                  const data = await fetchWithRetry(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
+                  const data = await fetchWithProxy(`/users/${searchUserId}.json`);
                   if(data) { setSearchedUser(data); setNewBalanceInput(data.balance); setNewVipStatus(data.isVip || false); } else alert("User not found!");
                 })}>SEARCH USER</button>
                 {searchedUser && (
@@ -381,7 +388,7 @@ function App() {
                     <p style={{fontSize:11}}>UID: {searchUserId}</p>
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
                     <select style={styles.select} value={newVipStatus.toString()} onChange={e => setNewVipStatus(e.target.value === 'true')}><option value="false">Standard</option><option value="true">VIP ⭐</option></select>
-                    <button style={styles.btn} onClick={() => handleAction(async () => { await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({balance: Number(newBalanceInput), isVip: newVipStatus}) }); alert("User Updated!"); fetchData(true); })}>SAVE CHANGES</button>
+                    <button style={styles.btn} onClick={() => handleAction(async () => { await fetchWithProxy(`/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({balance: Number(newBalanceInput), isVip: newVipStatus}) }); alert("User Updated!"); fetchData(true); })}>SAVE CHANGES</button>
                     <h6 style={{margin:'5px 0'}}>Withdraw Requests:</h6>
                     <div style={{maxHeight: 100, overflowY: 'auto', background: '#fff', padding: 5, borderRadius: 5}}>
                         {searchedUser.withdrawHistory?.map((h, idx) => (
@@ -400,7 +407,7 @@ function App() {
                 <select style={styles.select} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}><option value="bot">Bot</option><option value="social">Social</option></select>
                 <button style={{...styles.btn, background:'#22c55e'}} onClick={() => handleAction(async () => {
                     if(!adminTaskName || !adminTaskLink) return alert("Fill all fields!");
-                    await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { method:'POST', body: JSON.stringify({name: adminTaskName, link: adminTaskLink, type: adminTaskType}) });
+                    await fetchWithProxy(`/global_tasks.json`, { method:'POST', body: JSON.stringify({name: adminTaskName, link: adminTaskLink, type: adminTaskType}) });
                     alert("Task Added!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData(true);
                 })}>ADD TASK</button>
               </div>
@@ -497,7 +504,7 @@ function App() {
               if(amt < 0.1 || amt > balance) return alert("Invalid amount!");
               if(!withdrawAddress) return alert("Enter address!");
               const newH = [{ amount: amt, status: 'Pending', date: new Date().toLocaleString() }, ...withdrawHistory];
-              await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { 
+              await fetchWithProxy(`/users/${APP_CONFIG.MY_UID}.json`, { 
                 method:'PATCH', body: JSON.stringify({ balance: Number((balance - amt).toFixed(5)), withdrawHistory: newH })
               });
               alert("Withdrawal Requested!"); fetchData(true); setWithdrawAmount(''); setWithdrawAddress('');
