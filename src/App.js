@@ -60,11 +60,14 @@ function App() {
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
   const [newVipStatus, setNewVipStatus] = useState(false);
+  
+  // NEW ADMIN TASK STATES - Added back
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
   const [adminTaskType, setAdminTaskType] = useState('bot');
   const [adminPromoCode, setAdminPromoCode] = useState('');
   const [adminPromoReward, setAdminPromoReward] = useState('');
+
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
@@ -94,14 +97,13 @@ function App() {
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
       
-      // FIXED RANKING LOGIC - Mapping User IDs accurately using Object.entries
       if (allData) {
-        const cleanedUsers = Object.entries(allData)
-          .filter(([key, value]) => key !== 'error' && key !== 'null' && key !== 'undefined' && key.length > 5)
-          .map(([key, value]) => ({
+        const cleanedUsers = Object.keys(allData)
+          .filter(key => key !== 'error' && key !== 'null' && key !== 'undefined' && key.length > 5)
+          .map(key => ({
             id: key,
-            balance: Number(value?.balance || 0),
-            isVip: value?.isVip || false
+            balance: Number(allData[key]?.balance || 0),
+            isVip: allData[key]?.isVip || false
           }))
           .sort((a, b) => b.balance - a.balance);
         setAllUsers(cleanedUsers);
@@ -213,22 +215,6 @@ function App() {
     });
   };
 
-  const approveWithdraw = async (userId, historyIndex) => {
-    handleAction(async () => {
-        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
-        const userToEdit = await res.json();
-        if (!userToEdit || !userToEdit.withdrawHistory) return;
-        const updatedHistory = [...userToEdit.withdrawHistory];
-        updatedHistory[historyIndex].status = "Success";
-        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
-          method: 'PATCH',
-          body: JSON.stringify({ withdrawHistory: updatedHistory })
-        });
-        alert("Withdrawal Approved!");
-        fetchData(true);
-    });
-  };
-
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: '#000', padding: '20px', borderRadius: '20px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
@@ -313,6 +299,23 @@ function App() {
             {activeTab === 'admin' && (
               <div>
                 <h4 style={{margin:'0 0 10px 0', borderBottom: '2px solid #000'}}>Admin Controls</h4>
+                
+                {/* RE-ADDED ADD TASK FEATURE */}
+                <h5 style={{marginTop: 10}}>Add New Task</h5>
+                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
+                <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
+                <select style={styles.select} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
+                    <option value="bot">Bot Task</option>
+                    <option value="social">Social Task</option>
+                </select>
+                <button style={{...styles.btn, marginBottom: 15}} onClick={() => handleAction(async () => {
+                  if(!adminTaskName || !adminTaskLink) return alert("Fill all!");
+                  await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { 
+                      method: 'POST', body: JSON.stringify({ name: adminTaskName, link: adminTaskLink, type: adminTaskType })
+                  });
+                  setAdminTaskName(''); setAdminTaskLink(''); fetchData(true); alert("Task Added!");
+                })}>ADD TASK</button>
+
                 <h5 style={{marginTop: 10}}>Manage Tasks</h5>
                 <div style={{maxHeight: '120px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
                     {customTasks.map((ct, idx) => (
