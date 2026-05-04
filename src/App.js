@@ -5,8 +5,10 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
-  // FIXED: Proxy URL added to bypass ISP blocks in Myanmar
-  FIREBASE_URL: "https://easyton-proxy.dev-it.workers.dev", 
+  // Base Firebase URL
+  FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
+  // Cloudflare Proxy URL to bypass ISP blocks
+  PROXY_URL: "https://easyton-proxy.dev-it.workers.dev",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
   WATCH_REWARD: 0.0004, 
@@ -86,19 +88,28 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // PROXY FETCH: Ensures connection without VPN
+  /**
+   * PROXY FETCH: 
+   * Combines the Proxy URL with the specific Firebase endpoint.
+   * This allows the app to work in Myanmar even if Firebase is blocked.
+   */
   const fetchWithProxy = async (endpoint, options = {}, retries = 3) => {
-    const url = `${APP_CONFIG.FIREBASE_URL}${endpoint}`;
+    // Construct the full URL through the Cloudflare Worker
+    const url = `${APP_CONFIG.PROXY_URL}${endpoint}`;
     
     try {
       const response = await fetch(url, {
         ...options,
-        headers: { 'Content-Type': 'application/json', ...options.headers }
+        headers: { 
+            'Content-Type': 'application/json',
+            ...options.headers 
+        }
       });
       if (!response.ok) throw new Error("Connection failed");
       return await response.json();
     } catch (err) {
       if (retries > 0) {
+        // Wait 2 seconds before retrying
         await new Promise(res => setTimeout(res, 2000));
         return fetchWithProxy(endpoint, options, retries - 1);
       }
@@ -137,6 +148,7 @@ function App() {
       setIsLoading(false);
     } catch (e) { 
       console.error("Data Sync Error:", e);
+      // Keep trying even on error to ensure eventual connection
       setIsLoading(false);
     }
   }, []);
