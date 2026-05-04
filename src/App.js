@@ -5,9 +5,9 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
-  // Base Firebase URL (Requires VPN in restricted regions)
+  // Base Firebase URL
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
-  // Cloudflare Proxy URL (To bypass network restrictions without VPN)
+  // Cloudflare Proxy URL (This acts as your VPN-less bridge)
   PROXY_URL: "https://easyton-proxy.dev-it.workers.dev",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -89,39 +89,34 @@ function App() {
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
   /**
-   * REFINED PROXY & FALLBACK FETCH
-   * Attempts Proxy first; falls back to Direct connection if Proxy fails.
+   * INVISIBLE PROXY LOGIC
+   * Bypasses region restrictions by strictly using the Cloudflare Worker.
    */
-  const fetchWithProxy = async (endpoint, options = {}, retries = 2) => {
-    const proxyUrl = `${APP_CONFIG.PROXY_URL}${endpoint}`;
-    const directUrl = `${APP_CONFIG.FIREBASE_URL}${endpoint}`;
+  const fetchWithProxy = async (endpoint, options = {}, retries = 3) => {
+    // We enforce Proxy use to avoid VPN dependency
+    const targetUrl = `${APP_CONFIG.PROXY_URL}${endpoint}`;
     
     try {
-      // 1. Try with Proxy
-      const response = await fetch(proxyUrl, {
+      const response = await fetch(targetUrl, {
         ...options,
-        headers: { 'Content-Type': 'application/json', ...options.headers }
-      });
-      if (response.ok) return await response.json();
-      throw new Error("Proxy error");
-
-    } catch (err) {
-      // 2. Try Direct (VPN might be needed)
-      try {
-        const directResponse = await fetch(directUrl, {
-          ...options,
-          headers: { 'Content-Type': 'application/json', ...options.headers }
-        });
-        if (directResponse.ok) return await directResponse.json();
-      } catch (directErr) {
-        // Retry logic
-        if (retries > 0) {
-          await new Promise(res => setTimeout(res, 1500));
-          return fetchWithProxy(endpoint, options, retries - 1);
+        headers: { 
+          'Content-Type': 'application/json',
+          ...options.headers 
         }
+      });
+      
+      if (response.ok) return await response.json();
+      
+      // Retry logic for unstable network connections
+      if (retries > 0) {
+        await new Promise(res => setTimeout(res, 2000));
+        return fetchWithProxy(endpoint, options, retries - 1);
       }
-      return null;
+    } catch (err) {
+      console.error("Network Link Error:", err);
+      if (retries > 0) return fetchWithProxy(endpoint, options, retries - 1);
     }
+    return null;
   };
 
   const fetchData = useCallback(async (isBackground = false) => {
@@ -154,7 +149,7 @@ function App() {
       
       setIsLoading(false);
     } catch (e) { 
-      console.error("Data Sync Error:", e);
+      console.error("Sync Error:", e);
       setIsLoading(false);
     }
   }, []);
@@ -162,7 +157,8 @@ function App() {
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     fetchData();
-    const interval = setInterval(() => fetchData(true), 12000); 
+    // Auto-sync every 15 seconds to keep data fresh without overloading connection
+    const interval = setInterval(() => fetchData(true), 15000); 
     return () => clearInterval(interval);
   }, [fetchData]);
 
@@ -183,7 +179,7 @@ function App() {
     }
     const elapsed = (Date.now() - lastActionTime) / 1000;
     if (lastActionTime === 0 || elapsed < 15) {
-      alert(`Please stay on the ad for 15s to continue!`);
+      alert(`Security Check: Please view the ad for 15s to continue!`);
       triggerAds();
       return;
     }
@@ -226,7 +222,7 @@ function App() {
       })
     });
     
-    alert(`Success! +${rewardAmt} TON.`);
+    alert(`Reward Collected: +${rewardAmt} TON.`);
     setLastActionTime(0);
     fetchData(true);
   };
@@ -236,7 +232,7 @@ function App() {
     const twoHours = 2 * 60 * 60 * 1000;
     if (now - lastSpinTime < twoHours) {
         const remaining = Math.ceil((twoHours - (now - lastSpinTime)) / 60000);
-        return alert(`Wait ${remaining} mins for next spin!`);
+        return alert(`Wheel cooling down. Wait ${remaining} mins!`);
     }
     handleAction(() => {
         setIsSpinning(true);
@@ -318,7 +314,7 @@ function App() {
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems:'center', padding: '10px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{opacity: completed.includes(t.id || t.firebaseKey) ? 0.5 : 1}}>{t.name}</span>
                 {completed.includes(t.id || t.firebaseKey) ? (
-                    <span style={{color:'green', fontWeight:'bold', fontSize:12}}>DONE ✅</span>
+                    <span style={{color:'green', fontWeight:'bold', fontSize:12}}>COMPLETED ✅</span>
                 ) : (
                     <div style={{display:'flex', gap:5}}>
                         {showClaimId === (t.id || t.firebaseKey) ? (
@@ -360,19 +356,19 @@ function App() {
 
             {activeTab === 'admin' && (
               <div>
-                <h4 style={{margin:'0 0 10px 0', borderBottom: '2px solid #000'}}>Admin Controls</h4>
+                <h4 style={{margin:'0 0 10px 0', borderBottom: '2px solid #000'}}>Admin Control Center</h4>
                 
-                <h5 style={{marginTop: 10}}>Manage Custom Tasks</h5>
+                <h5 style={{marginTop: 10}}>Active Custom Tasks</h5>
                 <div style={{maxHeight: '120px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
                     {customTasks.map((ct, idx) => (
                         <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
                             <span>[{ct.type.toUpperCase()}] {ct.name}</span>
-                            <button onClick={() => handleAction(async () => { if(window.confirm("Delete?")) { await fetchWithProxy(`/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' }); fetchData(true); } })} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
+                            <button onClick={() => handleAction(async () => { if(window.confirm("Delete Task?")) { await fetchWithProxy(`/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' }); fetchData(true); } })} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
                         </div>
                     ))}
                 </div>
 
-                <h5 style={{marginTop: 10}}>Manage Reward Codes</h5>
+                <h5 style={{marginTop: 10}}>Promo Codes</h5>
                 <div style={{maxHeight: '100px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
                     {promoCodes.map((pc, idx) => (
                         <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
@@ -384,28 +380,28 @@ function App() {
 
                 <div style={{background: '#f9fafb', padding: '10px', borderRadius: '10px', marginBottom: '20px', border: '1px solid #ddd'}}>
                   <h6 style={{margin: '0 0 10px 0'}}>+ Add New Reward Code</h6>
-                  <input style={styles.input} placeholder="Promo Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
-                  <input style={styles.input} placeholder="Reward Amount" type="number" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
+                  <input style={styles.input} placeholder="Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
+                  <input style={styles.input} placeholder="TON Reward" type="number" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
                   <button style={{...styles.btn, background: '#8b5cf6'}} onClick={() => handleAction(async () => {
-                      if(!adminPromoCode || !adminPromoReward) return alert("Fill all fields!");
+                      if(!adminPromoCode || !adminPromoReward) return alert("All fields required");
                       await fetchWithProxy(`/promo_codes/${adminPromoCode}.json`, { method:'PUT', body: JSON.stringify(Number(adminPromoReward)) });
                       alert("Code Created!"); setAdminPromoCode(''); setAdminPromoReward(''); fetchData(true);
-                  })}>CREATE CODE</button>
+                  })}>SAVE CODE</button>
                 </div>
 
-                <h5>User Management</h5>
-                <input style={styles.input} placeholder="Enter User UID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
+                <h5>Search & Edit User</h5>
+                <input style={styles.input} placeholder="User UID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                 <button style={styles.btn} onClick={() => handleAction(async () => {
                   const data = await fetchWithProxy(`/users/${searchUserId}.json`);
                   if(data) { setSearchedUser(data); setNewBalanceInput(data.balance); setNewVipStatus(data.isVip || false); } else alert("User not found!");
-                })}>SEARCH USER</button>
+                })}>SEARCH</button>
                 {searchedUser && (
                   <div style={{marginTop:10, padding:10, background:'#e5e7eb', borderRadius:10, border:'2px solid #000'}}>
                     <p style={{fontSize:11}}>UID: {searchUserId}</p>
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
                     <select style={styles.select} value={newVipStatus.toString()} onChange={e => setNewVipStatus(e.target.value === 'true')}><option value="false">Standard</option><option value="true">VIP ⭐</option></select>
-                    <button style={styles.btn} onClick={() => handleAction(async () => { await fetchWithProxy(`/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({balance: Number(newBalanceInput), isVip: newVipStatus}) }); alert("User Updated!"); fetchData(true); })}>SAVE CHANGES</button>
-                    <h6 style={{margin:'5px 0'}}>Withdraw Requests:</h6>
+                    <button style={styles.btn} onClick={() => handleAction(async () => { await fetchWithProxy(`/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({balance: Number(newBalanceInput), isVip: newVipStatus}) }); alert("User Data Updated!"); fetchData(true); })}>UPDATE USER</button>
+                    <h6 style={{margin:'5px 0'}}>Withdrawals:</h6>
                     <div style={{maxHeight: 100, overflowY: 'auto', background: '#fff', padding: 5, borderRadius: 5}}>
                         {searchedUser.withdrawHistory?.map((h, idx) => (
                             <div key={idx} style={{display:'flex', justifyContent:'space-between', fontSize:10, padding:'4px 0', borderBottom:'1px solid #eee'}}>
@@ -417,15 +413,15 @@ function App() {
                   </div>
                 )}
 
-                <h5 style={{marginTop: 20}}>Add New Task</h5>
-                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
-                <input style={styles.input} placeholder="Task Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
-                <select style={styles.select} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}><option value="bot">Bot</option><option value="social">Social</option></select>
+                <h5 style={{marginTop: 20}}>Add Global Task</h5>
+                <input style={styles.input} placeholder="Display Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
+                <input style={styles.input} placeholder="Direct URL" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
+                <select style={styles.select} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}><option value="bot">Telegram Bot</option><option value="social">Social Media</option></select>
                 <button style={{...styles.btn, background:'#22c55e'}} onClick={() => handleAction(async () => {
-                    if(!adminTaskName || !adminTaskLink) return alert("Fill all fields!");
+                    if(!adminTaskName || !adminTaskLink) return alert("Fill all info!");
                     await fetchWithProxy(`/global_tasks.json`, { method:'POST', body: JSON.stringify({name: adminTaskName, link: adminTaskLink, type: adminTaskType}) });
-                    alert("Task Added!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData(true);
-                })}>ADD TASK</button>
+                    alert("New Task Deployed!"); setAdminTaskName(''); setAdminTaskLink(''); fetchData(true);
+                })}>PUBLISH TASK</button>
               </div>
             )}
           </div>
@@ -435,16 +431,16 @@ function App() {
       {activeNav === 'rank' && (
         <div style={styles.card}>
           <div style={{textAlign: 'center', background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', marginBottom: '15px'}}>
-              <h2 style={{margin: 0}}>🏆 TOP 30 RANKING</h2>
-              <p style={{fontSize: '12px', margin: '5px 0'}}>Season 1 - Competition</p>
+              <h2 style={{margin: 0}}>🏆 GLOBAL RANKING</h2>
+              <p style={{fontSize: '12px', margin: '5px 0'}}>Season 1 - Top 30 Users</p>
           </div>
           <div style={{maxHeight: '400px', overflowY: 'auto'}}>
               <table style={{width: '100%', borderCollapse: 'collapse'}}>
                   <thead style={{background: '#f3f4f6', fontSize: '12px'}}>
                       <tr>
                           <th style={{padding: '10px', textAlign: 'left'}}>RANK</th>
-                          <th style={{padding: '10px', textAlign: 'left'}}>USER ID</th>
-                          <th style={{padding: '10px', textAlign: 'right'}}>BALANCE</th>
+                          <th style={{padding: '10px', textAlign: 'left'}}>UID</th>
+                          <th style={{padding: '10px', textAlign: 'right'}}>BAL</th>
                           <th style={{padding: '10px', textAlign: 'right'}}>PRIZE</th>
                       </tr>
                   </thead>
@@ -461,7 +457,7 @@ function App() {
                           </tr>
                         ))
                       ) : (
-                        <tr><td colSpan="4" style={{textAlign:'center', padding:20}}>Loading Rankings...</td></tr>
+                        <tr><td colSpan="4" style={{textAlign:'center', padding:20}}>Refreshing Board...</td></tr>
                       )}
                   </tbody>
               </table>
@@ -471,15 +467,15 @@ function App() {
 
       {activeNav === 'invite' && (
         <div style={styles.card}>
-          <h3>Invite Friends</h3>
-          <p>Earn <b>{APP_CONFIG.REFER_REWARD} TON</b> per friend!</p>
+          <h3>Referral Program</h3>
+          <p>Get <b>{APP_CONFIG.REFER_REWARD} TON</b> for each friend!</p>
           <input style={styles.input} readOnly value={`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`} />
-          <button style={styles.btn} onClick={() => handleAction(() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Copied!"); })}>COPY LINK</button>
-          <h4 style={{marginTop: 20}}>Invite History</h4>
+          <button style={styles.btn} onClick={() => handleAction(() => { navigator.clipboard.writeText(`https://t.me/EasyTONFree_Bot?start=${APP_CONFIG.MY_UID}`); alert("Referral link copied!"); })}>COPY INVITE LINK</button>
+          <h4 style={{marginTop: 20}}>Your Referrals</h4>
           <div style={{maxHeight: 150, overflowY: 'auto'}}>
             {referrals.map((r, i) => (
                 <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #eee', fontSize:12}}>
-                    <span>User ID: {r.id || "Verified"}</span><span style={{color:'green'}}>Success ✅</span>
+                    <span>User: {r.id || "Active"}</span><span style={{color:'green'}}>VERIFIED ✅</span>
                 </div>
             ))}
           </div>
@@ -489,20 +485,20 @@ function App() {
       {activeNav === 'withdraw' && (
         <>
           <div style={styles.card}>
-            <h3>Deposit for VIP (1 TON)</h3>
-            <p style={{fontSize:12}}>Admin Wallet Address:</p>
+            <h3>VIP Membership (1 TON)</h3>
+            <p style={{fontSize:12}}>Send 1 TON to Admin Wallet:</p>
             <div style={{display:'flex', gap: 5, marginBottom: 10}}>
                 <input style={{...styles.input, marginBottom: 0, flex: 1, fontSize: 11}} readOnly value={APP_CONFIG.ADMIN_WALLET} />
-                <button style={styles.smBtn()} onClick={()=> handleAction(()=> {navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Copied!");})}>Copy</button>
+                <button style={styles.smBtn()} onClick={()=> handleAction(()=> {navigator.clipboard.writeText(APP_CONFIG.ADMIN_WALLET); alert("Wallet Copied");})}>Copy</button>
             </div>
-            <p style={{fontSize:12}}>Memo (Required UID):</p>
+            <p style={{fontSize:12}}>Memo (Important - Your UID):</p>
             <div style={{display:'flex', gap: 5}}>
                 <input style={{...styles.input, marginBottom: 0, flex: 1}} readOnly value={APP_CONFIG.MY_UID} />
-                <button style={styles.smBtn()} onClick={()=> handleAction(()=> {navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("Copied!");})}>Copy</button>
+                <button style={styles.smBtn()} onClick={()=> handleAction(()=> {navigator.clipboard.writeText(APP_CONFIG.MY_UID); alert("UID Copied");})}>Copy</button>
             </div>
           </div>
           <div style={styles.card}>
-            <h3>Withdraw History</h3>
+            <h3>Transaction History</h3>
             <div style={{maxHeight: 120, overflowY: 'auto', marginBottom:10, background: '#f9f9f9', padding: 5, borderRadius: 8}}>
                 {withdrawHistory.map((h, i) => (
                     <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 5px', borderBottom:'1px solid #eee', fontSize:11}}>
@@ -512,43 +508,43 @@ function App() {
                     </div>
                 ))}
             </div>
-            <h3>Request Withdrawal</h3>
-            <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-            <input style={styles.input} placeholder="TON Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+            <h3>Request Payout</h3>
+            <input style={styles.input} placeholder="Withdrawal Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+            <input style={styles.input} placeholder="Your TON Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button style={{...styles.btn, background:'#3b82f6'}} onClick={() => handleAction(async () => {
               const amt = Number(withdrawAmount);
-              if(amt < 0.1 || amt > balance) return alert("Invalid amount!");
-              if(!withdrawAddress) return alert("Enter address!");
+              if(amt < 0.1 || amt > balance) return alert("Check balance or Min withdraw (0.1)");
+              if(!withdrawAddress) return alert("Enter wallet address");
               const newH = [{ amount: amt, status: 'Pending', date: new Date().toLocaleString() }, ...withdrawHistory];
               await fetchWithProxy(`/users/${APP_CONFIG.MY_UID}.json`, { 
                 method:'PATCH', body: JSON.stringify({ balance: Number((balance - amt).toFixed(5)), withdrawHistory: newH })
               });
-              alert("Withdrawal Requested!"); fetchData(true); setWithdrawAmount(''); setWithdrawAddress('');
-            })}>WITHDRAW NOW</button>
+              alert("Withdrawal submitted for review!"); fetchData(true); setWithdrawAmount(''); setWithdrawAddress('');
+            })}>SUBMIT REQUEST</button>
           </div>
         </>
       )}
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h2 style={{textAlign: 'center', marginBottom: 20}}>User Profile</h2>
+          <h2 style={{textAlign: 'center', marginBottom: 20}}>User Dashboard</h2>
           <div style={{padding: '10px', background: '#f3f4f6', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ddd'}}>
-              <p style={{margin: '5px 0'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></p>
-              <p style={{margin: '5px 0'}}>Membership: <b>{isVip ? "VIP Member ⭐" : "Standard User"}</b></p>
+              <p style={{margin: '5px 0'}}>UID: <b>{APP_CONFIG.MY_UID}</b></p>
+              <p style={{margin: '5px 0'}}>Status: <b>{isVip ? "VIP Member ⭐" : "Free User"}</b></p>
           </div>
           
           <div style={{display: 'flex', gap: '10px', marginBottom: '20px'}}>
               <div style={{flex: 1, background: '#000', color: '#fff', padding: '15px', borderRadius: '15px', textAlign: 'center'}}>
-                  <small style={{display: 'block', opacity: 0.7}}>Total Balance</small>
+                  <small style={{display: 'block', opacity: 0.7}}>Balance</small>
                   <span style={{fontSize: '18px', fontWeight: 'bold'}}>{balance.toFixed(5)} TON</span>
               </div>
               <div style={{flex: 1, background: '#facc15', color: '#000', padding: '15px', borderRadius: '15px', textAlign: 'center', border: '2px solid #000'}}>
                   <small style={{display: 'block', opacity: 0.7}}>Ads Watched</small>
-                  <span style={{fontSize: '20px', fontWeight: 'bold'}}>{adsWatched} 📺</span>
+                  <span style={{fontSize: '20px', fontWeight: 'bold'}}>{adsWatched}</span>
               </div>
           </div>
 
-          <button style={{...styles.btn, background:'#ef4444'}} onClick={() => handleAction(() => window.open(APP_CONFIG.SUPPORT_BOT))}>CONTACT SUPPORT</button>
+          <button style={{...styles.btn, background:'#ef4444'}} onClick={() => handleAction(() => window.open(APP_CONFIG.SUPPORT_BOT))}>HELP & SUPPORT</button>
         </div>
       )}
 
