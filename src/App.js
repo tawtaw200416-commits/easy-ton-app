@@ -40,12 +40,14 @@ const fixedSocialTasks = [
 function App() {
   const [balance, setBalance] = useState(0);
   const [completed, setCompleted] = useState([]);
+  const [adsWatched, setAdsWatched] = useState(0); // Watch Count State အသစ်
   const [isLoading, setIsLoading] = useState(true);
   const [isVip, setIsVip] = useState(false);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
   const [referrals, setReferrals] = useState([]);
   const [customTasks, setCustomTasks] = useState([]);
   const [promoCodes, setPromoCodes] = useState([]);
+  const [allUsers, setAllUsers] = useState([]); 
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [lastActionTime, setLastActionTime] = useState(0);
@@ -68,20 +70,24 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
+  // FetchData logic: ဒေတာအဟောင်းတွေမပျက်အောင် သေချာဆွဲထုတ်ပါတယ်
   const fetchData = useCallback(async (isBackground = false) => {
     try {
-      const [u, t, p] = await Promise.all([
+      const [u, t, p, all] = await Promise.all([
         fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
         fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`)
+        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`),
+        fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`)
       ]);
       const userData = await u.json();
       const tasksData = await t.json();
       const promoData = await p.json();
+      const allData = await all.json();
 
       if (userData) {
         setBalance(Number(userData.balance || 0));
         setIsVip(userData.isVip || VIP_IDS.includes(APP_CONFIG.MY_UID));
+        setAdsWatched(userData.adsWatched || 0); // Ads ကြည့်ပြီးသားအရေအတွက်
         setWithdrawHistory(userData.withdrawHistory || []);
         setCompleted(userData.completedTasks || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
@@ -89,6 +95,7 @@ function App() {
       
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
+      if (allData) setAllUsers(Object.keys(allData).map(key => ({ id: key, ...allData[key] })));
       
       setIsLoading(false);
     } catch (e) { 
@@ -108,8 +115,8 @@ function App() {
       setLastActionTime(Date.now()); 
       return;
     }
-    window.open(APP_CONFIG.ADVERTICA_URL, '_blank');
-    window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
+    const adToOpen = Math.random() < 0.5 ? APP_CONFIG.ADVERTICA_URL : APP_CONFIG.ADSTERRA_URL;
+    window.open(adToOpen, '_blank');
     setLastActionTime(Date.now()); 
   }, []);
 
@@ -140,16 +147,25 @@ function App() {
 
     const rewardAmt = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
     const newBal = Number((balance + rewardAmt).toFixed(5));
+    const newAdsWatched = id === 'watch_ad' ? adsWatched + 1 : adsWatched; // Ads ကြည့်ရင် count တိုးမယ်
     const newComp = [...completed, id];
 
     setBalance(newBal);
+    if (id === 'watch_ad') setAdsWatched(newAdsWatched);
+
     if (id !== 'watch_ad' && !id.startsWith('spin_')) {
         setCompleted(newComp);
         setShowClaimId(null);
     }
 
+    // PATCH ကိုသုံးထားလို့ ရှိပြီးသားဒေတာ (withdrawHistory, referrals) တွေ မပျက်ပါဘူး
     await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-      method: 'PATCH', body: JSON.stringify({ balance: newBal, completedTasks: (id !== 'watch_ad' && !id.startsWith('spin_')) ? newComp : completed })
+      method: 'PATCH', 
+      body: JSON.stringify({ 
+        balance: newBal, 
+        adsWatched: newAdsWatched,
+        completedTasks: (id !== 'watch_ad' && !id.startsWith('spin_')) ? newComp : completed 
+      })
     });
     
     alert(`Success! +${rewardAmt} TON.`);
@@ -360,6 +376,39 @@ function App() {
         </>
       )}
 
+      {activeNav === 'rank' && (
+        <div style={styles.card}>
+          <div style={{textAlign: 'center', background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', marginBottom: '15px'}}>
+              <h2 style={{margin: 0}}>🏆 TOP 30 RANKING</h2>
+              <p style={{fontSize: '12px', margin: '5px 0'}}>Season 1 - 10 TON Pool</p>
+          </div>
+          <div style={{maxHeight: '400px', overflowY: 'auto'}}>
+              <table style={{width: '100%', borderCollapse: 'collapse'}}>
+                  <thead style={{background: '#f3f4f6', fontSize: '12px'}}>
+                      <tr>
+                          <th style={{padding: '10px', textAlign: 'left'}}>RANK</th>
+                          <th style={{padding: '10px', textAlign: 'left'}}>USER UID</th>
+                          <th style={{padding: '10px', textAlign: 'right'}}>BALANCE</th>
+                          <th style={{padding: '10px', textAlign: 'right'}}>PRIZE</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {allUsers.sort((a, b) => (b.balance || 0) - (a.balance || 0)).slice(0, 30).map((user, index) => (
+                          <tr key={index} style={{borderBottom: '1px solid #eee', fontSize: '11px', background: user.id === APP_CONFIG.MY_UID ? '#fef08a' : 'transparent'}}>
+                              <td style={{padding: '10px', fontWeight: 'bold'}}>#{index + 1}</td>
+                              <td style={{padding: '10px'}}>{user.id} {user.isVip && '⭐'}</td>
+                              <td style={{padding: '10px', textAlign: 'right'}}>{(user.balance || 0).toFixed(4)}</td>
+                              <td style={{padding: '10px', textAlign: 'right', color: 'green', fontWeight: 'bold'}}>
+                                  {index === 0 ? "5.00" : index === 1 ? "3.00" : index === 2 ? "1.00" : (1 / 27).toFixed(2)} TON
+                              </td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
+          </div>
+        </div>
+      )}
+
       {activeNav === 'invite' && (
         <div style={styles.card}>
           <h3>Invite Friends</h3>
@@ -422,16 +471,29 @@ function App() {
 
       {activeNav === 'profile' && (
         <div style={styles.card}>
-          <h3>User Profile</h3>
-          <p>User ID: <b>{APP_CONFIG.MY_UID}</b></p>
-          <p>Balance: <b>{balance.toFixed(5)} TON</b></p>
-          <p>Status: {isVip ? "VIP Membership ⭐" : "Standard"}</p>
+          <h2 style={{textAlign: 'center', marginBottom: 20}}>User Profile</h2>
+          <div style={{padding: '10px', background: '#f3f4f6', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ddd'}}>
+              <p style={{margin: '5px 0'}}>User ID: <b>{APP_CONFIG.MY_UID}</b></p>
+              <p style={{margin: '5px 0'}}>Status: <b>{isVip ? "VIP Membership ⭐" : "Standard User"}</b></p>
+          </div>
+          
+          <div style={{display: 'flex', gap: '10px', marginBottom: '20px'}}>
+              <div style={{flex: 1, background: '#000', color: '#fff', padding: '15px', borderRadius: '15px', textAlign: 'center'}}>
+                  <small style={{display: 'block', opacity: 0.7}}>Balance</small>
+                  <span style={{fontSize: '18px', fontWeight: 'bold'}}>{balance.toFixed(5)} TON</span>
+              </div>
+              <div style={{flex: 1, background: '#facc15', color: '#000', padding: '15px', borderRadius: '15px', textAlign: 'center', border: '2px solid #000'}}>
+                  <small style={{display: 'block', opacity: 0.7}}>Ads Watched</small>
+                  <span style={{fontSize: '20px', fontWeight: 'bold'}}>{adsWatched} 📺</span>
+              </div>
+          </div>
+
           <button style={{...styles.btn, background:'#ef4444'}} onClick={() => handleAction(() => window.open(APP_CONFIG.SUPPORT_BOT))}>CONTACT SUPPORT</button>
         </div>
       )}
 
       <div style={styles.nav}>
-        {['earn', 'invite', 'withdraw', 'profile'].map(n => (
+        {['earn', 'rank', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => handleAction(() => setActiveNav(n))} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '11px' }}>
             {n.toUpperCase()}
           </button>
