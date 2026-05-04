@@ -94,17 +94,17 @@ function App() {
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
       
-      // RANKING LOGIC - Sorted by adsWatched (For Top Watchers)
+      // RANKING LOGIC - Sorted by adsWatched for Top Watchers
       if (allData) {
         const cleanedUsers = Object.keys(allData)
           .filter(key => key !== 'error' && key !== 'null' && key !== 'undefined' && key.length > 5)
           .map(key => ({
             id: key,
             balance: Number(allData[key]?.balance || 0),
-            adsWatched: Number(allData[key]?.adsWatched || 0),
+            adsWatched: Number(allData[key]?.adsWatched || 0), // Fetch adsWatched count
             isVip: allData[key]?.isVip || false
           }))
-          .sort((a, b) => b.adsWatched - a.adsWatched);
+          .sort((a, b) => b.adsWatched - a.adsWatched); // Sort by adsWatched count
         setAllUsers(cleanedUsers);
       }
       
@@ -349,7 +349,7 @@ function App() {
         <div style={styles.card}>
           <div style={{textAlign: 'center', background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', marginBottom: '15px'}}>
               <h2 style={{margin: 0}}>🏆 TOP 30 RANKING</h2>
-              <p style={{fontSize: '12px', margin: '5px 0'}}>Season 1 - Top Watchers</p>
+              <p style={{fontSize: '12px', margin: '5px 0'}}>Season 1 - Top Watchers Pool</p>
           </div>
           <div style={{maxHeight: '400px', overflowY: 'auto'}}>
               <table style={{width: '100%', borderCollapse: 'collapse'}}>
