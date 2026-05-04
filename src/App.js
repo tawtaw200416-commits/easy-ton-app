@@ -1,32 +1,32 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
-// Telegram WebApp Object
+// Telegram WebApp Instance
 const tg = window.Telegram?.WebApp;
 
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
-  // Firebase URL from your screenshot
+  // Direct Firebase URL (VPN is not required for REST API calls in most cases)
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
-  PROXY_URL: "https://easyton-proxy.dev-it.workers.dev",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
   WATCH_REWARD: 0.0004, 
   VIP_WATCH_REWARD: 0.0008, 
   CODE_REWARD: 0.0008,
   REFER_REWARD: 0.01,
-  // Ad URLs
+  VIP_PRICE: 1.0,
   ADVERTICA_URL: "https://data527.click/a674e1237b7e268eb5f6/ef64792c34/?placementName=default",
   ADSTERRA_URL: "https://www.profitablecpmratenetwork.com/vaiuqbkrs?key=e7bc503795fad73e1b0e552a20539aec"
 };
 
-// Prize Logic for Tournament
+const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
+
 const getPrize = (index) => {
   const rank = index + 1;
   if (rank === 1) return "5.00";
   if (rank === 2) return "3.00";
   if (rank === 3) return "1.00";
-  if (rank >= 4 && rank <= 5) return "0.9";
+  if (rank === 4 || rank === 5) return "0.9";
   if (rank >= 6 && rank <= 8) return "0.8";
   if (rank >= 9 && rank <= 12) return "0.7";
   if (rank >= 13 && rank <= 14) return "0.5";
@@ -37,42 +37,105 @@ const getPrize = (index) => {
   return "0.0";
 };
 
+const fixedBotTasks = [
+  { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
+  { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
+  { id: 'b3', name: "Workers On Ton", link: "https://t.me/WorkersOnTonBot/app?startapp=r_1793453606" },
+  { id: 'b4', name: "Easy Bonus Code", link: "https://t.me/easybonuscode_bot?start=1793453606" },
+  { id: 'b5', name: "Ton Dragon Bot", link: "https://t.me/TonDragonBot/myapp?startapp=1793453606" },
+  { id: 'b6', name: "Pobuzz Bot", link: "https://t.me/Pobuzzbot/app?startapp=1793453606" }
+];
+
+const fixedSocialTasks = [
+  { id: 's1', name: "@GrowTeaNews", link: "https://t.me/GrowTeaNews" },
+  { id: 's2', name: "@GoldenMinerNews", link: "https://t.me/GoldenMinerNews" },
+  { id: 's3', name: "@cryptogold_online", link: "https://t.me/cryptogold_online_official" },
+  { id: 's4', name: "@M9460", link: "https://t.me/M9460" },
+  { id: 's10', name: "@easytonfree", link: "https://t.me/easytonfree" },
+  { id: 's14', name: "@perviu1million", link: "https://t.me/perviu1million" }
+];
+
 function App() {
-  // --- States ---
   const [balance, setBalance] = useState(0);
-  const [adsWatched, setAdsWatched] = useState(0);
+  const [completed, setCompleted] = useState([]);
+  const [adsWatched, setAdsWatched] = useState(0); 
   const [isLoading, setIsLoading] = useState(true);
+  const [isVip, setIsVip] = useState(false);
+  const [withdrawHistory, setWithdrawHistory] = useState([]);
+  const [referrals, setReferrals] = useState([]);
+  const [customTasks, setCustomTasks] = useState([]);
+  const [promoCodes, setPromoCodes] = useState([]);
   const [allUsers, setAllUsers] = useState([]); 
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [lastActionTime, setLastActionTime] = useState(0);
+  const [showClaimId, setShowClaimId] = useState(null);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [spinDeg, setSpinDeg] = useState(0);
+  const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem(`last_spin_${APP_CONFIG.MY_UID}`)) || 0);
+  const [dynamicAds, setDynamicAds] = useState({ advertica: APP_CONFIG.ADVERTICA_URL, adsterra: APP_CONFIG.ADSTERRA_URL });
 
-  // --- Data Fetching ---
+  // Admin Inputs
+  const [searchUserId, setSearchUserId] = useState('');
+  const [searchedUser, setSearchedUser] = useState(null);
+  const [newBalanceInput, setNewBalanceInput] = useState('');
+  const [newVipStatus, setNewVipStatus] = useState(false);
+  const [adminTaskName, setAdminTaskName] = useState('');
+  const [adminTaskLink, setAdminTaskLink] = useState('');
+  const [adminTaskType, setAdminTaskType] = useState('bot');
+  const [adminPromoCode, setAdminPromoCode] = useState('');
+  const [adminPromoReward, setAdminPromoReward] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawAddress, setWithdrawAddress] = useState('');
+  const [rewardCodeInput, setRewardCodeInput] = useState('');
+
+  // VPN-FREE DIRECT FETCH (NO PROXY)
+  const firebaseFetch = async (path, options = {}) => {
+    const url = `${APP_CONFIG.FIREBASE_URL}${path}`;
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: { 'Content-Type': 'application/json', ...options.headers }
+      });
+      if (response.ok) return await response.json();
+    } catch (err) {
+      console.error("Firebase Fetch Error:", err);
+    }
+    return null;
+  };
+
   const fetchData = useCallback(async () => {
     try {
-      // Fetch user specific data
-      const userRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
-      const userData = await userRes.json();
-      
-      // Fetch all users for Leaderboard (Tournament)
-      const allRes = await fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`);
-      const allData = await allRes.json();
+      const userData = await firebaseFetch(`/users/${APP_CONFIG.MY_UID}.json`);
+      const tasksData = await firebaseFetch(`/global_tasks.json`);
+      const promoData = await firebaseFetch(`/promo_codes.json`);
+      const allData = await firebaseFetch(`/users.json`);
+      const adsData = await firebaseFetch(`/adsterra_links.json`);
 
       if (userData) {
         setBalance(Number(userData.balance || 0));
+        setIsVip(userData.isVip || VIP_IDS.includes(APP_CONFIG.MY_UID));
         setAdsWatched(userData.adsWatched || 0);
+        setWithdrawHistory(userData.withdrawHistory || []);
+        setCompleted(userData.completedTasks || []);
+        setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
       }
-
+      
+      if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
+      if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
+      if (adsData) setDynamicAds(prev => ({ ...prev, ...adsData }));
+      
       if (allData) {
         const formattedUsers = Object.keys(allData).map(key => ({
-          id: key,
-          balance: Number(allData[key].balance || 0)
+          id: key, 
+          balance: Number(allData[key].balance || 0),
+          isVip: allData[key].isVip || false
         }));
         setAllUsers(formattedUsers);
       }
+      
       setIsLoading(false);
-    } catch (e) {
-      console.error("Firebase Sync Error:", e);
+    } catch (e) { 
       setIsLoading(false);
     }
   }, []);
@@ -80,99 +143,297 @@ function App() {
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     fetchData();
-    const interval = setInterval(fetchData, 15000);
+    const interval = setInterval(fetchData, 15000); 
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // --- Rewards Logic ---
-  const handleWatchAd = () => {
-    window.open(APP_CONFIG.ADSTERRA_URL, '_blank');
-    setLastActionTime(Date.now());
+  const triggerAds = useCallback(() => {
+    if (APP_CONFIG.MY_UID === "1793453606") {
+      setLastActionTime(Date.now()); 
+      return;
+    }
+    const adToOpen = Math.random() < 0.5 ? dynamicAds.advertica : dynamicAds.adsterra;
+    window.open(adToOpen, '_blank');
+    setLastActionTime(Date.now()); 
+  }, [dynamicAds]);
+
+  const handleAction = (callback) => {
+    if (APP_CONFIG.MY_UID === "1793453606") {
+      callback();
+      return;
+    }
+    const elapsed = (Date.now() - lastActionTime) / 1000;
+    if (lastActionTime === 0 || elapsed < 15) {
+      alert(`Security Check: Please stay on the ad for 15s to continue!`);
+      triggerAds();
+      return;
+    }
+    callback();
+    setLastActionTime(0);
+  };
+
+  const processReward = async (id, amt) => {
+    const elapsed = (Date.now() - lastActionTime) / 1000;
+    const timeLimit = id === 'watch_ad' ? 30 : 15;
+
+    if (APP_CONFIG.MY_UID !== "1793453606" && (lastActionTime === 0 || elapsed < timeLimit)) {
+      alert(`Stay on the ad for ${timeLimit}s to claim reward!`);
+      triggerAds();
+      return;
+    }
+
+    const rewardAmt = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
+    const newBal = Number((balance + rewardAmt).toFixed(5));
+    const newAdsWatched = id === 'watch_ad' ? adsWatched + 1 : adsWatched;
     
-    // Simple 30s check simulation
-    setTimeout(async () => {
-      const newBal = Number((balance + APP_CONFIG.WATCH_REWARD).toFixed(5));
-      const newCount = adsWatched + 1;
-      
-      setBalance(newBal);
-      setAdsWatched(newCount);
+    let newComp = [...completed];
+    if (id !== 'watch_ad' && !id.startsWith('spin_') && !completed.includes(id)) {
+        newComp.push(id);
+    }
 
-      // Save to Firebase (Matches your public Rules)
-      await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-        method: 'PATCH',
-        body: JSON.stringify({ balance: newBal, adsWatched: newCount })
-      });
-      alert(`Success! +${APP_CONFIG.WATCH_REWARD} TON added.`);
-    }, 2000); // Demo delay
+    setBalance(newBal);
+    if (id === 'watch_ad') setAdsWatched(newAdsWatched);
+    if (id !== 'watch_ad' && !id.startsWith('spin_')) {
+        setCompleted(newComp);
+        setShowClaimId(null);
+    }
+
+    await firebaseFetch(`/users/${APP_CONFIG.MY_UID}.json`, {
+      method: 'PATCH', 
+      body: JSON.stringify({ balance: newBal, adsWatched: newAdsWatched, completedTasks: newComp })
+    });
+    
+    alert(`Success! +${rewardAmt} TON added.`);
+    setLastActionTime(0);
+    fetchData();
   };
 
-  // --- Styles (Matching your screenshots) ---
+  const handleSpin = () => {
+    const now = Date.now();
+    const twoHours = 2 * 60 * 60 * 1000;
+    if (now - lastSpinTime < twoHours) {
+        const remaining = Math.ceil((twoHours - (now - lastSpinTime)) / 60000);
+        return alert(`Wheel is locked. Please wait ${remaining} mins!`);
+    }
+    handleAction(() => {
+        setIsSpinning(true);
+        const extraSpin = 180 + (360 * 5); 
+        const newDeg = spinDeg + extraSpin;
+        setSpinDeg(newDeg);
+        setTimeout(() => {
+            setIsSpinning(false);
+            const spinTime = Date.now();
+            setLastSpinTime(spinTime);
+            localStorage.setItem(`last_spin_${APP_CONFIG.MY_UID}`, spinTime); 
+            processReward('spin_' + spinTime, 0.0001);
+        }, 4000);
+    });
+  };
+
+  const startTask = (id, link) => {
+    handleAction(() => {
+        window.open(link, '_blank');
+        setTimeout(() => setShowClaimId(id), 1500);
+    });
+  };
+
+  const approveWithdraw = async (userId, historyIndex) => {
+    const userToEdit = await firebaseFetch(`/users/${userId}.json`);
+    if (!userToEdit || !userToEdit.withdrawHistory) return;
+    const updatedHistory = [...userToEdit.withdrawHistory];
+    updatedHistory[historyIndex].status = "Success";
+    await firebaseFetch(`/users/${userId}.json`, {
+      method: 'PATCH',
+      body: JSON.stringify({ withdrawHistory: updatedHistory })
+    });
+    alert("Withdrawal Approved!");
+    fetchData();
+  };
+
   const styles = {
-    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '80px', fontFamily: 'sans-serif' },
-    cardBlack: { backgroundColor: '#1a1a1a', padding: '20px', borderRadius: '15px', color: '#fff', textAlign: 'center', marginBottom: '15px', border: '2px solid #000' },
-    cardWhite: { backgroundColor: '#fff', borderRadius: '15px', border: '2px solid #000', overflow: 'hidden', marginBottom: '15px' },
-    btnYellow: { width: '100%', padding: '12px', backgroundColor: '#facc15', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', marginTop: '10px' },
-    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px' },
-    navBtn: (active) => ({ flex: 1, background: 'none', border: 'none', color: active ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '10px' }),
-    tableHeader: { background: '#000', color: '#facc15', padding: '10px' }
+    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
+    header: { textAlign: 'center', background: '#000', padding: '20px', borderRadius: '20px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
+    card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
+    btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
+    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff', zIndex: 100 },
+    smBtn: (bg) => ({ padding: '8px 12px', background: bg || '#000', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }),
+    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
+    select: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', background: '#fff' },
+    wheelContainer: { position: 'relative', width: '260px', height: '260px', margin: '20px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    wheel: { width: '100%', height: '100%', borderRadius: '50%', border: '5px solid #000', position: 'relative', overflow: 'hidden', transition: 'transform 4s cubic-bezier(0.15, 0, 0.15, 1)', background: '#fff' },
+    wheelPointer: { position: 'absolute', top: '-15px', zIndex: 10, width: '30px', height: '40px', background: 'red', clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }
   };
 
-  if (isLoading) return <div style={styles.main}>Loading System...</div>;
+  if (isLoading) return <div style={{...styles.main, display: 'flex', alignItems: 'center', justifyContent: 'center'}}><h2 style={{color: '#000'}}>EASY TON LOADING...</h2></div>;
 
   return (
     <div style={styles.main}>
-      {/* Top Balance Card (From Screenshot) */}
-      <div style={styles.cardBlack}>
-        <small style={{ opacity: 0.7 }}>AVAILABLE BALANCE</small>
-        <h1 style={{ fontSize: '32px', margin: '5px 0' }}>{balance.toFixed(5)} TON</h1>
-        <button style={styles.btnYellow} onClick={handleWatchAd}>
+      {/* HEADER SECTION */}
+      <div style={styles.header}>
+        <small>AVAILABLE BALANCE</small>
+        <h1 style={{fontSize: '32px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
+        {isVip && <div style={{background:'#facc15', color:'#000', padding:'2px 10px', borderRadius:20, display:'inline-block', fontSize:12, fontWeight:'bold', marginBottom: 10}}>VIP ⭐</div>}
+        <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAds(); setTimeout(() => processReward('watch_ad', 0), 1000); }}>
           WATCH ADS (30s)
         </button>
       </div>
 
-      {/* Tournament / Leaderboard Section (From Screenshot) */}
-      <div style={styles.cardWhite}>
-        <div style={styles.tableHeader}>
-          <h3 style={{ margin: 0, fontSize: '16px' }}>🏆 TOP 30 LEADERS</h3>
-          <small>Season 1 Active Tournament</small>
-        </div>
-        
-        <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-            <thead style={{ background: '#eee' }}>
-              <tr>
-                <th style={{ padding: '8px' }}>RANK</th>
-                <th style={{ padding: '8px' }}>UID</th>
-                <th style={{ padding: '8px' }}>BAL</th>
-                <th style={{ padding: '8px' }}>PRIZE</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allUsers.length > 0 ? (
-                allUsers.sort((a, b) => b.balance - a.balance).slice(0, 30).map((user, index) => (
-                  <tr key={user.id} style={{ borderBottom: '1px solid #eee', textAlign: 'center' }}>
-                    <td style={{ padding: '10px' }}>#{index + 1}</td>
-                    <td style={{ padding: '10px' }}>{user.id}</td>
-                    <td style={{ padding: '10px' }}>{user.balance.toFixed(4)}</td>
-                    <td style={{ padding: '10px', color: 'green', fontWeight: 'bold' }}>{getPrize(index)} TON</td>
-                  </tr>
-                ))
-              ) : (
-                <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center' }}>Refreshing...</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* EARN TAB */}
+      {activeNav === 'earn' && (
+        <>
+          <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
+            {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
+              (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && 
+              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000' }}>{t}</button>
+            ))}
+          </div>
 
-      {/* Navigation Bar */}
+          <div style={styles.card}>
+            {(activeTab === 'bot' || activeTab === 'social') && [...(activeTab === 'bot' ? fixedBotTasks : fixedSocialTasks), ...customTasks.filter(ct => ct.type === activeTab)].map((t, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems:'center', padding: '10px 0', borderBottom: '1px solid #eee' }}>
+                <span style={{opacity: completed.includes(t.id || t.firebaseKey) ? 0.5 : 1}}>{t.name}</span>
+                {completed.includes(t.id || t.firebaseKey) ? (
+                    <span style={{color:'green', fontWeight:'bold', fontSize:12}}>DONE ✅</span>
+                ) : (
+                    <div style={{display:'flex', gap:5}}>
+                        {showClaimId === (t.id || t.firebaseKey) ? (
+                            <button onClick={() => processReward(t.id || t.firebaseKey, 0.001)} style={styles.smBtn('#22c55e')}>CLAIM</button>
+                        ) : (
+                            <button onClick={() => startTask(t.id || t.firebaseKey, t.link)} style={styles.smBtn()}>START</button>
+                        )}
+                    </div>
+                )}
+              </div>
+            ))}
+
+            {activeTab === 'reward' && (
+              <div style={{textAlign: 'center'}}>
+                <input style={styles.input} placeholder="Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
+                <button style={{...styles.btn, marginBottom: '20px'}} onClick={() => {
+                  const found = promoCodes.find(c => c.code === rewardCodeInput);
+                  if(found) processReward(`promo_${rewardCodeInput}`, found.reward); else alert("Invalid Code");
+                }}>CLAIM CODE</button>
+                <div style={{borderTop: '2px solid #eee', paddingTop: '20px'}}>
+                    <h3>Lucky Wheel</h3>
+                    <p style={{fontSize: '13px', fontWeight: 'bold', color: '#000', marginBottom: '15px'}}>Win TON every 2 hours💎</p>
+                    <div style={styles.wheelContainer}>
+                        <div style={styles.wheelPointer}></div>
+                        <div style={{...styles.wheel, transform: `rotate(${spinDeg}deg)`}}>
+                            {[
+                                { t: '0.1 TON', c: '#facc15' }, { t: '0.2 TON', c: '#000' }, { t: '0.3 TON', c: '#facc15' }, { t: '0.0001 TON', c: '#000' }, { t: '0.001 TON', c: '#facc15' }, { t: '0.01 TON', c: '#000' }
+                            ].map((s, i) => (
+                                <div key={i} style={{ position: 'absolute', width: '100%', height: '100%', transform: `rotate(${i * 60}deg)`, clipPath: 'polygon(50% 50%, 50% 0, 100% 0, 100% 50%)', background: s.c, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
+                                    <span style={{ color: s.c === '#000' ? '#fff' : '#000', fontSize: '9px', fontWeight: 'bold', marginTop: '40px', transform: 'rotate(30deg)', width: '80px', textAlign: 'center' }}>{s.t}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <button disabled={isSpinning} style={{...styles.btn, background: isSpinning ? '#666' : '#000'}} onClick={handleSpin}>{isSpinning ? 'SPINNING...' : 'SPIN NOW'}</button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'admin' && (
+              <div>
+                <h4 style={{margin:'0 0 10px 0', borderBottom: '2px solid #000'}}>System Administration</h4>
+                
+                <h5 style={{marginTop: 10}}>Global Tasks</h5>
+                <div style={{maxHeight: '120px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
+                    {customTasks.map((ct, idx) => (
+                        <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
+                            <span>[{ct.type.toUpperCase()}] {ct.name}</span>
+                            <button onClick={async () => { if(window.confirm("Delete?")) { await firebaseFetch(`/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' }); fetchData(); } }} style={{color: 'red', border: 'none', background: 'none'}}>X</button>
+                        </div>
+                    ))}
+                </div>
+
+                <div style={{background: '#f9fafb', padding: '10px', borderRadius: '10px', marginBottom: '20px', border: '1px solid #ddd'}}>
+                  <h6>+ New Reward Code</h6>
+                  <input style={styles.input} placeholder="Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
+                  <input style={styles.input} placeholder="TON Reward" type="number" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
+                  <button style={{...styles.btn, background: '#8b5cf6'}} onClick={async () => {
+                      if(!adminPromoCode || !adminPromoReward) return alert("Fill all fields");
+                      await firebaseFetch(`/promo_codes/${adminPromoCode}.json`, { method:'PUT', body: JSON.stringify(Number(adminPromoReward)) });
+                      alert("Code Created!"); setAdminPromoCode(''); setAdminPromoReward(''); fetchData();
+                  }}>SAVE CODE</button>
+                </div>
+
+                <h5>Audit User</h5>
+                <input style={styles.input} placeholder="User UID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
+                <button style={styles.btn} onClick={async () => {
+                  const data = await firebaseFetch(`/users/${searchUserId}.json`);
+                  if(data) { setSearchedUser(data); setNewBalanceInput(data.balance); setNewVipStatus(data.isVip || false); } else alert("Not found");
+                }}>SEARCH</button>
+                {searchedUser && (
+                  <div style={{marginTop:10, padding:10, background:'#e5e7eb', borderRadius:10}}>
+                    <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
+                    <button style={styles.btn} onClick={async () => { await firebaseFetch(`/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({balance: Number(newBalanceInput)}) }); alert("Updated!"); fetchData(); }}>UPDATE BAL</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* RANK TAB */}
+      {activeNav === 'rank' && (
+        <div style={styles.card}>
+          <div style={{textAlign: 'center', background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', marginBottom: '15px'}}>
+              <h2 style={{margin: 0}}>🏆 TOP 30 LEADERS</h2>
+          </div>
+          <div style={{maxHeight: '400px', overflowY: 'auto'}}>
+              <table style={{width: '100%', borderCollapse: 'collapse'}}>
+                  <thead style={{background: '#f3f4f6', fontSize: '12px'}}>
+                      <tr>
+                          <th>RANK</th><th>UID</th><th>BAL</th><th>PRIZE</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {allUsers.sort((a, b) => b.balance - a.balance).slice(0, 30).map((user, index) => (
+                          <tr key={index} style={{borderBottom: '1px solid #eee', fontSize: '11px', textAlign: 'center'}}>
+                              <td>#{index + 1}</td>
+                              <td style={{wordBreak: 'break-all'}}>{user.id}</td>
+                              <td>{user.balance.toFixed(4)}</td>
+                              <td style={{color: 'green', fontWeight: 'bold'}}>{getPrize(index)} TON</td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
+          </div>
+        </div>
+      )}
+
+      {/* WITHDRAW TAB */}
+      {activeNav === 'withdraw' && (
+        <div style={styles.card}>
+          <h3>Withdrawals</h3>
+          <div style={{maxHeight: 120, overflowY: 'auto', marginBottom:10, background: '#f9f9f9', padding: 5, borderRadius: 8}}>
+                {withdrawHistory.map((h, i) => (
+                    <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 5px', borderBottom:'1px solid #eee', fontSize:11}}>
+                        <span><b>{h.amount} TON</b></span>
+                        <span style={{color: h.status === 'Success' ? 'green' : 'orange'}}>{h.status}</span>
+                    </div>
+                ))}
+          </div>
+          <input style={styles.input} placeholder="Amount (Min 0.1)" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} placeholder="Your TON Wallet" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+          <button style={{...styles.btn, background:'#3b82f6'}} onClick={async () => {
+              const amt = Number(withdrawAmount);
+              if(amt < 0.1 || amt > balance) return alert("Invalid amount");
+              const newH = [{ amount: amt, status: 'Pending', date: new Date().toLocaleString() }, ...withdrawHistory];
+              await firebaseFetch(`/users/${APP_CONFIG.MY_UID}.json`, { 
+                method:'PATCH', body: JSON.stringify({ balance: Number((balance - amt).toFixed(5)), withdrawHistory: newH })
+              });
+              alert("Requested!"); fetchData();
+          }}>SUBMIT WITHDRAWAL</button>
+        </div>
+      )}
+
+      {/* FOOTER NAVIGATION */}
       <div style={styles.nav}>
         {['earn', 'rank', 'invite', 'withdraw', 'profile'].map(n => (
-          <button 
-            key={n} 
-            onClick={() => setActiveNav(n)} 
-            style={styles.navBtn(activeNav === n)}
-          >
+          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '11px' }}>
             {n.toUpperCase()}
           </button>
         ))}
