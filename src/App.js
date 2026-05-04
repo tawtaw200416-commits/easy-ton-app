@@ -5,8 +5,8 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
-  // IMPORTANT: If you set up Cloudflare Worker, replace this URL with your Worker URL
-  FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
+  // FIXED: Proxy URL added to bypass ISP blocks in Myanmar
+  FIREBASE_URL: "https://easyton-proxy.dev-it.workers.dev", 
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
   WATCH_REWARD: 0.0004, 
@@ -86,9 +86,8 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // PROXY FETCH: Bypasses ISP blocks in Myanmar
+  // PROXY FETCH: Ensures connection without VPN
   const fetchWithProxy = async (endpoint, options = {}, retries = 3) => {
-    // If you have a Cloudflare Worker, prefix the URL here
     const url = `${APP_CONFIG.FIREBASE_URL}${endpoint}`;
     
     try {
@@ -278,7 +277,6 @@ function App() {
 
   return (
     <div style={styles.main}>
-      {/* Existing UI code remains exactly the same below... */}
       <div style={styles.header}>
         <small>AVAILABLE BALANCE</small>
         <h1 style={{fontSize: '32px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
