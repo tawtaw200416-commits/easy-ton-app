@@ -94,16 +94,16 @@ function App() {
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
       
-      // FIXED RANKING LOGIC
+      // ပြင်ဆင်ထားသော RANKING LOGIC
       if (allData) {
-        const userList = Object.keys(allData)
-          .map(key => ({ 
-            id: key, 
+        const cleanedUsers = Object.keys(allData)
+          .filter(key => key !== 'error' && key !== 'null' && key !== 'undefined' && key.length > 5)
+          .map(key => ({
+            id: key,
             balance: Number(allData[key]?.balance || 0),
             isVip: allData[key]?.isVip || false
-          }))
-          .filter(user => user.id !== "error" && user.id !== "undefined" && user.id !== ""); // Filter out "error" entries
-        setAllUsers(userList);
+          }));
+        setAllUsers(cleanedUsers);
       }
       
       setIsLoading(false);
@@ -401,27 +401,23 @@ function App() {
                       </tr>
                   </thead>
                   <tbody>
-                      {allUsers
-                        .sort((a, b) => b.balance - a.balance)
-                        .slice(0, 30)
-                        .map((user, index) => {
-                          // Prize Logic
-                          let prize = "0.03";
-                          if (index === 0) prize = "5.00";
-                          else if (index === 1) prize = "3.00";
-                          else if (index === 2) prize = "1.00";
-
-                          return (
+                      {allUsers.length > 0 ? (
+                        allUsers
+                          .sort((a, b) => b.balance - a.balance)
+                          .slice(0, 30)
+                          .map((user, index) => (
                             <tr key={index} style={{borderBottom: '1px solid #eee', fontSize: '11px', background: user.id === APP_CONFIG.MY_UID ? '#fef08a' : 'transparent'}}>
                                 <td style={{padding: '10px', fontWeight: 'bold'}}>#{index + 1}</td>
                                 <td style={{padding: '10px'}}>{user.id} {user.isVip && '⭐'}</td>
                                 <td style={{padding: '10px', textAlign: 'right'}}>{user.balance.toFixed(4)}</td>
                                 <td style={{padding: '10px', textAlign: 'right', color: 'green', fontWeight: 'bold'}}>
-                                    {prize} TON
+                                    {index === 0 ? "5.00" : index === 1 ? "3.00" : index === 2 ? "1.00" : "0.03"} TON
                                 </td>
                             </tr>
-                          );
-                      })}
+                          ))
+                      ) : (
+                        <tr><td colSpan="4" style={{textAlign:'center', padding:'20px'}}>Loading Leaderboard...</td></tr>
+                      )}
                   </tbody>
               </table>
           </div>
