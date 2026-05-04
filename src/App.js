@@ -94,17 +94,17 @@ function App() {
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
       
-      // RANKING LOGIC - Sorted by adsWatched (ကြော်ငြာကြည့်များသူများအတွက်)
+      // RANKING LOGIC - Sorted by adsWatched (For Top Watchers)
       if (allData) {
         const cleanedUsers = Object.keys(allData)
           .filter(key => key !== 'error' && key !== 'null' && key !== 'undefined' && key.length > 5)
           .map(key => ({
             id: key,
             balance: Number(allData[key]?.balance || 0),
-            adsWatched: Number(allData[key]?.adsWatched || 0), // adsWatched data ကိုယူခြင်း
+            adsWatched: Number(allData[key]?.adsWatched || 0),
             isVip: allData[key]?.isVip || false
           }))
-          .sort((a, b) => b.adsWatched - a.adsWatched); // ကြည့်ရှုမှုအများဆုံးသူက နံပါတ် ၁
+          .sort((a, b) => b.adsWatched - a.adsWatched);
         setAllUsers(cleanedUsers);
       }
       
