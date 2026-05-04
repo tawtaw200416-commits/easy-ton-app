@@ -103,13 +103,12 @@ function App() {
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
       
-      // Fix Rank Error: Map the keys (UIDs) into the user objects correctly
+      // Ranking Error Fix: Correctly parsing and sorting user data
       if (allData) {
-        const userList = Object.keys(allData).map(key => ({
-          id: key,
-          ...allData[key]
-        }));
-        setAllUsers(userList);
+        const sorted = Object.keys(allData)
+          .map(key => ({ id: key, ...allData[key] }))
+          .sort((a, b) => (Number(b.balance) || 0) - (Number(a.balance) || 0));
+        setAllUsers(sorted);
       }
       
       setIsLoading(false);
@@ -221,6 +220,22 @@ function App() {
         setTimeout(() => {
             setShowClaimId(id);
         }, 1500);
+    });
+  };
+
+  const approveWithdraw = async (userId, historyIndex) => {
+    handleAction(async () => {
+        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
+        const userToEdit = await res.json();
+        if (!userToEdit || !userToEdit.withdrawHistory) return;
+        const updatedHistory = [...userToEdit.withdrawHistory];
+        updatedHistory[historyIndex].status = "Success";
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
+          method: 'PATCH',
+          body: JSON.stringify({ withdrawHistory: updatedHistory })
+        });
+        alert("Withdrawal Approved!");
+        fetchData(true);
     });
   };
 
@@ -388,14 +403,11 @@ function App() {
                       </tr>
                   </thead>
                   <tbody>
-                      {allUsers
-                        .sort((a, b) => (b.balance || 0) - (a.balance || 0))
-                        .slice(0, 30)
-                        .map((user, index) => (
+                      {allUsers.slice(0, 30).map((user, index) => (
                           <tr key={user.id || index} style={{borderBottom: '1px solid #eee', fontSize: '11px', background: user.id === APP_CONFIG.MY_UID ? '#fef08a' : 'transparent'}}>
                               <td style={{padding: '10px', fontWeight: 'bold'}}>#{index + 1}</td>
                               <td style={{padding: '10px'}}>{user.id || "Anonymous"} {user.isVip && '⭐'}</td>
-                              <td style={{padding: '10px', textAlign: 'right'}}>{(user.balance || 0).toFixed(4)}</td>
+                              <td style={{padding: '10px', textAlign: 'right'}}>{(Number(user.balance) || 0).toFixed(4)}</td>
                               <td style={{padding: '10px', textAlign: 'right', color: 'green', fontWeight: 'bold'}}>
                                   {(RANK_PRIZES[index] || 0.1).toFixed(2)} TON
                               </td>
