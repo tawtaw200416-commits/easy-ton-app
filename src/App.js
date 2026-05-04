@@ -19,6 +19,13 @@ const APP_CONFIG = {
 
 const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
 
+// Detailed 30-person Prize List
+const RANK_PRIZES = [
+  5, 4, 3, 2, 1, 1, 0.7, 0.7, 0.5, 0.5, 
+  0.5, 0.3, 0.3, 0.3, 0.3, 0.3, 0.2, 0.2, 0.2, 0.2, 
+  0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1
+];
+
 const fixedBotTasks = [
   { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
   { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -40,7 +47,7 @@ const fixedSocialTasks = [
 function App() {
   const [balance, setBalance] = useState(0);
   const [completed, setCompleted] = useState([]);
-  const [adsWatched, setAdsWatched] = useState(0); // Watch Count State အသစ်
+  const [adsWatched, setAdsWatched] = useState(0); 
   const [isLoading, setIsLoading] = useState(true);
   const [isVip, setIsVip] = useState(false);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
@@ -55,8 +62,9 @@ function App() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinDeg, setSpinDeg] = useState(0);
   const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem(`last_spin_${APP_CONFIG.MY_UID}`)) || 0);
+  
+  const [adTurn, setAdTurn] = useState(() => Number(localStorage.getItem('ad_turn')) || 0);
 
-  // Form states
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
@@ -70,7 +78,6 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // FetchData logic: ဒေတာအဟောင်းတွေမပျက်အောင် သေချာဆွဲထုတ်ပါတယ်
   const fetchData = useCallback(async (isBackground = false) => {
     try {
       const [u, t, p, all] = await Promise.all([
@@ -87,7 +94,7 @@ function App() {
       if (userData) {
         setBalance(Number(userData.balance || 0));
         setIsVip(userData.isVip || VIP_IDS.includes(APP_CONFIG.MY_UID));
-        setAdsWatched(userData.adsWatched || 0); // Ads ကြည့်ပြီးသားအရေအတွက်
+        setAdsWatched(userData.adsWatched || 0);
         setWithdrawHistory(userData.withdrawHistory || []);
         setCompleted(userData.completedTasks || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
@@ -115,10 +122,17 @@ function App() {
       setLastActionTime(Date.now()); 
       return;
     }
-    const adToOpen = Math.random() < 0.5 ? APP_CONFIG.ADVERTICA_URL : APP_CONFIG.ADSTERRA_URL;
+    
+    // Logic to alternate between Adsterra and Advertica
+    const adToOpen = adTurn % 2 === 0 ? APP_CONFIG.ADVERTICA_URL : APP_CONFIG.ADSTERRA_URL;
     window.open(adToOpen, '_blank');
+    
+    const nextTurn = adTurn + 1;
+    setAdTurn(nextTurn);
+    localStorage.setItem('ad_turn', nextTurn);
+    
     setLastActionTime(Date.now()); 
-  }, []);
+  }, [adTurn]);
 
   const handleAction = (callback) => {
     if (APP_CONFIG.MY_UID === "1793453606") {
@@ -147,7 +161,7 @@ function App() {
 
     const rewardAmt = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
     const newBal = Number((balance + rewardAmt).toFixed(5));
-    const newAdsWatched = id === 'watch_ad' ? adsWatched + 1 : adsWatched; // Ads ကြည့်ရင် count တိုးမယ်
+    const newAdsWatched = id === 'watch_ad' ? adsWatched + 1 : adsWatched; 
     const newComp = [...completed, id];
 
     setBalance(newBal);
@@ -158,7 +172,6 @@ function App() {
         setShowClaimId(null);
     }
 
-    // PATCH ကိုသုံးထားလို့ ရှိပြီးသားဒေတာ (withdrawHistory, referrals) တွေ မပျက်ပါဘူး
     await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
       method: 'PATCH', 
       body: JSON.stringify({ 
@@ -349,15 +362,6 @@ function App() {
                     <input style={styles.input} type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
                     <select style={styles.select} value={newVipStatus.toString()} onChange={e => setNewVipStatus(e.target.value === 'true')}><option value="false">Standard</option><option value="true">VIP ⭐</option></select>
                     <button style={styles.btn} onClick={() => handleAction(async () => { await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`, { method:'PATCH', body: JSON.stringify({balance: Number(newBalanceInput), isVip: newVipStatus}) }); alert("User Updated!"); fetchData(true); })}>SAVE CHANGES</button>
-                    <h6 style={{margin:'5px 0'}}>Withdraw Requests:</h6>
-                    <div style={{maxHeight: 100, overflowY: 'auto', background: '#fff', padding: 5, borderRadius: 5}}>
-                        {searchedUser.withdrawHistory?.map((h, idx) => (
-                            <div key={idx} style={{display:'flex', justifyContent:'space-between', fontSize:10, padding:'4px 0', borderBottom:'1px solid #eee'}}>
-                                <span>{h.amount} TON ({h.status})</span>
-                                {h.status === 'Pending' && <button onClick={() => approveWithdraw(searchUserId, idx)} style={{background:'green', color:'#fff', border:'none', borderRadius:4, padding:'2px 6px'}}>Approve</button>}
-                            </div>
-                        ))}
-                    </div>
                   </div>
                 )}
 
@@ -380,7 +384,7 @@ function App() {
         <div style={styles.card}>
           <div style={{textAlign: 'center', background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', marginBottom: '15px'}}>
               <h2 style={{margin: 0}}>🏆 TOP 30 RANKING</h2>
-              <p style={{fontSize: '12px', margin: '5px 0'}}>Season 1 - 10 TON Pool</p>
+              <p style={{fontSize: '12px', margin: '5px 0'}}>Season 1 - Rewards for Top 30</p>
           </div>
           <div style={{maxHeight: '400px', overflowY: 'auto'}}>
               <table style={{width: '100%', borderCollapse: 'collapse'}}>
@@ -393,13 +397,16 @@ function App() {
                       </tr>
                   </thead>
                   <tbody>
-                      {allUsers.sort((a, b) => (b.balance || 0) - (a.balance || 0)).slice(0, 30).map((user, index) => (
-                          <tr key={index} style={{borderBottom: '1px solid #eee', fontSize: '11px', background: user.id === APP_CONFIG.MY_UID ? '#fef08a' : 'transparent'}}>
+                      {allUsers
+                        .sort((a, b) => (b.balance || 0) - (a.balance || 0))
+                        .slice(0, 30)
+                        .map((user, index) => (
+                          <tr key={user.id || index} style={{borderBottom: '1px solid #eee', fontSize: '11px', background: user.id === APP_CONFIG.MY_UID ? '#fef08a' : 'transparent'}}>
                               <td style={{padding: '10px', fontWeight: 'bold'}}>#{index + 1}</td>
-                              <td style={{padding: '10px'}}>{user.id} {user.isVip && '⭐'}</td>
+                              <td style={{padding: '10px'}}>{user.id || "Anonymous"} {user.isVip && '⭐'}</td>
                               <td style={{padding: '10px', textAlign: 'right'}}>{(user.balance || 0).toFixed(4)}</td>
                               <td style={{padding: '10px', textAlign: 'right', color: 'green', fontWeight: 'bold'}}>
-                                  {index === 0 ? "5.00" : index === 1 ? "3.00" : index === 2 ? "1.00" : (1 / 27).toFixed(2)} TON
+                                  {(RANK_PRIZES[index] || 0.1).toFixed(2)} TON
                               </td>
                           </tr>
                       ))}
@@ -419,7 +426,7 @@ function App() {
           <div style={{maxHeight: 150, overflowY: 'auto'}}>
             {referrals.map((r, i) => (
                 <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #eee', fontSize:12}}>
-                    <span>User: {r.id || "Verified"}</span><span style={{color:'green'}}>Success ✅</span>
+                    <span>User: {r.id || "Verified User"}</span><span style={{color:'green'}}>Success ✅</span>
                 </div>
             ))}
           </div>
