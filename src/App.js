@@ -19,6 +19,23 @@ const APP_CONFIG = {
 
 const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
 
+// NEW: Prize Calculation Logic
+const getPrize = (index) => {
+  const rank = index + 1;
+  if (rank === 1) return "5.00";
+  if (rank === 2) return "3.00";
+  if (rank === 3) return "1.00";
+  if (rank === 4 || rank === 5) return "0.9";
+  if (rank >= 6 && rank <= 8) return "0.8";
+  if (rank >= 9 && rank <= 12) return "0.7";
+  if (rank >= 13 && rank <= 14) return "0.5";
+  if (rank === 15) return "0.4";
+  if (rank >= 16 && rank <= 19) return "0.3";
+  if (rank >= 20 && rank <= 24) return "0.2";
+  if (rank >= 25 && rank <= 30) return "0.1";
+  return "0.0";
+};
+
 const fixedBotTasks = [
   { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
   { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -56,7 +73,6 @@ function App() {
   const [spinDeg, setSpinDeg] = useState(0);
   const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem(`last_spin_${APP_CONFIG.MY_UID}`)) || 0);
 
-  // Forms
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
@@ -70,19 +86,27 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
+  // VPN WORKAROUND: Enhanced Fetch with Retry
+  const fetchWithRetry = async (url, options = {}, retries = 3) => {
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) throw new Error("Network issue");
+      return await response.json();
+    } catch (err) {
+      if (retries > 0) {
+        await new Promise(res => setTimeout(res, 2000));
+        return fetchWithRetry(url, options, retries - 1);
+      }
+      throw err;
+    }
+  };
+
   const fetchData = useCallback(async (isBackground = false) => {
     try {
-      const [u, t, p, all] = await Promise.all([
-        fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`),
-        fetch(`${APP_CONFIG.FIREBASE_URL}/users.json`)
-      ]);
-      
-      const userData = await u.json();
-      const tasksData = await t.json();
-      const promoData = await p.json();
-      const allData = await all.json();
+      const userData = await fetchWithRetry(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
+      const tasksData = await fetchWithRetry(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`);
+      const promoData = await fetchWithRetry(`${APP_CONFIG.FIREBASE_URL}/promo_codes.json`);
+      const allData = await fetchWithRetry(`${APP_CONFIG.FIREBASE_URL}/users.json`);
 
       if (userData) {
         setBalance(Number(userData.balance || 0));
@@ -115,7 +139,7 @@ function App() {
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     fetchData();
-    const interval = setInterval(() => fetchData(true), 10000); 
+    const interval = setInterval(() => fetchData(true), 15000); 
     return () => clearInterval(interval);
   }, [fetchData]);
 
@@ -217,8 +241,7 @@ function App() {
 
   const approveWithdraw = async (userId, historyIndex) => {
     handleAction(async () => {
-        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
-        const userToEdit = await res.json();
+        const userToEdit = await fetchWithRetry(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
         if (!userToEdit || !userToEdit.withdrawHistory) return;
         const updatedHistory = [...userToEdit.withdrawHistory];
         updatedHistory[historyIndex].status = "Success";
@@ -350,8 +373,7 @@ function App() {
                 <h5>User Management</h5>
                 <input style={styles.input} placeholder="Enter User UID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
                 <button style={styles.btn} onClick={() => handleAction(async () => {
-                  const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
-                  const data = await res.json();
+                  const data = await fetchWithRetry(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
                   if(data) { setSearchedUser(data); setNewBalanceInput(data.balance); setNewVipStatus(data.isVip || false); } else alert("User not found!");
                 })}>SEARCH USER</button>
                 {searchedUser && (
@@ -391,7 +413,7 @@ function App() {
         <div style={styles.card}>
           <div style={{textAlign: 'center', background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', marginBottom: '15px'}}>
               <h2 style={{margin: 0}}>🏆 TOP 30 RANKING</h2>
-              <p style={{fontSize: '12px', margin: '5px 0'}}>Season 1 - 10 TON Pool</p>
+              <p style={{fontSize: '12px', margin: '5px 0'}}>Season 1 - Competition</p>
           </div>
           <div style={{maxHeight: '400px', overflowY: 'auto'}}>
               <table style={{width: '100%', borderCollapse: 'collapse'}}>
@@ -411,7 +433,7 @@ function App() {
                               <td style={{padding: '10px', wordBreak: 'break-all'}}>{user.id} {user.isVip && '⭐'}</td>
                               <td style={{padding: '10px', textAlign: 'right'}}>{(user.balance || 0).toFixed(4)}</td>
                               <td style={{padding: '10px', textAlign: 'right', color: 'green', fontWeight: 'bold'}}>
-                                  {index === 0 ? "5.00" : index === 1 ? "3.00" : index === 2 ? "1.00" : (1 / 27).toFixed(2)} TON
+                                  {getPrize(index)} TON
                               </td>
                           </tr>
                         ))
