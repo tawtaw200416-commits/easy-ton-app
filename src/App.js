@@ -99,7 +99,8 @@ function App() {
       if (allData) {
         const formattedUsers = Object.keys(allData).map(key => ({
           id: key, 
-          ...allData[key]
+          balance: Number(allData[key].balance || 0),
+          isVip: allData[key].isVip || false
         }));
         setAllUsers(formattedUsers);
       }
@@ -114,7 +115,7 @@ function App() {
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     fetchData();
-    const interval = setInterval(() => fetchData(true), 3000);
+    const interval = setInterval(() => fetchData(true), 10000); 
     return () => clearInterval(interval);
   }, [fetchData]);
 
@@ -394,13 +395,14 @@ function App() {
                   <thead style={{background: '#f3f4f6', fontSize: '12px'}}>
                       <tr>
                           <th style={{padding: '10px', textAlign: 'left'}}>RANK</th>
-                          <th style={{padding: '10px', textAlign: 'left'}}>USER UID</th>
+                          <th style={{padding: '10px', textAlign: 'left'}}>USER ID</th>
                           <th style={{padding: '10px', textAlign: 'right'}}>BALANCE</th>
                           <th style={{padding: '10px', textAlign: 'right'}}>PRIZE</th>
                       </tr>
                   </thead>
                   <tbody>
-                      {allUsers.sort((a, b) => (b.balance || 0) - (a.balance || 0)).slice(0, 30).map((user, index) => (
+                      {allUsers && allUsers.length > 0 ? (
+                        allUsers.sort((a, b) => (b.balance || 0) - (a.balance || 0)).slice(0, 30).map((user, index) => (
                           <tr key={index} style={{borderBottom: '1px solid #eee', fontSize: '11px', background: user.id === APP_CONFIG.MY_UID ? '#fef08a' : 'transparent'}}>
                               <td style={{padding: '10px', fontWeight: 'bold'}}>#{index + 1}</td>
                               <td style={{padding: '10px', wordBreak: 'break-all'}}>{user.id} {user.isVip && '⭐'}</td>
@@ -409,7 +411,10 @@ function App() {
                                   {index === 0 ? "5.00" : index === 1 ? "3.00" : index === 2 ? "1.00" : (1 / 27).toFixed(2)} TON
                               </td>
                           </tr>
-                      ))}
+                        ))
+                      ) : (
+                        <tr><td colSpan="4" style={{textAlign:'center', padding:20}}>Loading Rankings...</td></tr>
+                      )}
                   </tbody>
               </table>
           </div>
