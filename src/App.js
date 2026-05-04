@@ -5,7 +5,7 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
-  // Using direct REST URL for better reliability without VPN/Proxy
+  // Using direct REST URL to bypass proxy/VPN issues
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -20,13 +20,12 @@ const APP_CONFIG = {
 
 const VIP_IDS = ["1936306772", "1793453606", "5020977059"];
 
-// PRIZE CALCULATION LOGIC
 const getPrize = (index) => {
   const rank = index + 1;
   if (rank === 1) return "5.00";
   if (rank === 2) return "3.00";
   if (rank === 3) return "1.00";
-  if (rank >= 4 && rank <= 5) return "0.9";
+  if (rank === 4 || rank === 5) return "0.9";
   if (rank >= 6 && rank <= 8) return "0.8";
   if (rank >= 9 && rank <= 12) return "0.7";
   if (rank >= 13 && rank <= 14) return "0.5";
@@ -37,7 +36,6 @@ const getPrize = (index) => {
   return "0.0";
 };
 
-// PRESERVED TASKS
 const fixedBotTasks = [
   { id: 'b1', name: "Grow Tea Bot", link: "https://t.me/GrowTeaBot/app?startapp=1793453606" },
   { id: 'b2', name: "Golden Miner Bot", link: "https://t.me/GoldenMinerBot/app?startapp=ref_3A790DBD" },
@@ -57,14 +55,14 @@ const fixedSocialTasks = [
 ];
 
 function App() {
-  // CRITICAL: Initialize from LocalStorage to prevent Balance 0 during load
+  // Initialize states from LocalStorage so data is visible immediately (No VPN required)
   const [balance, setBalance] = useState(() => Number(localStorage.getItem(`bal_${APP_CONFIG.MY_UID}`)) || 0);
   const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem(`comp_${APP_CONFIG.MY_UID}`)) || []);
   const [adsWatched, setAdsWatched] = useState(() => Number(localStorage.getItem(`ads_${APP_CONFIG.MY_UID}`)) || 0);
+  const [withdrawHistory, setWithdrawHistory] = useState(() => JSON.parse(localStorage.getItem(`hist_${APP_CONFIG.MY_UID}`)) || []);
   
   const [isLoading, setIsLoading] = useState(true);
   const [isVip, setIsVip] = useState(false);
-  const [withdrawHistory, setWithdrawHistory] = useState([]);
   const [referrals, setReferrals] = useState([]);
   const [customTasks, setCustomTasks] = useState([]);
   const [promoCodes, setPromoCodes] = useState([]);
@@ -78,7 +76,7 @@ function App() {
   const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem(`last_spin_${APP_CONFIG.MY_UID}`)) || 0);
   const [dynamicAds, setDynamicAds] = useState({ advertica: APP_CONFIG.ADVERTICA_URL, adsterra: APP_CONFIG.ADSTERRA_URL });
 
-  // Admin states
+  // Admin/UI States
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
@@ -92,76 +90,81 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // VPN-Free Direct Fetcher
-  const apiCall = async (endpoint, method = 'GET', data = null) => {
+  // Helper for direct Firebase REST calls (No Proxy/VPN needed)
+  const fireFetch = async (path, method = 'GET', body = null) => {
     try {
-      const response = await fetch(`${APP_CONFIG.FIREBASE_URL}${endpoint}`, {
+      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}${path}`, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: data ? JSON.stringify(data) : null
+        body: body ? JSON.stringify(body) : null
       });
-      return response.ok ? await response.json() : null;
+      return res.ok ? await res.json() : null;
     } catch (e) {
-      console.error("Connection Error (VPN might be needed if your region blocks Firebase):", e);
+      console.error("Network Error:", e);
       return null;
     }
   };
 
-  const syncData = useCallback(async () => {
-    const [userData, tasksData, promoData, usersData, adsData] = await Promise.all([
-      apiCall(`/users/${APP_CONFIG.MY_UID}.json`),
-      apiCall(`/global_tasks.json`),
-      apiCall(`/promo_codes.json`),
-      apiCall(`/users.json`),
-      apiCall(`/adsterra_links.json`)
+  const fetchData = useCallback(async () => {
+    const [uData, tData, pData, allData, adsData] = await Promise.all([
+      fireFetch(`/users/${APP_CONFIG.MY_UID}.json`),
+      fireFetch(`/global_tasks.json`),
+      fireFetch(`/promo_codes.json`),
+      fireFetch(`/users.json`),
+      fireFetch(`/adsterra_links.json`)
     ]);
 
-    if (userData) {
-      const dbBal = Number(userData.balance || 0);
-      const dbComp = userData.completedTasks || [];
-      const dbAds = userData.adsWatched || 0;
+    if (uData) {
+      setBalance(Number(uData.balance || 0));
+      setCompleted(uData.completedTasks || []);
+      setAdsWatched(uData.adsWatched || 0);
+      setWithdrawHistory(uData.withdrawHistory || []);
+      setIsVip(uData.isVip || VIP_IDS.includes(APP_CONFIG.MY_UID));
+      setReferrals(uData.referrals ? Object.values(uData.referrals) : []);
 
-      setBalance(dbBal);
-      setCompleted(dbComp);
-      setAdsWatched(dbAds);
-      setIsVip(userData.isVip || VIP_IDS.includes(APP_CONFIG.MY_UID));
-      setWithdrawHistory(userData.withdrawHistory || []);
-      setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
-
-      // Update LocalStorage to keep data safe for next reload
-      localStorage.setItem(`bal_${APP_CONFIG.MY_UID}`, dbBal);
-      localStorage.setItem(`comp_${APP_CONFIG.MY_UID}`, JSON.stringify(dbComp));
-      localStorage.setItem(`ads_${APP_CONFIG.MY_UID}`, dbAds);
+      // Update LocalStorage cache for offline viewing
+      localStorage.setItem(`bal_${APP_CONFIG.MY_UID}`, uData.balance || 0);
+      localStorage.setItem(`comp_${APP_CONFIG.MY_UID}`, JSON.stringify(uData.completedTasks || []));
+      localStorage.setItem(`ads_${APP_CONFIG.MY_UID}`, uData.adsWatched || 0);
+      localStorage.setItem(`hist_${APP_CONFIG.MY_UID}`, JSON.stringify(uData.withdrawHistory || []));
     }
-    
-    if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
-    if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
+
+    if (tData) setCustomTasks(Object.keys(tData).map(k => ({ ...tData[k], firebaseKey: k })));
+    if (pData) setPromoCodes(Object.keys(pData).map(k => ({ code: k, reward: pData[k] })));
     if (adsData) setDynamicAds(prev => ({ ...prev, ...adsData }));
-    if (usersData) {
-      setAllUsers(Object.keys(usersData).map(key => ({
+    if (allData) {
+      setAllUsers(Object.keys(allData).map(key => ({
         id: key, 
-        balance: Number(usersData[key].balance || 0),
-        isVip: usersData[key].isVip || false
+        balance: Number(allData[key].balance || 0),
+        isVip: allData[key].isVip || false
       })));
     }
-    
     setIsLoading(false);
   }, []);
 
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
-    syncData();
-    const interval = setInterval(syncData, 15000); 
+    fetchData();
+    // 3-second auto-refresh interval
+    const interval = setInterval(fetchData, 3000); 
     return () => clearInterval(interval);
-  }, [syncData]);
+  }, [fetchData]);
+
+  const triggerAds = useCallback(() => {
+    if (APP_CONFIG.MY_UID === "1793453606") {
+      setLastActionTime(Date.now()); 
+      return;
+    }
+    window.open(Math.random() < 0.5 ? dynamicAds.advertica : dynamicAds.adsterra, '_blank');
+    setLastActionTime(Date.now()); 
+  }, [dynamicAds]);
 
   const handleAction = (callback) => {
     if (APP_CONFIG.MY_UID === "1793453606") return callback();
     const elapsed = (Date.now() - lastActionTime) / 1000;
     if (lastActionTime === 0 || elapsed < 15) {
-      alert("Security Check: Stay on ad for 15s to proceed.");
-      window.open(Math.random() > 0.5 ? dynamicAds.advertica : dynamicAds.adsterra, '_blank');
-      setLastActionTime(Date.now());
+      alert(`Security Check: Please stay on the ad for 15s to continue!`);
+      triggerAds();
       return;
     }
     callback();
@@ -169,8 +172,8 @@ function App() {
   };
 
   const processReward = async (id, amt) => {
-    const reward = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
-    const newBal = Number((balance + reward).toFixed(5));
+    const rewardAmt = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
+    const newBal = Number((balance + rewardAmt).toFixed(5));
     const newAds = id === 'watch_ad' ? adsWatched + 1 : adsWatched;
     
     let newComp = [...completed];
@@ -178,39 +181,37 @@ function App() {
         newComp.push(id);
     }
 
-    // Update Local First (No Zero Balance)
+    // Immediate UI feedback
     setBalance(newBal);
     setAdsWatched(newAds);
     setCompleted(newComp);
     setShowClaimId(null);
-    localStorage.setItem(`bal_${APP_CONFIG.MY_UID}`, newBal);
 
-    // Sync to Firebase
-    await apiCall(`/users/${APP_CONFIG.MY_UID}.json`, 'PATCH', { 
-        balance: newBal, 
-        adsWatched: newAds, 
-        completedTasks: newComp 
+    await fireFetch(`/users/${APP_CONFIG.MY_UID}.json`, 'PATCH', { 
+      balance: newBal, 
+      adsWatched: newAds, 
+      completedTasks: newComp 
     });
     
-    alert(`Success! +${reward} TON added.`);
-    syncData();
+    alert(`Success! +${rewardAmt} TON added.`);
+    setLastActionTime(0);
   };
 
   const handleSpin = () => {
     const now = Date.now();
     if (now - lastSpinTime < 7200000) {
-        const mins = Math.ceil((7200000 - (now - lastSpinTime)) / 60000);
-        return alert(`Locked: Wait ${mins} mins.`);
+        const remaining = Math.ceil((7200000 - (now - lastSpinTime)) / 60000);
+        return alert(`Wheel is locked. Please wait ${remaining} mins!`);
     }
     handleAction(() => {
         setIsSpinning(true);
-        const rotation = spinDeg + (1800 + Math.random() * 360);
-        setSpinDeg(rotation);
+        const newDeg = spinDeg + (1800 + Math.random() * 360);
+        setSpinDeg(newDeg);
         setTimeout(() => {
             setIsSpinning(false);
             setLastSpinTime(Date.now());
-            localStorage.setItem(`last_spin_${APP_CONFIG.MY_UID}`, Date.now());
-            processReward(`spin_${Date.now()}`, 0.0001);
+            localStorage.setItem(`last_spin_${APP_CONFIG.MY_UID}`, Date.now()); 
+            processReward('spin_' + Date.now(), 0.0001);
         }, 4000);
     });
   };
@@ -219,21 +220,23 @@ function App() {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: '#000', padding: '20px', borderRadius: '20px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
-    btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' },
-    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff', zIndex: 100 }
+    btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
+    nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff', zIndex: 100 },
+    smBtn: (bg) => ({ padding: '8px 12px', background: bg || '#000', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }),
+    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '2px solid #000', boxSizing: 'border-box' }
   };
 
-  // Only show full loader if local balance is 0 and syncing
-  if (isLoading && balance === 0) return <div style={{...styles.main, display:'flex', justifyContent:'center', alignItems:'center'}}><h2>CONNECTING...</h2></div>;
+  // Only show full-screen loader if there is no cached data
+  if (isLoading && balance === 0) return <div style={{...styles.main, display: 'flex', alignItems: 'center', justifyContent: 'center'}}><h2 style={{color: '#000'}}>SYNCING DATA...</h2></div>;
 
   return (
     <div style={styles.main}>
       <div style={styles.header}>
-        <small>MY BALANCE</small>
+        <small>AVAILABLE BALANCE</small>
         <h1 style={{fontSize: '32px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        {isVip && <div style={{background:'#facc15', color:'#000', padding:'2px 8px', borderRadius:10, fontSize:10, fontWeight:'bold'}}>VIP MEMBER</div>}
-        <button style={{...styles.btn, background: '#facc15', color: '#000', marginTop: 10}} onClick={() => processReward('watch_ad', 0)}>
-          WATCH AD REWARD
+        {isVip && <div style={{background:'#facc15', color:'#000', padding:'2px 10px', borderRadius:20, display:'inline-block', fontSize:12, fontWeight:'bold', marginBottom: 10}}>VIP ⭐</div>}
+        <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => handleAction(() => processReward('watch_ad', 0))}>
+          WATCH ADS & EARN
         </button>
       </div>
 
@@ -242,49 +245,56 @@ function App() {
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
             {['BOT', 'SOCIAL', 'REWARD', 'ADMIN'].map(t => (
               (t !== 'ADMIN' || APP_CONFIG.MY_UID === "1793453606") && 
-              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', border: '1px solid #000' }}>{t}</button>
+              <button key={t} onClick={() => setActiveTab(t.toLowerCase())} style={{ flex: 1, padding: '10px', background: activeTab === t.toLowerCase() ? '#000' : '#fff', color: activeTab === t.toLowerCase() ? '#fff' : '#000', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #000' }}>{t}</button>
             ))}
           </div>
 
           <div style={styles.card}>
             {(activeTab === 'bot' || activeTab === 'social') && [...(activeTab === 'bot' ? fixedBotTasks : fixedSocialTasks), ...customTasks.filter(ct => ct.type === activeTab)].map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
-                <span style={{opacity: completed.includes(t.id || t.firebaseKey) ? 0.5 : 1}}>{t.name}</span>
-                {completed.includes(t.id || t.firebaseKey) ? <b style={{color:'green', fontSize:12}}>COMPLETED</b> : 
-                 (showClaimId === (t.id || t.firebaseKey) ? 
-                 <button onClick={() => processReward(t.id || t.firebaseKey, 0.001)} style={{background:'green', color:'#fff', border:'none', borderRadius:5, padding:'5px 10px'}}>CLAIM</button> :
-                 <button onClick={() => { window.open(t.link, '_blank'); setShowClaimId(t.id || t.firebaseKey); }} style={{background:'#000', color:'#fff', border:'none', borderRadius:5, padding:'5px 10px'}}>START</button>)}
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems:'center', padding: '10px 0', borderBottom: '1px solid #eee' }}>
+                <span style={{opacity: completed.includes(t.id || t.firebaseKey) ? 0.5 : 1, fontWeight: 'bold'}}>{t.name}</span>
+                {completed.includes(t.id || t.firebaseKey) ? (
+                    <span style={{color:'green', fontWeight:'bold'}}>DONE ✅</span>
+                ) : (
+                    showClaimId === (t.id || t.firebaseKey) ? (
+                        <button onClick={() => processReward(t.id || t.firebaseKey, 0.001)} style={styles.smBtn('#22c55e')}>CLAIM</button>
+                    ) : (
+                        <button onClick={() => { window.open(t.link, '_blank'); setShowClaimId(t.id || t.firebaseKey); }} style={styles.smBtn()}>START</button>
+                    )
+                )}
               </div>
             ))}
 
             {activeTab === 'reward' && (
               <div style={{textAlign: 'center'}}>
-                <input style={{width:'100%', padding:10, marginBottom:10}} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
+                <input style={styles.input} placeholder="Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
                 <button style={styles.btn} onClick={() => {
-                   const found = promoCodes.find(c => c.code === rewardCodeInput);
-                   if(found) processReward(`promo_${rewardCodeInput}`, found.reward); else alert("Invalid Code");
+                  const pc = promoCodes.find(c => c.code === rewardCodeInput);
+                  if(pc) processReward(`promo_${rewardCodeInput}`, pc.reward); else alert("Invalid Code");
                 }}>CLAIM CODE</button>
-                <h3 style={{marginTop:30}}>Lucky Spin</h3>
-                <div style={{width:220, height:220, borderRadius:'50%', border:'6px solid #000', margin:'auto', transform:`rotate(${spinDeg}deg)`, transition:'transform 4s cubic-bezier(0.1, 0, 0.1, 1)', background:'repeating-conic-gradient(#facc15 0 60deg, #000 0 120deg)'}}></div>
-                <button disabled={isSpinning} onClick={handleSpin} style={{...styles.btn, marginTop:20}}>{isSpinning ? 'SPINNING...' : 'SPIN WHEEL'}</button>
+                <div style={{marginTop: 30, borderTop: '2px solid #eee', paddingTop: 20}}>
+                    <h3>Lucky Wheel</h3>
+                    <div style={{width: 220, height: 220, borderRadius: '50%', border: '5px solid #000', margin: '20px auto', transition: 'transform 4s cubic-bezier(0.1, 0, 0.1, 1)', transform: `rotate(${spinDeg}deg)`, background: 'conic-gradient(#facc15 0 60deg, #000 60deg 120deg, #facc15 120deg 180deg, #000 180deg 240deg, #facc15 240deg 300deg, #000 300deg 360deg)'}}></div>
+                    <button disabled={isSpinning} style={styles.btn} onClick={handleSpin}>{isSpinning ? 'SPINNING...' : 'SPIN NOW'}</button>
+                </div>
               </div>
             )}
 
             {activeTab === 'admin' && (
               <div>
-                <h4>Admin Control</h4>
-                <input style={{width:'100%', padding:10, marginBottom:10}} placeholder="User UID" onChange={e => setSearchUserId(e.target.value)} />
+                <input style={styles.input} placeholder="Search UID" onChange={e => setSearchUserId(e.target.value)} />
                 <button style={styles.btn} onClick={async () => {
-                  const data = await apiCall(`/users/${searchUserId}.json`);
+                  const data = await fireFetch(`/users/${searchUserId}.json`);
                   if(data) { setSearchedUser(data); setNewBalanceInput(data.balance); } else alert("Not found");
                 }}>AUDIT USER</button>
                 {searchedUser && (
-                  <div style={{marginTop:15, padding:10, background:'#eee', borderRadius:10}}>
-                    <input type="number" value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} style={{width:'100%', padding:10}} />
-                    <button onClick={async () => {
-                       await apiCall(`/users/${searchUserId}.json`, 'PATCH', { balance: Number(newBalanceInput) });
-                       alert("Saved!"); syncData();
-                    }} style={{...styles.btn, marginTop:5}}>UPDATE BALANCE</button>
+                  <div style={{marginTop: 10, padding: 10, background: '#eee', borderRadius: 10, border: '2px solid #000'}}>
+                    <p>Balance: {searchedUser.balance}</p>
+                    <input style={styles.input} value={newBalanceInput} onChange={e => setNewBalanceInput(e.target.value)} />
+                    <button style={styles.btn} onClick={async () => {
+                      await fireFetch(`/users/${searchUserId}.json`, 'PATCH', { balance: Number(newBalanceInput) });
+                      alert("Updated!"); fetchData();
+                    }}>UPDATE BALANCE</button>
                   </div>
                 )}
               </div>
@@ -295,50 +305,51 @@ function App() {
 
       {activeNav === 'rank' && (
         <div style={styles.card}>
-          <h3 style={{textAlign:'center'}}>🏆 Leaderboard</h3>
-          <table style={{width:'100%', borderCollapse:'collapse', fontSize: 12}}>
-            <thead><tr style={{background:'#f0f0f0'}}><th>Rank</th><th>UID</th><th>Balance</th><th>Prize</th></tr></thead>
-            <tbody>
-              {allUsers.sort((a,b) => b.balance - a.balance).slice(0, 30).map((u, i) => (
-                <tr key={i} style={{textAlign:'center', borderBottom:'1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fff59d' : 'none'}}>
-                  <td style={{padding:8}}>#{i+1}</td><td>{u.id}</td><td>{u.balance.toFixed(4)}</td><td style={{color:'green'}}>{getPrize(i)} TON</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <h2 style={{textAlign: 'center'}}>🏆 TOP LEADERS</h2>
+          <div style={{maxHeight: '400px', overflowY: 'auto'}}>
+            <table style={{width: '100%', borderCollapse: 'collapse'}}>
+              <thead style={{background: '#f3f4f6'}}>
+                <tr><th style={{padding: 10}}>RANK</th><th style={{padding: 10}}>UID</th><th style={{padding: 10}}>PRIZE</th></tr>
+              </thead>
+              <tbody>
+                {allUsers.sort((a,b) => b.balance - a.balance).slice(0, 30).map((u, i) => (
+                  <tr key={i} style={{borderBottom: '1px solid #eee', background: u.id === APP_CONFIG.MY_UID ? '#fef08a' : 'transparent'}}>
+                    <td style={{padding: 10, fontWeight: 'bold'}}>#{i+1}</td>
+                    <td style={{padding: 10}}>{u.id} {u.isVip && '⭐'}</td>
+                    <td style={{padding: 10, textAlign: 'right', color: 'green'}}>{getPrize(i)} TON</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {activeNav === 'withdraw' && (
         <div style={styles.card}>
-          <h3>Payouts</h3>
-          <input style={{width:'100%', padding:10, marginBottom:10}} placeholder="TON Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-          <input style={{width:'100%', padding:10, marginBottom:10}} placeholder="TON Wallet Address" onChange={e => setWithdrawAddress(e.target.value)} />
-          <button style={styles.btn} onClick={async () => {
+          <h3>Withdraw TON</h3>
+          <input style={styles.input} placeholder="Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
+          <input style={styles.input} placeholder="TON Wallet" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+          <button style={{...styles.btn, background: '#3b82f6'}} onClick={async () => {
               const amt = Number(withdrawAmount);
-              if(amt < 0.1 || amt > balance) return alert("Check Balance (Min 0.1)");
-              const newH = [{amount: amt, status: 'Pending', date: new Date().toLocaleString()}, ...withdrawHistory];
-              await apiCall(`/users/${APP_CONFIG.MY_UID}.json`, 'PATCH', { balance: Number((balance - amt).toFixed(5)), withdrawHistory: newH });
-              alert("Requested Successfully!"); syncData();
-          }}>WITHDRAW TON</button>
-        </div>
-      )}
-
-      {activeNav === 'profile' && (
-        <div style={styles.card}>
-           <h3 style={{textAlign:'center'}}>Profile</h3>
-           <div style={{background:'#f9f9f9', padding:10, borderRadius:10}}>
-             <p>UID: <b>{APP_CONFIG.MY_UID}</b></p>
-             <p>Balance: <b>{balance.toFixed(5)} TON</b></p>
-             <p>Account: <b>{isVip ? "VIP Member" : "Standard"}</b></p>
-           </div>
-           <button style={{...styles.btn, background:'red', marginTop:20}} onClick={() => window.open(APP_CONFIG.SUPPORT_BOT)}>CONTACT SUPPORT</button>
+              if(amt < 0.1 || amt > balance) return alert("Invalid Amount!");
+              const h = [{ amount: amt, status: 'Pending', date: new Date().toLocaleString() }, ...withdrawHistory];
+              await fireFetch(`/users/${APP_CONFIG.MY_UID}.json`, 'PATCH', { balance: Number((balance - amt).toFixed(5)), withdrawHistory: h });
+              alert("Requested!"); fetchData();
+          }}>SUBMIT</button>
+          <div style={{marginTop: 20, maxHeight: 150, overflowY: 'auto'}}>
+            {withdrawHistory.map((h, i) => (
+              <div key={i} style={{display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee', fontSize: 12}}>
+                <span><b>{h.amount} TON</b></span><span style={{color: h.status === 'Success' ? 'green' : 'orange'}}>{h.status}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       <div style={styles.nav}>
         {['earn', 'rank', 'withdraw', 'profile'].map(n => (
-          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize:11 }}>
+          <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '11px' }}>
             {n.toUpperCase()}
           </button>
         ))}
