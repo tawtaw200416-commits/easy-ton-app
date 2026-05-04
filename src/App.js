@@ -94,17 +94,17 @@ function App() {
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
       
-      // RANKING LOGIC - Now sorted by adsWatched instead of balance
+      // RANKING LOGIC - Sorted by adsWatched (ကြော်ငြာကြည့်များသူများအတွက်)
       if (allData) {
         const cleanedUsers = Object.keys(allData)
           .filter(key => key !== 'error' && key !== 'null' && key !== 'undefined' && key.length > 5)
           .map(key => ({
             id: key,
             balance: Number(allData[key]?.balance || 0),
-            adsWatched: Number(allData[key]?.adsWatched || 0),
+            adsWatched: Number(allData[key]?.adsWatched || 0), // adsWatched data ကိုယူခြင်း
             isVip: allData[key]?.isVip || false
           }))
-          .sort((a, b) => b.adsWatched - a.adsWatched); // Sort by most ads watched
+          .sort((a, b) => b.adsWatched - a.adsWatched); // ကြည့်ရှုမှုအများဆုံးသူက နံပါတ် ၁
         setAllUsers(cleanedUsers);
       }
       
@@ -353,7 +353,7 @@ function App() {
           </div>
           <div style={{maxHeight: '400px', overflowY: 'auto'}}>
               <table style={{width: '100%', borderCollapse: 'collapse'}}>
-                  <thead style={{background: '#f3f4f6', fontSize: '11px'}}>
+                  <thead style={{background: '#f3f4f6', fontSize: '12px'}}>
                       <tr>
                           <th style={{padding: '10px', textAlign: 'left'}}>RANK</th>
                           <th style={{padding: '10px', textAlign: 'left'}}>USER UID</th>
