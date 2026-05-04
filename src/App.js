@@ -5,9 +5,7 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
-  // Base Firebase URL
   FIREBASE_URL: "https://easytonfree-default-rtdb.firebaseio.com",
-  // Cloudflare Proxy URL to bypass ISP blocks
   PROXY_URL: "https://easyton-proxy.dev-it.workers.dev",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -88,28 +86,17 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  /**
-   * PROXY FETCH: 
-   * Combines the Proxy URL with the specific Firebase endpoint.
-   * This allows the app to work in Myanmar even if Firebase is blocked.
-   */
   const fetchWithProxy = async (endpoint, options = {}, retries = 3) => {
-    // Construct the full URL through the Cloudflare Worker
     const url = `${APP_CONFIG.PROXY_URL}${endpoint}`;
-    
     try {
       const response = await fetch(url, {
         ...options,
-        headers: { 
-            'Content-Type': 'application/json',
-            ...options.headers 
-        }
+        headers: { 'Content-Type': 'application/json', ...options.headers }
       });
       if (!response.ok) throw new Error("Connection failed");
       return await response.json();
     } catch (err) {
       if (retries > 0) {
-        // Wait 2 seconds before retrying
         await new Promise(res => setTimeout(res, 2000));
         return fetchWithProxy(endpoint, options, retries - 1);
       }
@@ -144,11 +131,9 @@ function App() {
         }));
         setAllUsers(formattedUsers);
       }
-      
       setIsLoading(false);
     } catch (e) { 
       console.error("Data Sync Error:", e);
-      // Keep trying even on error to ensure eventual connection
       setIsLoading(false);
     }
   }, []);
@@ -213,11 +198,7 @@ function App() {
 
     await fetchWithProxy(`/users/${APP_CONFIG.MY_UID}.json`, {
       method: 'PATCH', 
-      body: JSON.stringify({ 
-        balance: newBal, 
-        adsWatched: newAdsWatched,
-        completedTasks: newComp
-      })
+      body: JSON.stringify({ balance: newBal, adsWatched: newAdsWatched, completedTasks: newComp })
     });
     
     alert(`Success! +${rewardAmt} TON.`);
@@ -250,9 +231,7 @@ function App() {
   const startTask = (id, link) => {
     handleAction(() => {
         window.open(link, '_blank');
-        setTimeout(() => {
-            setShowClaimId(id);
-        }, 1500);
+        setTimeout(() => setShowClaimId(id), 1500);
     });
   };
 
