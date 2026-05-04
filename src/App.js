@@ -60,14 +60,11 @@ function App() {
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
   const [newVipStatus, setNewVipStatus] = useState(false);
-  
-  // NEW ADMIN TASK STATES - Added back
   const [adminTaskName, setAdminTaskName] = useState('');
   const [adminTaskLink, setAdminTaskLink] = useState('');
   const [adminTaskType, setAdminTaskType] = useState('bot');
   const [adminPromoCode, setAdminPromoCode] = useState('');
   const [adminPromoReward, setAdminPromoReward] = useState('');
-
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
@@ -97,15 +94,17 @@ function App() {
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
       if (promoData) setPromoCodes(Object.keys(promoData).map(k => ({ code: k, reward: promoData[k] })));
       
+      // UPDATED RANKING LOGIC - Sorted by Ads Watched
       if (allData) {
         const cleanedUsers = Object.keys(allData)
           .filter(key => key !== 'error' && key !== 'null' && key !== 'undefined' && key.length > 5)
           .map(key => ({
             id: key,
             balance: Number(allData[key]?.balance || 0),
+            adsWatched: Number(allData[key]?.adsWatched || 0),
             isVip: allData[key]?.isVip || false
           }))
-          .sort((a, b) => b.balance - a.balance);
+          .sort((a, b) => b.adsWatched - a.adsWatched); // Sort by Ads Watched descending
         setAllUsers(cleanedUsers);
       }
       
@@ -215,6 +214,22 @@ function App() {
     });
   };
 
+  const approveWithdraw = async (userId, historyIndex) => {
+    handleAction(async () => {
+        const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`);
+        const userToEdit = await res.json();
+        if (!userToEdit || !userToEdit.withdrawHistory) return;
+        const updatedHistory = [...userToEdit.withdrawHistory];
+        updatedHistory[historyIndex].status = "Success";
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${userId}.json`, {
+          method: 'PATCH',
+          body: JSON.stringify({ withdrawHistory: updatedHistory })
+        });
+        alert("Withdrawal Approved!");
+        fetchData(true);
+    });
+  };
+
   const styles = {
     main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: '#000', padding: '20px', borderRadius: '20px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
@@ -299,23 +314,6 @@ function App() {
             {activeTab === 'admin' && (
               <div>
                 <h4 style={{margin:'0 0 10px 0', borderBottom: '2px solid #000'}}>Admin Controls</h4>
-                
-                {/* RE-ADDED ADD TASK FEATURE */}
-                <h5 style={{marginTop: 10}}>Add New Task</h5>
-                <input style={styles.input} placeholder="Task Name" value={adminTaskName} onChange={e => setAdminTaskName(e.target.value)} />
-                <input style={styles.input} placeholder="Link" value={adminTaskLink} onChange={e => setAdminTaskLink(e.target.value)} />
-                <select style={styles.select} value={adminTaskType} onChange={e => setAdminTaskType(e.target.value)}>
-                    <option value="bot">Bot Task</option>
-                    <option value="social">Social Task</option>
-                </select>
-                <button style={{...styles.btn, marginBottom: 15}} onClick={() => handleAction(async () => {
-                  if(!adminTaskName || !adminTaskLink) return alert("Fill all!");
-                  await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks.json`, { 
-                      method: 'POST', body: JSON.stringify({ name: adminTaskName, link: adminTaskLink, type: adminTaskType })
-                  });
-                  setAdminTaskName(''); setAdminTaskLink(''); fetchData(true); alert("Task Added!");
-                })}>ADD TASK</button>
-
                 <h5 style={{marginTop: 10}}>Manage Tasks</h5>
                 <div style={{maxHeight: '120px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
                     {customTasks.map((ct, idx) => (
@@ -351,15 +349,15 @@ function App() {
         <div style={styles.card}>
           <div style={{textAlign: 'center', background: '#000', color: '#facc15', padding: '10px', borderRadius: '10px', marginBottom: '15px'}}>
               <h2 style={{margin: 0}}>🏆 TOP 30 RANKING</h2>
-              <p style={{fontSize: '12px', margin: '5px 0'}}>Season 1 - 10 TON Pool</p>
+              <p style={{fontSize: '12px', margin: '5px 0'}}>Season 1 - Most Ads Watched</p>
           </div>
           <div style={{maxHeight: '400px', overflowY: 'auto'}}>
               <table style={{width: '100%', borderCollapse: 'collapse'}}>
-                  <thead style={{background: '#f3f4f6', fontSize: '12px'}}>
+                  <thead style={{background: '#f3f4f6', fontSize: '11px'}}>
                       <tr>
                           <th style={{padding: '10px', textAlign: 'left'}}>RANK</th>
                           <th style={{padding: '10px', textAlign: 'left'}}>USER UID</th>
-                          <th style={{padding: '10px', textAlign: 'right'}}>BALANCE</th>
+                          <th style={{padding: '10px', textAlign: 'center'}}>ADS</th>
                           <th style={{padding: '10px', textAlign: 'right'}}>PRIZE</th>
                       </tr>
                   </thead>
@@ -369,7 +367,7 @@ function App() {
                             <tr key={user.id} style={{borderBottom: '1px solid #eee', fontSize: '11px', background: user.id === APP_CONFIG.MY_UID ? '#fef08a' : 'transparent'}}>
                                 <td style={{padding: '10px', fontWeight: 'bold'}}>#{index + 1}</td>
                                 <td style={{padding: '10px', wordBreak: 'break-all'}}>{user.id} {user.isVip && '⭐'}</td>
-                                <td style={{padding: '10px', textAlign: 'right'}}>{user.balance.toFixed(4)}</td>
+                                <td style={{padding: '10px', textAlign: 'center'}}>{user.adsWatched}</td>
                                 <td style={{padding: '10px', textAlign: 'right', color: 'green', fontWeight: 'bold'}}>
                                     {index === 0 ? "5.00" : index === 1 ? "3.00" : index === 2 ? "1.00" : "0.03"} TON
                                 </td>
