@@ -40,7 +40,7 @@ const fixedSocialTasks = [
 function App() {
   const [balance, setBalance] = useState(0);
   const [completed, setCompleted] = useState([]);
-  const [adsWatched, setAdsWatched] = useState(0); // Watch Count State အသစ်
+  const [adsWatched, setAdsWatched] = useState(0); 
   const [isLoading, setIsLoading] = useState(true);
   const [isVip, setIsVip] = useState(false);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
@@ -70,7 +70,6 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
-  // FetchData logic: ဒေတာအဟောင်းတွေမပျက်အောင် သေချာဆွဲထုတ်ပါတယ်
   const fetchData = useCallback(async (isBackground = false) => {
     try {
       const [u, t, p, all] = await Promise.all([
@@ -87,7 +86,7 @@ function App() {
       if (userData) {
         setBalance(Number(userData.balance || 0));
         setIsVip(userData.isVip || VIP_IDS.includes(APP_CONFIG.MY_UID));
-        setAdsWatched(userData.adsWatched || 0); // Ads ကြည့်ပြီးသားအရေအတွက်
+        setAdsWatched(userData.adsWatched || 0);
         setWithdrawHistory(userData.withdrawHistory || []);
         setCompleted(userData.completedTasks || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
@@ -147,7 +146,7 @@ function App() {
 
     const rewardAmt = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
     const newBal = Number((balance + rewardAmt).toFixed(5));
-    const newAdsWatched = id === 'watch_ad' ? adsWatched + 1 : adsWatched; // Ads ကြည့်ရင် count တိုးမယ်
+    const newAdsWatched = id === 'watch_ad' ? adsWatched + 1 : adsWatched; 
     const newComp = [...completed, id];
 
     setBalance(newBal);
@@ -158,7 +157,6 @@ function App() {
         setShowClaimId(null);
     }
 
-    // PATCH ကိုသုံးထားလို့ ရှိပြီးသားဒေတာ (withdrawHistory, referrals) တွေ မပျက်ပါဘူး
     await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
       method: 'PATCH', 
       body: JSON.stringify({ 
@@ -313,27 +311,6 @@ function App() {
                             <button onClick={() => handleAction(async () => { if(window.confirm("Delete?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/global_tasks/${ct.firebaseKey}.json`, { method: 'DELETE' }); fetchData(true); } })} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
                         </div>
                     ))}
-                </div>
-
-                <h5 style={{marginTop: 10}}>Manage Reward Codes</h5>
-                <div style={{maxHeight: '100px', overflowY: 'auto', marginBottom: 15, padding: 5, background: '#f0f0f0', borderRadius: 8}}>
-                    {promoCodes.map((pc, idx) => (
-                        <div key={idx} style={{display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #ccc', fontSize: 11}}>
-                            <span>{pc.code} ({pc.reward} TON)</span>
-                            <button onClick={() => handleAction(async () => { if(window.confirm("Delete code?")) { await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${pc.code}.json`, { method: 'DELETE' }); fetchData(true); } })} style={{color: 'red', border: 'none', background: 'none', fontWeight: 'bold'}}>X</button>
-                        </div>
-                    ))}
-                </div>
-
-                <div style={{background: '#f9fafb', padding: '10px', borderRadius: '10px', marginBottom: '20px', border: '1px solid #ddd'}}>
-                  <h6 style={{margin: '0 0 10px 0'}}>+ Add New Reward Code</h6>
-                  <input style={styles.input} placeholder="Promo Code Name" value={adminPromoCode} onChange={e => setAdminPromoCode(e.target.value)} />
-                  <input style={styles.input} placeholder="Reward Amount" type="number" value={adminPromoReward} onChange={e => setAdminPromoReward(e.target.value)} />
-                  <button style={{...styles.btn, background: '#8b5cf6'}} onClick={() => handleAction(async () => {
-                      if(!adminPromoCode || !adminPromoReward) return alert("Fill all!");
-                      await fetch(`${APP_CONFIG.FIREBASE_URL}/promo_codes/${adminPromoCode}.json`, { method:'PUT', body: JSON.stringify(Number(adminPromoReward)) });
-                      alert("Code Created!"); setAdminPromoCode(''); setAdminPromoReward(''); fetchData(true);
-                  })}>CREATE CODE</button>
                 </div>
 
                 <h5>User Management</h5>
@@ -504,3 +481,4 @@ function App() {
 }
 
 export default App;
+့
