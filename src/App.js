@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+ဎ၆import React, { useState, useEffect, useCallback } from 'react';
 
 const tg = window.Telegram?.WebApp;
 
