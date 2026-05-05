@@ -5,7 +5,6 @@ const tg = window.Telegram?.WebApp;
 const APP_CONFIG = {
   ADMIN_WALLET: "UQDasFrJo7PrMaJcRFivcBVVnhWNQxYG-y32EN0ZeQPRSOp9",
   MY_UID: tg?.initDataUnsafe?.user?.id?.toString() || "1793453606", 
-  // VPN မလိုဘဲ ဒေတာတက်လာစေရန် Proxy URL သို့ ပြောင်းလဲထားပါသည်
   FIREBASE_URL: "https://easyton-proxy.dev-it.workers.dev",
   SUPPORT_BOT: "https://t.me/EasyTonHelp_Bot",
   MIN_WITHDRAW: 0.1,
@@ -85,12 +84,18 @@ function App() {
       const allData = await all.json();
 
       if (userData) {
-        setBalance(Number(userData.balance || 0));
+        setBalance(prev => isBackground ? Math.max(prev, Number(userData.balance || 0)) : Number(userData.balance || 0));
         setIsVip(userData.isVip || VIP_IDS.includes(APP_CONFIG.MY_UID));
         setAdsWatched(userData.adsWatched || 0); 
         setWithdrawHistory(userData.withdrawHistory || []);
         setCompleted(userData.completedTasks || []);
         setReferrals(userData.referrals ? Object.values(userData.referrals) : []);
+      } else if (!isBackground) {
+        // Create initial user profile if not exists
+        await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+          method: 'PATCH',
+          body: JSON.stringify({ balance: 0, adsWatched: 0, completedTasks: [], isVip: VIP_IDS.includes(APP_CONFIG.MY_UID) })
+        });
       }
       
       if (tasksData) setCustomTasks(Object.keys(tasksData).map(k => ({ ...tasksData[k], firebaseKey: k })));
@@ -106,8 +111,7 @@ function App() {
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     fetchData();
-    // စက္ကန့်တိုင်း (1000ms) Data များကို Fetch လုပ်ရန်
-    const interval = setInterval(() => fetchData(true), 1000);
+    const interval = setInterval(() => fetchData(true), 3000); // 3s interval
     return () => clearInterval(interval);
   }, [fetchData]);
 
@@ -146,31 +150,46 @@ function App() {
       return;
     }
 
-    const rewardAmt = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
-    const newBal = Number((balance + rewardAmt).toFixed(5));
-    const newAdsWatched = id === 'watch_ad' ? adsWatched + 1 : adsWatched; 
-    const newComp = [...completed, id];
+    try {
+      // Sync latest data from server before update to prevent balance reset
+      const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
+      const dbData = await res.json();
+      
+      const dbBalance = Number(dbData?.balance || 0);
+      const dbAdsWatched = Number(dbData?.adsWatched || 0);
+      const dbCompleted = dbData?.completedTasks || [];
 
-    setBalance(newBal);
-    if (id === 'watch_ad') setAdsWatched(newAdsWatched);
+      const rewardAmt = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
+      const newBal = Number((dbBalance + rewardAmt).toFixed(5));
+      const newAdsWatched = id === 'watch_ad' ? dbAdsWatched + 1 : dbAdsWatched; 
+      
+      let updatedComp = [...dbCompleted];
+      if (id !== 'watch_ad' && !id.startsWith('spin_') && !dbCompleted.includes(id)) {
+          updatedComp.push(id);
+      }
 
-    if (id !== 'watch_ad' && !id.startsWith('spin_')) {
-        setCompleted(newComp);
-        setShowClaimId(null);
+      // Update Local State first for UI responsiveness
+      setBalance(newBal);
+      if (id === 'watch_ad') setAdsWatched(newAdsWatched);
+      if (id !== 'watch_ad' && !id.startsWith('spin_')) setCompleted(updatedComp);
+      setShowClaimId(null);
+
+      // Save to Firebase
+      await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+        method: 'PATCH', 
+        body: JSON.stringify({ 
+          balance: newBal, 
+          adsWatched: newAdsWatched,
+          completedTasks: updatedComp 
+        })
+      });
+      
+      alert(`Success! +${rewardAmt} TON.`);
+      setLastActionTime(0);
+      fetchData(true);
+    } catch (e) {
+      alert("Sync Error! Please check connection.");
     }
-
-    await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-      method: 'PATCH', 
-      body: JSON.stringify({ 
-        balance: newBal, 
-        adsWatched: newAdsWatched,
-        completedTasks: (id !== 'watch_ad' && !id.startsWith('spin_')) ? newComp : completed 
-      })
-    });
-    
-    alert(`Success! +${rewardAmt} TON.`);
-    setLastActionTime(0);
-    fetchData(true);
   };
 
   const handleSpin = () => {
@@ -459,9 +478,16 @@ function App() {
               const amt = Number(withdrawAmount);
               if(amt < 0.1 || amt > balance) return alert("Invalid amount!");
               if(!withdrawAddress) return alert("Enter address!");
-              const newH = [{ amount: amt, status: 'Pending', date: new Date().toLocaleString() }, ...withdrawHistory];
+              
+              const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
+              const currentData = await res.json();
+              const currentBalance = Number(currentData?.balance || 0);
+
+              if (currentBalance < amt) return alert("Insufficient actual balance!");
+
+              const newH = [{ amount: amt, status: 'Pending', date: new Date().toLocaleString() }, ...(currentData?.withdrawHistory || [])];
               await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, { 
-                method:'PATCH', body: JSON.stringify({ balance: Number((balance - amt).toFixed(5)), withdrawHistory: newH })
+                method:'PATCH', body: JSON.stringify({ balance: Number((currentBalance - amt).toFixed(5)), withdrawHistory: newH })
               });
               alert("Request Sent!"); fetchData(true); setWithdrawAmount(''); setWithdrawAddress('');
             })}>WITHDRAW NOW</button>
