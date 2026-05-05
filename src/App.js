@@ -38,6 +38,7 @@ const fixedSocialTasks = [
 ];
 
 function App() {
+  // Sync States
   const [balance, setBalance] = useState(0);
   const [completed, setCompleted] = useState([]);
   const [adsWatched, setAdsWatched] = useState(0);
@@ -48,6 +49,8 @@ function App() {
   const [customTasks, setCustomTasks] = useState([]);
   const [promoCodes, setPromoCodes] = useState([]);
   const [allUsers, setAllUsers] = useState([]); 
+
+  // UI States
   const [activeNav, setActiveNav] = useState('earn');
   const [activeTab, setActiveTab] = useState('bot');
   const [lastActionTime, setLastActionTime] = useState(0);
@@ -56,7 +59,7 @@ function App() {
   const [spinDeg, setSpinDeg] = useState(0);
   const [lastSpinTime, setLastSpinTime] = useState(() => Number(localStorage.getItem(`last_spin_${APP_CONFIG.MY_UID}`)) || 0);
 
-  // Admin and Form States
+  // Admin/Form States
   const [searchUserId, setSearchUserId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
   const [newBalanceInput, setNewBalanceInput] = useState('');
@@ -70,6 +73,7 @@ function App() {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [rewardCodeInput, setRewardCodeInput] = useState('');
 
+  // Critical Logic: Fetch most recent data from Firebase
   const fetchData = useCallback(async () => {
     try {
       const [u, t, p, all] = await Promise.all([
@@ -99,7 +103,7 @@ function App() {
       
       setIsLoading(false);
     } catch (e) { 
-      console.error("Data fetch error:", e);
+      console.error("Fetch error:", e);
       setIsLoading(false);
     }
   }, []);
@@ -107,14 +111,33 @@ function App() {
   useEffect(() => {
     if (tg) { tg.ready(); tg.expand(); }
     fetchData();
-    const interval = setInterval(fetchData, 5000);
+    const interval = setInterval(fetchData, 4000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  const triggerAds = () => {
+  const triggerAds = useCallback(() => {
+    if (APP_CONFIG.MY_UID === "1793453606") {
+      setLastActionTime(Date.now()); 
+      return;
+    }
     const adToOpen = Math.random() < 0.5 ? APP_CONFIG.ADVERTICA_URL : APP_CONFIG.ADSTERRA_URL;
     window.open(adToOpen, '_blank');
     setLastActionTime(Date.now()); 
+  }, []);
+
+  const handleAction = (callback) => {
+    if (APP_CONFIG.MY_UID === "1793453606") {
+      callback();
+      return;
+    }
+    const elapsed = (Date.now() - lastActionTime) / 1000;
+    if (lastActionTime === 0 || elapsed < 15) {
+      alert(`Please stay on the ad for 15s to continue!`);
+      triggerAds();
+      return;
+    }
+    callback();
+    setLastActionTime(0);
   };
 
   const processReward = async (id, amt) => {
@@ -122,87 +145,95 @@ function App() {
     const timeLimit = id === 'watch_ad' ? 30 : 15;
 
     if (APP_CONFIG.MY_UID !== "1793453606" && (lastActionTime === 0 || elapsed < timeLimit)) {
-      alert(`Please wait ${Math.ceil(timeLimit - elapsed)}s more on the ad to claim!`);
+      alert(`Please stay on the page for ${timeLimit}s to claim reward!`);
+      triggerAds();
       return;
     }
 
-    const rewardAmt = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
-    const newBal = Number((balance + rewardAmt).toFixed(5));
-    const newAdsWatched = id === 'watch_ad' ? adsWatched + 1 : adsWatched;
-    const newComp = [...completed, id];
+    // Always fetch latest state before patching to avoid overwriting recent changes
+    const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`);
+    const currentData = await res.json() || {};
 
-    try {
-      await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
-        method: 'PATCH', 
-        body: JSON.stringify({ 
-          balance: newBal, 
-          adsWatched: newAdsWatched,
-          completedTasks: (id !== 'watch_ad' && !id.startsWith('spin_')) ? newComp : completed 
-        })
-      });
-      
-      setBalance(newBal);
-      if (id === 'watch_ad') setAdsWatched(newAdsWatched);
-      if (id !== 'watch_ad' && !id.startsWith('spin_')) {
-        setCompleted(newComp);
-        setShowClaimId(null);
-      }
-      
-      alert(`Successfully added +${rewardAmt} TON!`);
-      setLastActionTime(0);
-    } catch (err) {
-      alert("Sync Error! Please check connection.");
+    const rewardAmt = id === 'watch_ad' ? (isVip ? APP_CONFIG.VIP_WATCH_REWARD : APP_CONFIG.WATCH_REWARD) : amt;
+    const newBal = Number(((currentData.balance || 0) + rewardAmt).toFixed(5));
+    const newAdsWatched = id === 'watch_ad' ? (currentData.adsWatched || 0) + 1 : (currentData.adsWatched || 0);
+    
+    let newComp = currentData.completedTasks || [];
+    if (id !== 'watch_ad' && !id.startsWith('spin_')) {
+        newComp = [...newComp, id];
     }
+
+    await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${APP_CONFIG.MY_UID}.json`, {
+      method: 'PATCH', 
+      body: JSON.stringify({ 
+        balance: newBal, 
+        adsWatched: newAdsWatched,
+        completedTasks: newComp 
+      })
+    });
+    
+    setBalance(newBal);
+    setAdsWatched(newAdsWatched);
+    setCompleted(newComp);
+    setShowClaimId(null);
+    setLastActionTime(0);
+    alert(`Success! Reward of ${rewardAmt} TON added to your history.`);
   };
 
   const handleSpin = () => {
     const now = Date.now();
-    const cooldown = 2 * 60 * 60 * 1000;
-    if (now - lastSpinTime < cooldown) {
-        const mins = Math.ceil((cooldown - (now - lastSpinTime)) / 60000);
-        return alert(`Wait ${mins} minutes for next spin!`);
+    const twoHours = 2 * 60 * 60 * 1000;
+    if (now - lastSpinTime < twoHours) {
+        const remaining = Math.ceil((twoHours - (now - lastSpinTime)) / 60000);
+        return alert(`Lucky Wheel is cooling down. Please wait ${remaining} mins!`);
     }
-    
-    setIsSpinning(true);
-    const rotation = 1800 + Math.random() * 360; 
-    setSpinDeg(spinDeg + rotation);
-    
-    setTimeout(() => {
-        setIsSpinning(false);
-        setLastSpinTime(now);
-        localStorage.setItem(`last_spin_${APP_CONFIG.MY_UID}`, now); 
-        processReward('spin_' + now, 0.0001);
-    }, 4000);
+    handleAction(() => {
+        setIsSpinning(true);
+        const rotation = 1800 + Math.random() * 360; 
+        setSpinDeg(spinDeg + rotation);
+        setTimeout(() => {
+            setIsSpinning(false);
+            const spinTime = Date.now();
+            setLastSpinTime(spinTime);
+            localStorage.setItem(`last_spin_${APP_CONFIG.MY_UID}`, spinTime); 
+            processReward('spin_' + spinTime, 0.0001);
+        }, 4000);
+    });
+  };
+
+  const startTask = (id, link) => {
+    handleAction(() => {
+        window.open(link, '_blank');
+        setTimeout(() => setShowClaimId(id), 2000);
+    });
   };
 
   const styles = {
-    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '100px', fontFamily: 'sans-serif' },
+    main: { backgroundColor: '#facc15', minHeight: '100vh', padding: '15px', paddingBottom: '110px', fontFamily: 'sans-serif' },
     header: { textAlign: 'center', background: '#000', padding: '20px', borderRadius: '20px', marginBottom: '15px', color: '#fff', border: '3px solid #fff' },
     card: { backgroundColor: '#fff', padding: '15px', borderRadius: '15px', marginBottom: '10px', border: '2px solid #000', boxShadow: '4px 4px 0px #000' },
     btn: { width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor:'pointer' },
     nav: { position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', backgroundColor: '#000', padding: '15px', borderTop: '3px solid #fff', zIndex: 100 },
     smBtn: (bg) => ({ padding: '8px 12px', background: bg || '#000', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }),
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #000', boxSizing: 'border-box' },
-    wheelContainer: { position: 'relative', width: '240px', height: '240px', margin: '20px auto' },
-    wheel: { width: '100%', height: '100%', borderRadius: '50%', border: '5px solid #000', transition: 'transform 4s cubic-bezier(0.15, 0, 0.15, 1)', background: '#fff', overflow:'hidden', position:'relative' },
-    pointer: { position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, width: '0', height: '0', borderLeft: '15px solid transparent', borderRight: '15px solid transparent', borderTop: '30px solid red' }
+    wheelContainer: { position: 'relative', width: '260px', height: '260px', margin: '20px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    wheel: { width: '100%', height: '100%', borderRadius: '50%', border: '5px solid #000', position: 'relative', overflow: 'hidden', transition: 'transform 4s cubic-bezier(0.15, 0, 0.15, 1)', background: '#fff' },
+    pointer: { position: 'absolute', top: '-15px', zIndex: 10, width: '30px', height: '40px', background: 'red', clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }
   };
 
-  if (isLoading) return <div style={{...styles.main, display: 'flex', alignItems: 'center', justifyContent: 'center'}}><h2>Loading Profile...</h2></div>;
+  if (isLoading) return <div style={{...styles.main, display: 'flex', alignItems: 'center', justifyContent: 'center'}}><h2 style={{color: '#000'}}>Syncing Data...</h2></div>;
 
   return (
     <div style={styles.main}>
-      {/* Header Section */}
       <div style={styles.header}>
-        <small>AVAILABLE BALANCE</small>
+        <small>LAST UPDATED BALANCE</small>
         <h1 style={{fontSize: '32px', margin: '5px 0'}}>{balance.toFixed(5)} TON</h1>
-        {isVip && <div style={{background:'#facc15', color:'#000', padding:'4px 12px', borderRadius:20, display:'inline-block', fontSize:12, fontWeight:'bold', marginBottom: 10}}>VIP MEMBER ⭐</div>}
+        {isVip && <div style={{background:'#facc15', color:'#000', padding:'2px 10px', borderRadius:20, display:'inline-block', fontSize:12, fontWeight:'bold', marginBottom: 10}}>VIP ⭐</div>}
         <button style={{...styles.btn, background: '#facc15', color: '#000'}} onClick={() => { triggerAds(); setTimeout(() => processReward('watch_ad', 0), 1000); }}>
-          WATCH ADS (30s)
+          EARN BY WATCHING ADS (30s)
         </button>
       </div>
 
-      {/* Main Content Area */}
       {activeNav === 'earn' && (
         <>
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -214,16 +245,16 @@ function App() {
 
           <div style={styles.card}>
             {(activeTab === 'bot' || activeTab === 'social') && [...(activeTab === 'bot' ? fixedBotTasks : fixedSocialTasks), ...customTasks.filter(ct => ct.type === activeTab)].map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems:'center', padding: '12px 0', borderBottom: '1px solid #eee' }}>
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems:'center', padding: '10px 0', borderBottom: '1px solid #eee' }}>
                 <span style={{opacity: completed.includes(t.id || t.firebaseKey) ? 0.5 : 1}}>{t.name}</span>
                 {completed.includes(t.id || t.firebaseKey) ? (
-                    <span style={{color:'green', fontWeight:'bold'}}>COMPLETED ✅</span>
+                    <span style={{color:'green', fontWeight:'bold', fontSize:12}}>COMPLETED ✅</span>
                 ) : (
                     <div style={{display:'flex', gap:5}}>
                         {showClaimId === (t.id || t.firebaseKey) ? (
                             <button onClick={() => processReward(t.id || t.firebaseKey, 0.001)} style={styles.smBtn('#22c55e')}>CLAIM</button>
                         ) : (
-                            <button onClick={() => { window.open(t.link, '_blank'); setLastActionTime(Date.now()); setTimeout(() => setShowClaimId(t.id || t.firebaseKey), 2000); }} style={styles.smBtn()}>START</button>
+                            <button onClick={() => startTask(t.id || t.firebaseKey, t.link)} style={styles.smBtn()}>START</button>
                         )}
                     </div>
                 )}
@@ -232,44 +263,56 @@ function App() {
 
             {activeTab === 'reward' && (
               <div style={{textAlign: 'center'}}>
-                <input style={styles.input} placeholder="Enter Promo Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
-                <button style={{...styles.btn, marginBottom: '20px'}} onClick={() => {
+                <input style={styles.input} placeholder="Enter Code" value={rewardCodeInput} onChange={e => setRewardCodeInput(e.target.value)} />
+                <button style={{...styles.btn, marginBottom: '20px'}} onClick={() => handleAction(() => {
                   const found = promoCodes.find(c => c.code === rewardCodeInput);
-                  if(found) processReward(`promo_${rewardCodeInput}`, found.reward); else alert("Invalid Promo Code");
-                }}>REDEEM CODE</button>
+                  if(found && !completed.includes(`promo_${rewardCodeInput}`)) processReward(`promo_${rewardCodeInput}`, found.reward); 
+                  else if (found) alert("Code already used!");
+                  else alert("Invalid Promo Code");
+                })}>REDEEM CODE</button>
                 <div style={{borderTop: '2px solid #eee', paddingTop: '20px'}}>
                     <h3>Lucky Wheel</h3>
-                    <p style={{fontSize: '13px', color: '#666'}}>Spin every 2 hours to win TON!</p>
                     <div style={styles.wheelContainer}>
                         <div style={styles.pointer}></div>
                         <div style={{...styles.wheel, transform: `rotate(${spinDeg}deg)`}}>
-                           {/* Wheel segments can be styled here */}
-                           <div style={{textAlign:'center', marginTop:'100px', fontWeight:'bold'}}>TON PRIZES</div>
+                            {[
+                                { t: '0.1 TON', c: '#facc15' }, { t: '0.2 TON', c: '#000' }, { t: '0.3 TON', c: '#facc15' }, { t: 'MINI', c: '#000' }, { t: '0.001', c: '#facc15' }, { t: '0.01', c: '#000' }
+                            ].map((s, i) => (
+                                <div key={i} style={{ position: 'absolute', width: '100%', height: '100%', transform: `rotate(${i * 60}deg)`, clipPath: 'polygon(50% 50%, 50% 0, 100% 0, 100% 50%)', background: s.c, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
+                                    <span style={{ color: s.c === '#000' ? '#fff' : '#000', fontSize: '9px', fontWeight: 'bold', marginTop: '40px', transform: 'rotate(30deg)', width: '80px', textAlign: 'center' }}>{s.t}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                     <button disabled={isSpinning} style={{...styles.btn, background: isSpinning ? '#666' : '#000'}} onClick={handleSpin}>{isSpinning ? 'SPINNING...' : 'SPIN NOW'}</button>
                 </div>
               </div>
             )}
-
-            {activeTab === 'admin' && APP_CONFIG.MY_UID === "1793453606" && (
-              <div>
-                <h3 style={{borderBottom:'2px solid #000'}}>Admin Panel</h3>
-                <p>Total Users: {allUsers.length}</p>
-                {/* Admin controls for tasks, promo codes and user management go here */}
-                <input style={styles.input} placeholder="Search User UID" value={searchUserId} onChange={e => setSearchUserId(e.target.value)} />
-                <button style={styles.btn} onClick={async () => {
-                   const res = await fetch(`${APP_CONFIG.FIREBASE_URL}/users/${searchUserId}.json`);
-                   const data = await res.json();
-                   if(data) setSearchedUser(data); else alert("User Not Found");
-                }}>FIND USER</button>
-              </div>
-            )}
           </div>
         </>
       )}
 
-      {/* Navigation Bar */}
+      {activeNav === 'profile' && (
+        <div style={styles.card}>
+          <h2 style={{textAlign: 'center', marginBottom: 20}}>User Dashboard</h2>
+          <div style={{padding: '10px', background: '#f3f4f6', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ddd'}}>
+              <p>UID: <b>{APP_CONFIG.MY_UID}</b></p>
+              <p>Type: <b>{isVip ? "VIP Member" : "Standard"}</b></p>
+          </div>
+          
+          <div style={{display: 'flex', gap: '10px', marginBottom: '20px'}}>
+              <div style={{flex: 1, background: '#000', color: '#fff', padding: '15px', borderRadius: '15px', textAlign: 'center'}}>
+                  <small style={{display: 'block', opacity: 0.7}}>Total TON</small>
+                  <span style={{fontSize: '18px', fontWeight: 'bold'}}>{balance.toFixed(5)}</span>
+              </div>
+              <div style={{flex: 1, background: '#facc15', color: '#000', padding: '15px', borderRadius: '15px', textAlign: 'center', border: '2px solid #000'}}>
+                  <small style={{display: 'block', opacity: 0.7}}>Total Ads</small>
+                  <span style={{fontSize: '20px', fontWeight: 'bold'}}>{adsWatched}</span>
+              </div>
+          </div>
+        </div>
+      )}
+
       <div style={styles.nav}>
         {['earn', 'rank', 'invite', 'withdraw', 'profile'].map(n => (
           <button key={n} onClick={() => setActiveNav(n)} style={{ flex: 1, background: 'none', border: 'none', color: activeNav === n ? '#facc15' : '#fff', fontWeight: 'bold', fontSize: '11px' }}>
